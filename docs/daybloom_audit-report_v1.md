@@ -3,6 +3,7 @@
 **Version:** 1.0 (25 September 2026)
 **Audited code:** `main` at commit `874e4b1` (25 September 2026), app version 1.4.1 (Android `versionCode` 9)
 **Platform:** Expo SDK 57.0.25, React Native 0.86.3, React 19.2.3, TypeScript 6.0.3, Android target SDK 36
+**Note:** Line references in Sections 1 to 7 refer to commit `874e4b1`. Appendix B re-checks the findings against `main` at `567083f`, which added backup and restore after the audit began.
 
 ---
 
@@ -13,6 +14,8 @@
 **Method.** All 64 TypeScript files (8,867 lines) in `src/` and `index.ts` were read. Automated checks (TypeScript, ESLint, expo-doctor, npm audit) were run. The Android manifest produced by `expo prebuild`, the React Compiler output and the exported Android release bundle were inspected. Suspected defects were reproduced with a Node.js test script that runs the real state store, and with Playwright against the web build under a controlled clock.
 
 **Results.** The code base typechecks and lints without errors and passes all 21 expo-doctor checks. Thirty-three findings were recorded: one Critical, four High, thirteen Medium and fifteen Low (Table 3). The Critical defect makes the Today screen keep showing the previous day after midnight while the app remains in memory; in that state a Heavy check-in is saved but the Tele-MANAS support card is not shown (Fig. 1; Appendix A, run 3). The High findings concern duplicate buddy nudges, queued nudges that wait until the app is reopened, test APKs signed with a publicly available key, and Android backup contradicting the app's privacy statements.
+
+**Update for `main` at 567083f (Appendix B).** The backup and restore feature resolves M9 and makes Android backup a deliberate choice, but the privacy statements still contradict it (H3). C1 and H1 persist unchanged. One new Medium finding (N1: restore accepts files that stop the app from starting) and one new Low finding (N2) are recorded.
 
 **Priority actions.** (1) Hold "today" in state so that it changes at midnight (C1). (2) Make the nudge idempotent, time-limited and retried from the widget handler (H1, H4). (3) Sign release APKs with a private key (H2). (4) Decide on Android backup and align every privacy statement (H3, M6). (5) Add unit tests and a pull-request CI job (M12).
 
@@ -324,3 +327,32 @@ rareChance 0.15, previous 'marigold'     -> rare 9.42%, empty pool 5
 rareChance 0.15, previous 'lotus'        -> rare 6.37%, empty pool 0
 rareChance 1.00 (badges), previous 'lotus' -> rare 100%
 ```
+
+**Run 5.** Same test script on `main` at 567083f (`src/lib/store.ts` and `src/lib/backup-core.ts`): a backup file containing one task with `quadrant: 7` and `focus: 5`, restored with `replaceState` and read back as on the next launch.
+
+```
+N1. parseBackup accepts the file: true
+    Matrix/Today task row -> useQuadrantColors -> TypeError: Cannot read properties of undefined (reading 'color')
+    Today FocusTimerCard -> sessionsOn -> TypeError: Cannot read properties of undefined (reading 'filter')
+```
+
+## Appendix B. Re-check Against `main` at 567083f
+
+Commit 567083f ("Add backup and restore, with a weekly backup", merged as PR #3) changed 12 files after the audit began. Table 7 gives the status of each affected finding; two new findings follow. Line references in this appendix refer to 567083f.
+
+*Table 7. Status of affected findings on `main` at 567083f.*
+
+| ID | Status | Evidence |
+|---|---|---|
+| C1 | Unchanged | The compiled `Today` component still caches `dayKey()`, `prettyDate(new Date())` and `greeting()` in compute-once blocks; the commit adds only an import and `<WeeklyBackupCard />` to `today.tsx` |
+| H1 | Unchanged | `recordMood` and `flushQueued` are identical (`src/lib/store.ts:259`, `:277`) |
+| H2 | Data-loss part mitigated | Users can now export before moving to the Play build and restore afterwards; the public signing key remains |
+| H3 | Narrowed | `"allowBackup": true` is now explicit (`app.json:31`) and the Backup card says that Google backup includes Daybloom (`src/components/backup.tsx:113`). The contradicting statements remain: "stored only on this phone" on the same Settings screen (`src/app/settings.tsx:188`), "never leave the phone" four lines after the README's new backup paragraph (`README.md:68`, `:72`), and the store listing (`docs/daybloom_store-listing_v1.md:51`). Remedy: amend these statements |
+| M9 | Resolved | Manual backup to a JSON file through the share sheet, restore with a summary and confirmation, and a weekly on-device backup (`src/lib/backup.ts`, `src/components/backup.tsx`) |
+| L10 | Partly addressed | `mergeSaved` now serves both load and restore (`src/lib/store.ts:159`), but nested objects are still merged shallowly and `version` is still not read |
+
+**N1. Restore accepts files that stop the app from starting (Medium).** `parseBackup` checks only that `tasks`, `people`, `garden` and `nudges` are arrays and that `checkins` and `badges` are objects (`src/lib/backup-core.ts:57-59`). Their elements and the other sections (`focus`, `settings`, `reminder`, `buddy`) are trusted. A file with one task in quadrant 7 and `focus: 5` passes, is saved by `replaceState` (`src/lib/store.ts:239`), and both the task row and the Today focus card then throw during render (Appendix A, run 5). Today is the first screen after onboarding and the broken state is already saved, so the app cannot start until its data is cleared in Android settings, which deletes everything. Such a file could come from corruption, hand editing, or a later app version that changes a nested shape without raising `BACKUP_FORMAT`. *Remedy:* validate each element (quadrant ranges, required fields, the types of `focus`, `settings` and `reminder`) and drop or repair invalid entries before `replaceState`; add an error boundary on Today that offers Erase or Restore; add round-trip tests for `makeBackup` and `parseBackup`.
+
+**N2. The backup file holds sensitive data in plain JSON (Low).** The file contains the full mood history, the circle's names and phone numbers, and the buddy's ntfy topic (`src/lib/backup-core.ts:23-33`). "Back up to Google Drive" opens the general share sheet, so the file can equally be sent through a chat or email app (`src/components/backup.tsx:93-94`). *Remedy:* say what the file contains next to the button, consider leaving out the buddy topic (a restored buddy can be invited again), and consider an optional password.
+
+On 567083f the register therefore holds 34 open findings: one Critical, four High, thirteen Medium (M1 to M8, M10 to M13 and N1) and sixteen Low (L1 to L15 and N2).
