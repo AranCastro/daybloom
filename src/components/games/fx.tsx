@@ -4,7 +4,7 @@
  */
 import * as Haptics from 'expo-haptics';
 import { useEffect, useRef, useState } from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import Animated, {
   Easing,
   FadeIn,
@@ -22,13 +22,14 @@ import { Text } from '@/components/text';
 import { Button } from '@/components/ui';
 import { Fonts } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { hapticsOn } from '@/lib/store';
 
 const haptic = {
-  light: () => Platform.OS !== 'web' && Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light),
-  medium: () => Platform.OS !== 'web' && Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium),
-  select: () => Platform.OS !== 'web' && Haptics.selectionAsync(),
-  success: () => Platform.OS !== 'web' && Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success),
-  warning: () => Platform.OS !== 'web' && Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning),
+  light: () => hapticsOn() && Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light),
+  medium: () => hapticsOn() && Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium),
+  select: () => hapticsOn() && Haptics.selectionAsync(),
+  success: () => hapticsOn() && Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success),
+  warning: () => hapticsOn() && Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning),
 };
 export { haptic };
 

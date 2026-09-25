@@ -1,4 +1,4 @@
-/** Month calendar: pick a day, see coloured dots for the tasks due on it. Weeks start on Sunday. */
+/** Month calendar: pick a day, see coloured dots for the tasks due on it. Weeks start on Sunday or Monday (Settings). */
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
@@ -9,6 +9,7 @@ import { Fonts } from '@/constants/theme';
 import { useIsDark, useTheme } from '@/hooks/use-theme';
 import { dayKey, fromKey } from '@/lib/dates';
 import { HEAT, HeatLevel } from '@/lib/productivity';
+import { useAppState } from '@/lib/store';
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const WEEK = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
@@ -41,9 +42,12 @@ export function MonthCalendar({ selected, onSelect, marks = {}, onMonth, compact
     onMonth?.(next);
   }
 
-  // Six rows of seven days, starting on the Sunday on or before the 1st.
+  // Six rows of seven days, starting on the Sunday (or Monday, per Settings) on or before the 1st.
+  const weekStart = useAppState((s) => s.settings.weekStart);
   const first = new Date(month.getFullYear(), month.getMonth(), 1);
-  const lead = first.getDay();
+  const lead = (first.getDay() - weekStart + 7) % 7;
+  const week = [...WEEK.slice(weekStart), ...WEEK.slice(0, weekStart)];
+  const weekFull = [...WEEK_FULL.slice(weekStart), ...WEEK_FULL.slice(0, weekStart)];
   const days = Array.from({ length: 42 }, (_, i) => new Date(month.getFullYear(), month.getMonth(), 1 - lead + i));
   const rows = [0, 1, 2, 3, 4, 5]
     .map((r) => days.slice(r * 7, r * 7 + 7))
@@ -66,8 +70,8 @@ export function MonthCalendar({ selected, onSelect, marks = {}, onMonth, compact
       </View>
 
       <View style={styles.row}>
-        {WEEK.map((w, i) => (
-          <Text key={i} variant="small" color="textMuted" style={[styles.week, { width: `${100 / 7}%` }]} accessibilityLabel={WEEK_FULL[i]}>
+        {week.map((w, i) => (
+          <Text key={i} variant="small" color="textMuted" style={[styles.week, { width: `${100 / 7}%` }]} accessibilityLabel={weekFull[i]}>
             {w}
           </Text>
         ))}

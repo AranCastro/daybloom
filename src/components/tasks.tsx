@@ -21,7 +21,7 @@ import { Fonts, Radius } from '@/constants/theme';
 import { useIsDark, useTheme } from '@/hooks/use-theme';
 import { addDays, dayKey, fromKey, prettyDate } from '@/lib/dates';
 import { dueBadge, QUADRANTS, quadrantOf } from '@/lib/quadrants';
-import { addTask, deleteTask, editTask, moveTask, openTasks, Quadrant, Task, toggleTask, useAppState } from '@/lib/store';
+import { addTask, deleteTask, editTask, moveTask, openTasks, Quadrant, Task, toggleTask, useAppState, hapticsOn } from '@/lib/store';
 
 export function useQuadrantColors(q: Quadrant) {
   const dark = useIsDark();
@@ -51,7 +51,7 @@ export function Checkbox({ checked, color, onPress, size = 22 }: { checked: bool
       aria-checked={checked}
       onPress={() => {
         s.set(withSequence(withSpring(0.8, { stiffness: 600, damping: 20 }), withSpring(1, { damping: 10 })));
-        if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        if (hapticsOn()) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         onPress();
       }}>
       <Animated.View
@@ -153,7 +153,7 @@ function SheetBody({ onClose, task, defaultQuadrant = 1, defaultDue }: SheetProp
     if (!clean) return;
     if (task) editTask(task.id, { title: clean, quadrant: q, due });
     else addTask(clean, q, due);
-    if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    if (hapticsOn()) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     onClose();
   }
 

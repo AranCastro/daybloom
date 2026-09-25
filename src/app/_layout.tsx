@@ -5,11 +5,12 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { AppState as RNAppState } from 'react-native';
+import { Appearance, AppState as RNAppState, Platform } from 'react-native';
+import { ReducedMotionConfig, ReduceMotion } from 'react-native-reanimated';
 
 import { BloomToast } from '@/components/garden';
 import { useIsDark, useTheme } from '@/hooks/use-theme';
-import { flushQueued, refreshBuddyJoined } from '@/lib/store';
+import { flushQueued, refreshBuddyJoined, useAppState } from '@/lib/store';
 import { startWidgetSync } from '@/widgets/sync';
 
 SplashScreen.preventAutoHideAsync();
@@ -40,6 +41,14 @@ export default function RootLayout() {
     return () => sub.remove();
   }, []);
 
+  // Light / dark from Settings also applies to system parts (keyboard, dialogs, pickers).
+  const appearance = useAppState((s) => s.settings.appearance);
+  const reduceMotion = useAppState((s) => s.settings.reduceMotion);
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    Appearance.setColorScheme(appearance === 'system' ? 'unspecified' : appearance);
+  }, [appearance]);
+
   // Home-screen widgets redraw whenever something changes in the app (Android).
   useEffect(() => startWidgetSync(), []);
 
@@ -47,6 +56,7 @@ export default function RootLayout() {
 
   return (
     <>
+      <ReducedMotionConfig mode={reduceMotion ? ReduceMotion.Always : ReduceMotion.System} />
       <StatusBar style={dark ? 'light' : 'dark'} />
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: t.background }, animation: 'fade' }}>
         <Stack.Screen name="index" />

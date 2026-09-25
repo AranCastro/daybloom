@@ -57,6 +57,10 @@ One calm app where everything you do grows the same garden:
   `src/widgets/` and the widget list in the plugin entry of `app.json`. Widgets need the APK or a development
   build; they do not run in Expo Go.
 
+- **Settings.** Appearance (System, Light or Dark), vibration on or off, reduce motion (also saves battery),
+  week starts on Sunday or Monday, and the usual focus session (15, 25 or 50 minutes), plus name, daily
+  reminder, nudge threshold and home-screen widgets.
+
 Moods, tasks, people, scores, focus sessions, badges and the garden never leave the phone.
 
 Built with Expo SDK 57 (React Native 0.86, Expo Router, TypeScript).

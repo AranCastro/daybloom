@@ -10,7 +10,7 @@ import { Card, Choice, Divider, Input, Row, Screen, tap } from '@/components/ui'
 import { useTheme } from '@/hooks/use-theme';
 import { prettyTime } from '@/lib/dates';
 import { cancelFocusAlarm, cancelReminders, scheduleDailyReminder } from '@/lib/reminders';
-import { AppState, resetAll, update, useAppState } from '@/lib/store';
+import { AppState, resetAll, setSettings, update, useAppState } from '@/lib/store';
 
 const TIMES = [
   { label: '8 AM', value: 8 },
@@ -28,6 +28,7 @@ export default function Settings() {
   const [draft, setDraft] = useState(name);
   const reminder = useAppState((s) => s.reminder);
   const streak = useAppState((s) => s.streak);
+  const prefs = useAppState((s) => s.settings);
 
   async function setReminder(next: AppState['reminder']) {
     update({ reminder: next });
@@ -76,6 +77,63 @@ export default function Settings() {
           onPress={() => router.push('/widgets')}
           right={<Icon name="arrow" color={t.textMuted} size={18} />}
         />
+      </Card>
+
+      <Card>
+        <Text variant="label">Appearance</Text>
+        <Choice
+          options={[
+            { label: 'System', value: 'system' },
+            { label: 'Light', value: 'light' },
+            { label: 'Dark', value: 'dark' },
+          ]}
+          value={prefs.appearance}
+          onChange={(appearance) => setSettings({ appearance })}
+        />
+        <Text variant="small">
+          {prefs.appearance === 'system' ? 'Follows your phone’s light or dark setting.' : `Always ${prefs.appearance}, whatever the phone is set to.`}
+        </Text>
+      </Card>
+
+      <Card>
+        <Text variant="label">Comfort</Text>
+        <SettingSwitch
+          title="Vibration"
+          detail="A light buzz on taps, check-ins and games"
+          value={prefs.haptics}
+          onChange={(haptics) => setSettings({ haptics })}
+        />
+        <Divider />
+        <SettingSwitch
+          title="Reduce motion"
+          detail="Stops the breathing orb and softens animations. Also saves battery."
+          value={prefs.reduceMotion}
+          onChange={(reduceMotion) => setSettings({ reduceMotion })}
+        />
+      </Card>
+
+      <Card>
+        <Text variant="label">Calendar and focus</Text>
+        <Text variant="bodyStrong">Week starts on</Text>
+        <Choice
+          options={[
+            { label: 'Sunday', value: 0 },
+            { label: 'Monday', value: 1 },
+          ]}
+          value={prefs.weekStart}
+          onChange={(v) => setSettings({ weekStart: v as 0 | 1 })}
+        />
+        <Text variant="bodyStrong">Usual focus session</Text>
+        <Choice
+          options={[
+            { label: '15 min', value: 'gentle' },
+            { label: '25 min', value: 'classic' },
+            { label: '50 min', value: 'deep' },
+          ]}
+          value={prefs.focusPreset}
+          onChange={(focusPreset) => setSettings({ focusPreset })}
+        />
+        <Text variant="small">On a low day the timer still suggests the gentle 15 minutes.</Text>
       </Card>
 
       <Card>
@@ -142,5 +200,24 @@ export default function Settings() {
         emergency, call 112.
       </Text>
     </Screen>
+  );
+}
+
+function SettingSwitch({ title, detail, value, onChange }: { title: string; detail: string; value: boolean; onChange: (v: boolean) => void }) {
+  const t = useTheme();
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+      <View style={{ flex: 1 }}>
+        <Text variant="bodyStrong">{title}</Text>
+        <Text variant="small">{detail}</Text>
+      </View>
+      <Switch
+        value={value}
+        onValueChange={onChange}
+        trackColor={{ true: t.brand, false: t.line }}
+        thumbColor="#fff"
+        accessibilityLabel={title}
+      />
+    </View>
   );
 }

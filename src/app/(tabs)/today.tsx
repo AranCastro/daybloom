@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { router, useIsFocused } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Linking, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown, ZoomIn } from 'react-native-reanimated';
 
 import { Icon } from '@/components/icons';
@@ -21,7 +21,7 @@ import { Flower } from '@/components/flower';
 import { flowerOf } from '@/lib/flowers';
 import { remaining, sessionsOn } from '@/lib/focus';
 import { gameForMood } from '@/lib/games';
-import { awardBadges, openTasks, peopleIn, Person, recordMood, Task, useAppState } from '@/lib/store';
+import { awardBadges, openTasks, peopleIn, Person, recordMood, Task, useAppState, hapticsOn } from '@/lib/store';
 import { Badge, streakInfo } from '@/lib/badges';
 
 export default function Today() {
@@ -40,7 +40,7 @@ export default function Today() {
   const showPicker = !todayMood || editing;
 
   async function choose(v: MoodValue) {
-    if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    if (hapticsOn()) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setEditing(false);
     await recordMood(v);
     const fresh = awardBadges();
