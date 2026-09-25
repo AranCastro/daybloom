@@ -1,9 +1,12 @@
 import { LinearGradient } from 'expo-linear-gradient';
+import { useIsFocused } from 'expo-router';
 import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, {
+  cancelAnimation,
   Easing,
   useAnimatedStyle,
+  useReducedMotion,
   useSharedValue,
   withRepeat,
   withSequence,
@@ -11,6 +14,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import Svg, { Circle, Path } from 'react-native-svg';
 
+import { useAppActive } from '@/hooks/use-app-active';
 import { Mood } from '@/lib/moods';
 
 /** Mouth curve per mood: positive bends up (smile), negative bends down. */
@@ -21,8 +25,19 @@ type Props = { mood: Mood; size: number; breathe?: boolean; face?: boolean };
 export function MoodOrb({ mood, size, breathe = false, face = true }: Props) {
   const s = useSharedValue(1);
 
+  // Breathe only while this screen is on show and the app is open. Tabs stay mounted, so an
+  // endless animation would otherwise keep the phone redrawing (and warm) on every other screen.
+  const focused = useIsFocused();
+  const appActive = useAppActive();
+  const reduceMotion = useReducedMotion();
+  const run = breathe && focused && appActive && !reduceMotion;
+
   useEffect(() => {
-    if (!breathe) return;
+    if (!run) {
+      cancelAnimation(s);
+      s.set(1);
+      return;
+    }
     s.set(withRepeat(
       withSequence(
         withTiming(1.045, { duration: 2600, easing: Easing.inOut(Easing.sin) }),
@@ -30,7 +45,8 @@ export function MoodOrb({ mood, size, breathe = false, face = true }: Props) {
       ),
       -1,
     ));
-  }, [breathe, s]);
+    return () => cancelAnimation(s);
+  }, [run, s]);
 
   const anim = useAnimatedStyle(() => ({ transform: [{ scale: s.value }] }));
   const c = CURVE[mood.value];

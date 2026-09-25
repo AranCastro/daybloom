@@ -2,7 +2,7 @@
  * Keeps home-screen widgets in step with the app: any change to the saved state
  * redraws every widget the user has placed. A no-op off Android.
  */
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import { requestWidgetUpdate } from 'react-native-android-widget';
 
 import { getState, subscribe } from '@/lib/store';
@@ -31,8 +31,11 @@ export function startWidgetSync(): () => void {
     timer = setTimeout(() => refreshWidgets(), 600);
   });
   refreshWidgets();
+  // Coming back to the app (for example the next morning) redraws them too, so "today" is right.
+  const sub = AppState.addEventListener('change', (s) => s === 'active' && refreshWidgets());
   return () => {
     clearTimeout(timer);
     unsubscribe();
+    sub.remove();
   };
 }

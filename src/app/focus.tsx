@@ -12,6 +12,7 @@ import { Icon } from '@/components/icons';
 import { Text } from '@/components/text';
 import { Button, Card, Choice, Screen, tap } from '@/components/ui';
 import { Fonts } from '@/constants/theme';
+import { useAppActive } from '@/hooks/use-app-active';
 import { useIsDark, useTheme } from '@/hooks/use-theme';
 import { dayKey } from '@/lib/dates';
 import { FlowerKind, GOLDEN_EVERY, RARITY_LABEL } from '@/lib/flowers';
@@ -73,8 +74,13 @@ export default function FocusScreen() {
   );
   const [taskId, setTaskId] = useState<string | undefined>(params.task);
 
-  // One ticker: refreshes the clock and completes a timer that has run out (also after the app was closed).
+  const running = !!active && active.endAt !== null;
+  const appActive = useAppActive();
+
+  // One ticker while a timer runs (once a second, only in the foreground): refreshes the clock and
+  // completes a timer that has run out, also one that ran out while the app was closed.
   useEffect(() => {
+    if (!running || !appActive) return;
     const tick = () => {
       setNow(Date.now());
       const a = getState().focus.active;
@@ -91,14 +97,13 @@ export default function FocusScreen() {
       }
     };
     const first = setTimeout(tick, 0);
-    const id = setInterval(tick, 250);
+    const id = setInterval(tick, 1000);
     return () => {
       clearTimeout(first);
       clearInterval(id);
     };
-  }, []);
+  }, [running, appActive]);
 
-  const running = !!active && active.endAt !== null;
   useEffect(() => {
     if (!running) return;
     activateKeepAwakeAsync('focus').catch(() => {});

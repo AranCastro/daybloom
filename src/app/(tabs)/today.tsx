@@ -11,6 +11,7 @@ import { TaskRow, TaskSheet } from '@/components/tasks';
 import { Text } from '@/components/text';
 import { Card, Screen, tap } from '@/components/ui';
 import { TabBarInset } from '@/constants/theme';
+import { useAppActive } from '@/hooks/use-app-active';
 import { useTheme } from '@/hooks/use-theme';
 import { addDays, dayKey, greeting, prettyDate, weekdayShort } from '@/lib/dates';
 import { isLow, MOODS, MoodValue, moodOf } from '@/lib/moods';
@@ -228,7 +229,8 @@ function FocusTimerCard() {
   const sessions = useAppState((s) => s.focus.sessions);
   const todays = sessionsOn(sessions, dayKey());
   const [now, setNow] = useState(() => Date.now());
-  const ticking = !!active && active.endAt !== null;
+  const appActive = useAppActive();
+  const ticking = !!active && active.endAt !== null && appActive;
   // Re-render once a second while a timer runs, so the card flips to "Collect" on time.
   useEffect(() => {
     if (!ticking) return;
