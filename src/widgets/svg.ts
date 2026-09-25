@@ -39,6 +39,11 @@ export function tickSvg(color: string, size = 22): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5" fill="none" stroke="${color}" stroke-width="1.8"/></svg>`;
 }
 
+/** A filled tick circle for finished tasks. */
+export function doneSvg(color: string, size = 22): string {
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10.5" fill="${color}"/><path d="M7.5 12.5l3 3 6-6.5" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+}
+
 /** Draws a garden flower from its recipe, as components/flower.tsx does. */
 export function flowerSvg(kind: FlowerKind, size: number, stem = false): string {
   const c = 50;

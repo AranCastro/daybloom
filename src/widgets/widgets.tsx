@@ -9,9 +9,11 @@
  */
 import { FlexWidget, SvgWidget, TextWidget } from 'react-native-android-widget';
 
+import { CIRCLE } from '@/lib/circle';
 import { MOODS } from '@/lib/moods';
+import { QUADRANTS } from '@/lib/quadrants';
 import type { Snapshot } from '@/widgets/data';
-import { budSvg, flowerSvg, iconSvg, orbSvg, tickSvg } from '@/widgets/svg';
+import { budSvg, doneSvg, flowerSvg, iconSvg, orbSvg, tickSvg } from '@/widgets/svg';
 
 // ── Palette ──────────────────────────────────────────────────────────────────
 
@@ -26,6 +28,9 @@ export type WidgetPalette = {
   brand: `#${string}`;
   brandInk: `#${string}`;
   accent: `#${string}`;
+  mode: 'light' | 'dark';
+  /** Background opacity 0.4–1 (matrix widgets let the user choose). */
+  alpha?: number;
 };
 
 export const LIGHT: WidgetPalette = {
@@ -39,6 +44,7 @@ export const LIGHT: WidgetPalette = {
   brand: '#2F4A3F',
   brandInk: '#FFFFFF',
   accent: '#D0683E',
+  mode: 'light',
 };
 
 export const DARK: WidgetPalette = {
@@ -52,13 +58,33 @@ export const DARK: WidgetPalette = {
   brand: '#A8D0BC',
   brandInk: '#10201A',
   accent: '#F0936B',
+  mode: 'dark',
 };
 
 const DISPLAY = 'Fraunces_600SemiBold';
 const BOLD = 'Manrope_700Bold';
 const BODY = 'Manrope_500Medium';
 
-export type WidgetProps = { s: Snapshot; p: WidgetPalette; width: number; height: number; flash?: string };
+export type WidgetProps = {
+  s: Snapshot;
+  p: WidgetPalette;
+  width: number;
+  height: number;
+  flash?: string;
+  /** Text size multiplier (Small 0.9, Default 1, Large 1.15). */
+  scale?: number;
+  /** Matrix: tick circles. Circle: call and message buttons. */
+  checkbox?: boolean;
+};
+
+type Rgba = `rgba(${number}, ${number}, ${number}, ${number})`;
+
+/** #RRGGBB at the palette's opacity. */
+function bg(hex: `#${string}`, alpha = 1): `#${string}` | Rgba {
+  if (alpha >= 1) return hex;
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+}
 
 /** Deep links into the app (scheme "daybloom" in app.json). */
 export const LINK = {
@@ -84,7 +110,7 @@ function Shell({ p, children, padding = 14, uri, app }: { p: WidgetPalette; chil
         width: 'match_parent',
         borderRadius: 24,
         padding,
-        backgroundGradient: { from: p.from, to: p.to, orientation: 'TL_BR' },
+        backgroundGradient: { from: bg(p.from, p.alpha), to: bg(p.to, p.alpha), orientation: 'TL_BR' },
       }}
     >
       {children}
@@ -432,11 +458,7 @@ export function ReachWidget({ s, p }: WidgetProps) {
     <Shell p={p} padding={12}>
       <FlexWidget style={{ flexDirection: 'row', alignItems: 'center', height: 'match_parent', width: 'match_parent' }}>
         {picks.map((x, i) => {
-          const uri = x.phone
-            ? x.mode === 'call'
-              ? `tel:${x.phone.replace(/[^\d+]/g, '')}`
-              : `sms:${x.phone.replace(/[^\d+]/g, '')}?body=${encodeURIComponent(x.opener)}`
-            : LINK.circle;
+          const uri = x.uri;
           return (
             <FlexWidget key={x.id} style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
               {i > 0 && <Spacer size={8} />}
@@ -460,5 +482,181 @@ export function ReachWidget({ s, p }: WidgetProps) {
         })}
       </FlexWidget>
     </Shell>
+  );
+}
+
+// ── 7 & 8. Matrix widgets (Eisenhower tasks, people circle) ──────────────────
+
+const HEADER = 46;
+
+/** The shared 2 × 2 frame: a header, then four equal cells split by hairlines. */
+function Grid({ p, width, height, title, addUri, addLabel, cell }: {
+  p: WidgetPalette;
+  width: number;
+  height: number;
+  title: string;
+  addUri: string;
+  addLabel: string;
+  cell: (q: 1 | 2 | 3 | 4, w: number, h: number) => React.JSX.Element;
+}) {
+  const cw = Math.floor((width - 1) / 2);
+  const ch = Math.floor((height - HEADER - 2) / 2);
+  const row = (a: 1 | 2 | 3 | 4, b: 1 | 2 | 3 | 4) => (
+    <FlexWidget style={{ flexDirection: 'row', height: ch, width: 'match_parent' }}>
+      {cell(a, cw, ch)}
+      <FlexWidget style={{ width: 1, height: 'match_parent', backgroundColor: p.line }} />
+      {cell(b, width - cw - 1, ch)}
+    </FlexWidget>
+  );
+  return (
+    <Shell p={p} padding={0}>
+      <FlexWidget style={{ flexDirection: 'row', alignItems: 'center', height: HEADER, width: 'match_parent', paddingLeft: 16, paddingRight: 10 }}>
+        <FlexWidget style={{ flex: 1 }} {...open(addUri)}>
+          <TextWidget text={title} style={{ fontSize: 16, fontFamily: DISPLAY, color: p.ink }} maxLines={1} truncate="END" />
+        </FlexWidget>
+        <FlexWidget {...open(addUri)} accessibilityLabel={addLabel} style={{ height: 32, width: 32, borderRadius: 16, backgroundColor: p.brand, alignItems: 'center', justifyContent: 'center' }}>
+          <SvgWidget svg={iconSvg('plus', p.brandInk, 16)} style={{ height: 16, width: 16 }} />
+        </FlexWidget>
+      </FlexWidget>
+      <FlexWidget style={{ height: 1, width: 'match_parent', backgroundColor: p.line }} />
+      {row(1, 2)}
+      <FlexWidget style={{ height: 1, width: 'match_parent', backgroundColor: p.line }} />
+      {row(3, 4)}
+    </Shell>
+  );
+}
+
+/** Fits a list into a cell: how many lines show, and whether a "+n more" line is needed. */
+function fit(count: number, h: number, titleH: number, lineH: number) {
+  const room = Math.max(0, Math.floor((h - 16 - titleH) / lineH));
+  if (count <= room) return { show: count, more: 0 };
+  const show = Math.max(0, room - 1);
+  return { show, more: count - show };
+}
+
+function Empty({ text, p, k, uri }: { text: string; p: WidgetPalette; k: number; uri: string }) {
+  return (
+    <FlexWidget {...open(uri)} style={{ flex: 1, width: 'match_parent', alignItems: 'center', justifyContent: 'center' }}>
+      <TextWidget text={text} style={{ fontSize: 12 * k, fontFamily: BODY, color: p.muted }} />
+    </FlexWidget>
+  );
+}
+
+/** All four Eisenhower quadrants, like the Matrix tab. */
+export function MatrixWidget({ s, p, width, height, scale = 1, checkbox = true }: WidgetProps) {
+  if (!s.onboarded) return <Welcome p={p} />;
+  const k = scale;
+  const titleH = Math.round(18 * k) + 4;
+  const lineH = Math.round(24 * k);
+  const box = Math.round(16 * k);
+
+  return (
+    <Grid
+      p={p}
+      width={width}
+      height={height}
+      title="Eisenhower Matrix"
+      addUri={LINK.matrix}
+      addLabel="Add a task"
+      cell={(q, w, h) => {
+        const info = QUADRANTS[q - 1];
+        const uri = `daybloom://quadrant/${q}`;
+        const tasks = s.matrix[q - 1].tasks;
+        const { show, more } = fit(tasks.length, h, titleH, lineH);
+        return (
+          <FlexWidget key={q} style={{ width: w, height: h, paddingHorizontal: 12, paddingVertical: 8 }}>
+            <FlexWidget {...open(uri)} style={{ height: titleH, width: 'match_parent' }}>
+              <TextWidget text={info.action} style={{ fontSize: 12.5 * k, fontFamily: BOLD, color: info.color[p.mode] as `#${string}` }} maxLines={1} truncate="END" />
+            </FlexWidget>
+            {tasks.length === 0 ? (
+              <Empty text="No tasks" p={p} k={k} uri={uri} />
+            ) : (
+              tasks.slice(0, show).map((t) => (
+                <FlexWidget key={t.id} style={{ flexDirection: 'row', alignItems: 'center', height: lineH, width: 'match_parent' }}>
+                  {checkbox && (
+                    <FlexWidget
+                      clickAction="TASK_TOGGLE"
+                      clickActionData={{ id: t.id }}
+                      accessibilityLabel={`${t.done ? 'Mark not done' : 'Mark done'}: ${t.title}`}
+                      style={{ paddingRight: 8, paddingVertical: 3 }}
+                    >
+                      <SvgWidget svg={t.done ? doneSvg(info.color[p.mode], box) : tickSvg(p.muted, box)} style={{ height: box, width: box }} />
+                    </FlexWidget>
+                  )}
+                  <FlexWidget {...open(uri)} style={{ flex: 1 }}>
+                    <TextWidget
+                      text={t.title}
+                      style={{ fontSize: 13.5 * k, fontFamily: BODY, color: t.done ? p.muted : t.due?.late ? p.accent : p.ink }}
+                      maxLines={1}
+                      truncate="END"
+                    />
+                  </FlexWidget>
+                  {t.due && w >= 200 && <TextWidget text={t.due.text} style={{ fontSize: 10.5 * k, fontFamily: BOLD, color: t.due.late ? p.accent : p.dim, marginLeft: 6 }} />}
+                </FlexWidget>
+              ))
+            )}
+            {more > 0 && <TextWidget {...open(uri)} text={`+${more} more`} style={{ fontSize: 11 * k, fontFamily: BODY, color: p.muted }} />}
+          </FlexWidget>
+        );
+      }}
+    />
+  );
+}
+
+/** All four circle quadrants, like the People tab. Tap a name to call or message. */
+export function CircleWidget({ s, p, width, height, scale = 1, checkbox = true }: WidgetProps) {
+  if (!s.onboarded) return <Welcome p={p} />;
+  const k = scale;
+  const titleH = Math.round(18 * k) + 4;
+  const lineH = Math.round(28 * k);
+  const dot = Math.round(20 * k);
+
+  return (
+    <Grid
+      p={p}
+      width={width}
+      height={height}
+      title="Your circle"
+      addUri={LINK.circle}
+      addLabel="Add a person"
+      cell={(q, w, h) => {
+        const info = CIRCLE[q - 1];
+        const color = info.color[p.mode] as `#${string}`;
+        const soft = info.soft[p.mode] as `#${string}`;
+        const people = s.circle[q - 1].people;
+        const { show, more } = fit(people.length, h, titleH, lineH);
+        return (
+          <FlexWidget key={q} style={{ width: w, height: h, paddingHorizontal: 12, paddingVertical: 8 }}>
+            <FlexWidget {...open(LINK.circle)} style={{ height: titleH, width: 'match_parent' }}>
+              <TextWidget text={info.title} style={{ fontSize: 12.5 * k, fontFamily: BOLD, color }} maxLines={1} truncate="END" />
+            </FlexWidget>
+            {people.length === 0 ? (
+              <Empty text="No one yet" p={p} k={k} uri={LINK.circle} />
+            ) : (
+              people.slice(0, show).map((x) => (
+                <FlexWidget
+                  key={x.id}
+                  {...open(x.uri)}
+                  accessibilityLabel={`${info.mode === 'call' ? 'Call' : 'Message'} ${x.name}`}
+                  style={{ flexDirection: 'row', alignItems: 'center', height: lineH, width: 'match_parent' }}
+                >
+                  <FlexWidget style={{ height: dot, width: dot, borderRadius: dot / 2, backgroundColor: soft, alignItems: 'center', justifyContent: 'center' }}>
+                    <TextWidget text={x.name.slice(0, 1).toUpperCase()} style={{ fontSize: 10.5 * k, fontFamily: BOLD, color }} />
+                  </FlexWidget>
+                  <Spacer size={8} />
+                  <FlexWidget style={{ flex: 1 }}>
+                    <TextWidget text={x.name} style={{ fontSize: 13.5 * k, fontFamily: BODY, color: p.ink }} maxLines={1} truncate="END" />
+                  </FlexWidget>
+                  {checkbox && (
+                    <SvgWidget svg={iconSvg(info.mode === 'call' ? 'phone' : 'chat', color, Math.round(15 * k))} style={{ height: Math.round(15 * k), width: Math.round(15 * k), marginLeft: 6 }} />
+                  )}
+                </FlexWidget>
+              ))
+            )}
+            {more > 0 && <TextWidget {...open(LINK.circle)} text={`+${more} more`} style={{ fontSize: 11 * k, fontFamily: BODY, color: p.muted }} />}
+          </FlexWidget>
+        );
+      }}
+    />
   );
 }

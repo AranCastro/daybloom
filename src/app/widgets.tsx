@@ -2,20 +2,19 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Linking, Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Alert, Linking, Platform, Pressable, StyleSheet, Switch, useWindowDimensions, View } from 'react-native';
 import { requestPinWidget } from 'react-native-android-widget';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { Icon } from '@/components/icons';
 import { Text } from '@/components/text';
-import { Button, Card, Screen, tap } from '@/components/ui';
+import { Button, Card, Choice, Divider, Screen, tap } from '@/components/ui';
 import { WidgetMock } from '@/components/widget-mock';
 import { useIsDark, useTheme } from '@/hooks/use-theme';
 import { MoodValue } from '@/lib/moods';
-import { awardBadges, getState, recordMood, toggleTask, useAppState } from '@/lib/store';
-import { WIDGETS, WidgetSpec } from '@/widgets/catalogue';
+import { awardBadges, DEFAULT_WIDGET_PREFS, getState, recordMood, setWidgetPrefs, toggleTask, useAppState } from '@/lib/store';
+import { lookFor, WIDGETS, WidgetSpec } from '@/widgets/catalogue';
 import { snapshot } from '@/widgets/data';
-import { DARK, LIGHT } from '@/widgets/widgets';
 
 const ANDROID = Platform.OS === 'android';
 
@@ -64,7 +63,7 @@ function WidgetCard({ spec }: { spec: WidgetSpec }) {
   const room = Math.min(screen, 520) - 32 - 2 * 20 - 2 * 14;
   const width = Math.min(spec.width, room);
   const Widget = spec.render;
-  const tree = <Widget s={snapshot(state)} p={dark ? DARK : LIGHT} width={width} height={spec.height} />;
+  const tree = <Widget s={snapshot(state)} width={width} height={spec.height} {...lookFor(spec, state, dark)} />;
 
   async function add() {
     setBusy(true);
@@ -100,6 +99,8 @@ function WidgetCard({ spec }: { spec: WidgetSpec }) {
         </View>
       </LinearGradient>
 
+      {spec.custom && <Customise name={spec.custom} />}
+
       {ANDROID ? (
         <Button title="Add to home screen" icon="plus" kind="secondary" loading={busy} onPress={add} />
       ) : (
@@ -108,6 +109,56 @@ function WidgetCard({ spec }: { spec: WidgetSpec }) {
         </Text>
       )}
     </Card>
+  );
+}
+
+/** Look settings for the matrix widgets. Changes show in the preview and on the home screen at once. */
+function Customise({ name }: { name: 'Matrix' | 'Circle' }) {
+  const t = useTheme();
+  const saved = useAppState((s) => s.widgetPrefs?.[name]);
+  const prefs = { ...DEFAULT_WIDGET_PREFS, ...saved };
+  const set = (patch: Parameters<typeof setWidgetPrefs>[1]) => setWidgetPrefs(name, patch);
+  const toggle = (label: string, value: boolean, onChange: (v: boolean) => void) => (
+    <View style={styles.toggle}>
+      <Text variant="body" style={{ flex: 1 }}>
+        {label}
+      </Text>
+      <Switch value={value} onValueChange={onChange} trackColor={{ true: t.brand, false: t.line }} thumbColor="#fff" accessibilityLabel={label} />
+    </View>
+  );
+
+  return (
+    <View style={{ gap: 10 }}>
+      <Text variant="label">Theme</Text>
+      <Choice
+        options={[
+          { label: 'Auto', value: 'auto' },
+          { label: 'Light', value: 'light' },
+          { label: 'Dark', value: 'dark' },
+        ]}
+        value={prefs.theme}
+        onChange={(theme) => set({ theme })}
+      />
+      <Text variant="label">Opacity</Text>
+      <Choice
+        options={[100, 90, 75, 60, 40].map((v) => ({ label: `${v}%`, value: v }))}
+        value={prefs.opacity}
+        onChange={(opacity) => set({ opacity })}
+      />
+      <Text variant="label">Text size</Text>
+      <Choice
+        options={[
+          { label: 'Small', value: 'small' },
+          { label: 'Default', value: 'default' },
+          { label: 'Large', value: 'large' },
+        ]}
+        value={prefs.font}
+        onChange={(font) => set({ font })}
+      />
+      <Divider />
+      {toggle(name === 'Matrix' ? 'Show checkboxes' : 'Show call and message icons', prefs.checkbox, (checkbox) => set({ checkbox }))}
+      {name === 'Matrix' && toggle('Show completed tasks', prefs.completed, (completed) => set({ completed }))}
+    </View>
   );
 }
 
@@ -120,6 +171,9 @@ async function onWidgetClick(action: string, data: Record<string, unknown>) {
   } else if (action === 'TASK_DONE') {
     const id = String(data.id ?? '');
     if (getState().tasks.some((x) => x.id === id && !x.done)) toggleTask(id);
+  } else if (action === 'TASK_TOGGLE') {
+    const id = String(data.id ?? '');
+    if (getState().tasks.some((x) => x.id === id)) toggleTask(id);
   } else if (action === 'OPEN_APP') {
     router.navigate('/');
   } else if (action === 'OPEN_URI' && typeof data.uri === 'string') {
@@ -137,6 +191,7 @@ async function onWidgetClick(action: string, data: Record<string, unknown>) {
 const styles = StyleSheet.create({
   head: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
   cells: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
+  toggle: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 40 },
   wall: { borderRadius: 22, padding: 14, alignItems: 'center', justifyContent: 'center' },
   shadow: {
     borderRadius: 24,

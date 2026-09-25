@@ -2,7 +2,7 @@
   "expo": {
     "name": "Daybloom",
     "slug": "daybloom",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "daybloom",
@@ -14,7 +14,7 @@
     },
     "android": {
       "package": "online.draran.daybloom",
-      "versionCode": 2,
+      "versionCode": 3,
       "adaptiveIcon": {
         "backgroundColor": "#F6F2EC",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -72,6 +72,34 @@
             "./node_modules/@expo-google-fonts/manrope/700Bold/Manrope_700Bold.ttf"
           ],
           "widgets": [
+            {
+              "name": "Matrix",
+              "label": "Daybloom · Eisenhower Matrix",
+              "description": "All four quadrants with your tasks",
+              "minWidth": "250dp",
+              "minHeight": "180dp",
+              "targetCellWidth": 4,
+              "targetCellHeight": 3,
+              "maxResizeWidth": "520dp",
+              "maxResizeHeight": "620dp",
+              "resizeMode": "horizontal|vertical",
+              "updatePeriodMillis": 1800000,
+              "previewImage": "./assets/widgets/matrix.png"
+            },
+            {
+              "name": "Circle",
+              "label": "Daybloom · People circle",
+              "description": "Call or message your circle",
+              "minWidth": "250dp",
+              "minHeight": "180dp",
+              "targetCellWidth": 4,
+              "targetCellHeight": 3,
+              "maxResizeWidth": "520dp",
+              "maxResizeHeight": "620dp",
+              "resizeMode": "horizontal|vertical",
+              "updatePeriodMillis": 1800000,
+              "previewImage": "./assets/widgets/circle.png"
+            },
             {
               "name": "CheckIn",
               "label": "Daybloom · Check in",

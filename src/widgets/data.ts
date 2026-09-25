@@ -36,7 +36,47 @@ export function snapshot(s: AppState, now: Date = new Date()) {
     tasks: focusList(s.tasks, today, low),
     focus: focusState(s, now),
     reach: reachPicks(s.people),
+    matrix: matrixCells(s.tasks, today, s.widgetPrefs.Matrix.completed),
+    circle: circleCells(s.people),
   };
+}
+
+/** Each Eisenhower quadrant: open tasks (dated first, soonest due), then finished ones if asked for. */
+function matrixCells(tasks: Task[], today: string, withDone: boolean) {
+  return ([1, 2, 3, 4] as const).map((q) => {
+    const open = tasks
+      .filter((t) => t.quadrant === q && !t.done)
+      .sort((a, b) => {
+        if (a.due && b.due) return a.due.localeCompare(b.due);
+        if (a.due) return -1;
+        if (b.due) return 1;
+        return a.createdAt - b.createdAt;
+      });
+    const done = withDone ? tasks.filter((t) => t.quadrant === q && t.done).sort((a, b) => (b.doneAt ?? 0) - (a.doneAt ?? 0)) : [];
+    return {
+      q,
+      tasks: [...open, ...done].map((t) => ({ id: t.id, title: t.title, done: t.done, due: t.done ? null : dueText(t.due, today) })),
+    };
+  });
+}
+
+/** Each circle quadrant, least recently reached first, with the link that reaches them. */
+function circleCells(people: Person[]) {
+  return ([1, 2, 3, 4] as const).map((q) => {
+    const info = circleOf(q);
+    const list = people
+      .filter((p) => p.quadrant === q)
+      .sort((a, b) => (a.lastReachedAt ?? 0) - (b.lastReachedAt ?? 0) || a.createdAt - b.createdAt)
+      .map((p) => ({ id: p.id, name: p.name, uri: reachUri(p.phone, info.mode, info.opener) }));
+    return { q, mode: info.mode, people: list };
+  });
+}
+
+/** tel: or sms: link for a person; without a number, the circle screen. */
+export function reachUri(phone: string | undefined, mode: 'call' | 'message', opener: string): string {
+  if (!phone) return 'daybloom://circle';
+  const n = phone.replace(/[^\d+]/g, '');
+  return mode === 'call' ? `tel:${n}` : `sms:${n}?body=${encodeURIComponent(opener)}`;
 }
 
 /** Today's short list, as on the Today screen: due or late first, then "Do first". One task on a low day. */
@@ -84,5 +124,5 @@ function reachPicks(people: Person[]) {
   const texter = inQ(3)[0] ?? inQ(4)[0];
   return [caller, texter]
     .filter((p): p is Person => !!p)
-    .map((p) => ({ id: p.id, name: p.name, phone: p.phone, mode: circleOf(p.quadrant).mode, opener: circleOf(p.quadrant).opener, circle: circleOf(p.quadrant).title }));
+    .map((p) => ({ id: p.id, name: p.name, mode: circleOf(p.quadrant).mode, uri: reachUri(p.phone, circleOf(p.quadrant).mode, circleOf(p.quadrant).opener) }));
 }

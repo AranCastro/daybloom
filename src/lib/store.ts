@@ -90,7 +90,22 @@ export type AppState = {
   badges: Record<string, number>;
   /** Pomodoro: completed sessions (newest first) and the running timer. */
   focus: { sessions: FocusSession[]; active: ActiveTimer | null };
+  /** Look of the matrix-style home-screen widgets, set in Settings → Home screen widgets. */
+  widgetPrefs: Record<'Matrix' | 'Circle', WidgetPrefs>;
 };
+
+export type WidgetPrefs = {
+  theme: 'auto' | 'light' | 'dark';
+  /** Background opacity, 40–100 (%). */
+  opacity: number;
+  font: 'small' | 'default' | 'large';
+  /** Matrix: tick circles next to tasks. Circle: call and message buttons. */
+  checkbox: boolean;
+  /** Matrix only: also list finished tasks. */
+  completed: boolean;
+};
+
+export const DEFAULT_WIDGET_PREFS: WidgetPrefs = { theme: 'auto', opacity: 100, font: 'default', checkbox: true, completed: false };
 
 const KEY = 'nudge.state.v1';
 
@@ -110,6 +125,7 @@ const initial: AppState = {
   focus: { sessions: [], active: null },
   badges: {},
   garden: [],
+  widgetPrefs: { Matrix: DEFAULT_WIDGET_PREFS, Circle: DEFAULT_WIDGET_PREFS },
 };
 
 function load(): AppState {
@@ -118,6 +134,7 @@ function load(): AppState {
   try {
     const saved = JSON.parse(raw) as Partial<AppState>;
     const merged = { ...initial, ...saved };
+    merged.widgetPrefs = { ...initial.widgetPrefs, ...saved.widgetPrefs };
     // Gardens began with focus sessions only: carry those flowers over once.
     if (!saved.garden && saved.focus?.sessions?.length) {
       merged.garden = saved.focus.sessions.map((f, i) => ({ id: `m${i}-${f.at}`, at: f.at, flower: f.flower, source: 'focus' as const, ref: f.taskId }));
@@ -167,6 +184,10 @@ export function useAppState<T>(select: (s: AppState) => T): T {
     () => select(state),
     () => select(state),
   );
+}
+
+export function setWidgetPrefs(name: keyof AppState['widgetPrefs'], patch: Partial<WidgetPrefs>) {
+  update((s) => ({ widgetPrefs: { ...s.widgetPrefs, [name]: { ...s.widgetPrefs[name], ...patch } } }));
 }
 
 export function resetAll() {

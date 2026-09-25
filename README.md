@@ -39,10 +39,13 @@ One calm app where everything you do grows the same garden:
   (formerly Journey) holds the illustrated garden, "ways to grow today", latest blooms, the 12-flower
   collection, badges and the mood journal.
 
-- **Home-screen widgets (Android).** Six widgets, each in light and dark: Mood check-in (4 × 1; tap a mood to
+- **Home-screen widgets (Android).** Eight widgets, each in light and dark: Eisenhower Matrix (4 × 3; all four
+  quadrants, tick tasks off in place), People circle (4 × 3; tap a name to call or message), Mood check-in (4 × 1; tap a mood to
   check in), Focus today (4 × 2; tick off tasks, each grows a flower), Garden (2 × 2), Focus timer (2 × 2; 15/25/50
   minute presets open the timer), Streak (2 × 1) and Reach out (4 × 1; one tap to call or message). Settings →
-  Home screen widgets shows live previews and an **Add to home screen** button. Built with
+  Home screen widgets shows live previews and an **Add to home screen** button. The two matrix widgets have their
+  own settings there: theme (auto, light, dark), background opacity, text size, checkboxes or call icons, and
+  whether finished tasks are listed. Built with
   [react-native-android-widget](https://github.com/sAleksovski/react-native-android-widget); the code is in
   `src/widgets/` and the widget list in the plugin entry of `app.json`. Widgets need the APK or a development
   build; they do not run in Expo Go.

@@ -2,7 +2,8 @@
  * Runs in the background when Android asks for a widget update or a widget is tapped.
  * Taps that open a screen are handled natively (OPEN_URI); this handles the rest:
  *   MOOD       check in from the home screen
- *   TASK_DONE  tick off a task (grows a flower, as in the app)
+ *   TASK_DONE    tick off a task (grows a flower, as in the app)
+ *   TASK_TOGGLE  tick or untick a task from the matrix widget (unticking takes its flower back)
  */
 import type { WidgetTaskHandlerProps } from 'react-native-android-widget';
 
@@ -38,6 +39,12 @@ export async function widgetTaskHandler({ widgetInfo, widgetAction, clickAction,
         const b = getState().garden[0];
         setFlash(name, b && b.ref === id ? `Done · ${flowerOf(b.flower).name} bloomed` : 'Done');
       }
+    }
+
+    if (clickAction === 'TASK_TOGGLE') {
+      const id = String(clickActionData?.id ?? '');
+      const task = getState().tasks.find((t) => t.id === id);
+      if (task) toggleTask(id);
     }
   }
 
