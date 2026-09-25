@@ -11,6 +11,7 @@ import { TaskRow, TaskSheet } from '@/components/tasks';
 import { Text } from '@/components/text';
 import { Button, Card, Divider, Screen, tap } from '@/components/ui';
 import { useIsDark, useTheme } from '@/hooks/use-theme';
+import { useToday } from '@/hooks/use-today';
 import { dayKey, fromKey, prettyDate } from '@/lib/dates';
 import { moodOf } from '@/lib/moods';
 import { HeatLevel, levelOf, workByDay, workLine } from '@/lib/productivity';
@@ -24,7 +25,7 @@ export default function CalendarScreen() {
   const checkins = useAppState((s) => s.checkins);
   const garden = useAppState((s) => s.garden);
   const sessions = useAppState((s) => s.focus.sessions);
-  const today = dayKey();
+  const today = useToday();
   const [day, setDay] = useState(today);
   const [sheet, setSheet] = useState<{ open: boolean; task?: Task | null }>({ open: false });
 
@@ -36,7 +37,8 @@ export default function CalendarScreen() {
   }
 
   // Past days are shaded by how much got done: tasks finished plus focus sessions.
-  const work = workByDay(tasks, sessions);
+  const cleared = useAppState((s) => s.clearedWork);
+  const work = workByDay(tasks, sessions, cleared);
   const heat: Record<string, HeatLevel> = Object.fromEntries(Object.entries(work).map(([k, w]) => [k, levelOf(w.score)]));
 
   const open = sortOpen(tasks.filter((x) => x.due === day && !x.done)).sort((a, b) => a.quadrant - b.quadrant);

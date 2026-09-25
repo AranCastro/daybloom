@@ -8,7 +8,8 @@ Website, privacy policy and a live web demo: https://arancastro.github.io/ (sour
 One calm app where everything you do grows the same garden:
 
 - **Nudge a Friend.** Tap your mood once a day. After a set number of low days in a row (default three),
-  one trusted friend receives a single line: "Call Aran today." They are never told why.
+  one trusted friend receives a single line: "Call Aran today." They never see your answers; from the invite they
+  know a nudge means a few hard days.
 - **Eisenhower Matrix.** Sort tasks into Do first, Schedule, Delegate and Later, with due-date badges.
   Today's screen shows a short Focus list (due or late first, then Do first), reduced to one task on a low day.
   **Arrange** (in each quadrant, or Move up / Move down in a task) sets your own order; the widgets follow it.
@@ -69,7 +70,9 @@ One calm app where everything you do grows the same garden:
   Code: `src/lib/backup-core.ts` (file format and checks), `src/lib/backup.ts` / `backup.web.ts`,
   `src/components/backup.tsx`.
 
-Moods, tasks, people, scores, focus sessions, badges and the garden never leave the phone.
+Moods, tasks, people, scores, focus sessions, badges and the garden are stored on the phone. They leave it only
+in a backup file the user chooses to save, or through Android's own Google backup when that is switched on in
+the phone's settings. The only thing the app itself sends is the one-line nudge to the buddy (via ntfy.sh).
 
 Built with Expo SDK 57 (React Native 0.86, Expo Router, TypeScript).
 
@@ -90,8 +93,10 @@ Built with Expo SDK 57 (React Native 0.86, Expo Router, TypeScript).
 Everything in this app works in Expo Go (local notifications, haptics, SQLite storage, SVG, gradients,
 contact picker) except the home-screen widgets, which need the APK (below).
 
-WhatsApp links need an international number. A bare 10-digit number is treated as Indian (+91); numbers
-saved with a country code (for example +44 …) are used as they are (`src/lib/reach.ts`).
+WhatsApp links need an international number. A bare 10-digit number gets the country code of the phone's region
+(India +91, US and Canada +1); elsewhere, save numbers with their country code (`src/lib/reach.ts`,
+`src/lib/region.ts`). The Heavy-day helpline also follows the region: Tele-MANAS 14416 in India, findahelpline.com
+elsewhere.
 
 ## Download a test APK (no setup needed)
 
@@ -188,4 +193,22 @@ assets/images/            app icon, adaptive icon, splash
 ```powershell
 npm run typecheck
 npm run lint
+npm test          # unit tests (jest-expo): nudge rule and sequences, flowers, streaks, backups, tasks
 ```
+
+The same three run on every pull request (`.github/workflows/checks.yml`).
+
+## Signing the test APK with your own key
+
+Until these repository secrets exist, the APK workflow signs with Expo's public debug key, which is fine for
+trying the app but lets anyone build an APK that installs over a tester's copy. To use a private key:
+
+```powershell
+keytool -genkeypair -v -keystore daybloom-release.jks -alias daybloom -keyalg RSA -keysize 2048 -validity 10000
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("daybloom-release.jks")) | Set-Clipboard
+```
+
+Then in GitHub → daybloom → Settings → Secrets and variables → Actions, add `ANDROID_KEYSTORE_BASE64` (paste),
+`ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` (`daybloom`) and `ANDROID_KEY_PASSWORD`. Keep the `.jks` file and
+passwords safe: losing them means testers must uninstall to update. Testers on a debug-signed build must uninstall
+once (make a backup first: Settings → Backup and restore).

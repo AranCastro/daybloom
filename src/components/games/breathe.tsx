@@ -6,7 +6,16 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import Animated, { Easing, FadeIn, FadeOut, useAnimatedProps, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated, {
+  Easing,
+  FadeIn,
+  FadeOut,
+  ReduceMotion,
+  useAnimatedProps,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import Svg, { Circle } from 'react-native-svg';
 
 import { haptic, ResultPanel } from '@/components/games/fx';
@@ -124,7 +133,8 @@ export function BreatheGame() {
     if (!phaseKey) return;
     const ph = pattern.phases[where.index];
     const easing = Easing.inOut(Easing.sin);
-    scale.set(withTiming(ph.scale, { duration: ph.secs * 1000, easing }));
+    // The slow swell paces the breath, so it keeps moving even with Reduce motion on.
+    scale.set(withTiming(ph.scale, { duration: ph.secs * 1000, easing, reduceMotion: ReduceMotion.Never }));
     glow.set(withTiming(ph.scale === 1 ? 0.55 : 0.2, { duration: ph.secs * 1000, easing }));
     haptic.select();
   }, [phaseKey, pattern, where.index, scale, glow]);

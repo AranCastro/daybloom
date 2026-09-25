@@ -45,7 +45,10 @@ export function prettyTime(hour: number, minute: number): string {
 }
 
 export function greeting(d: Date = new Date()): string {
-  const h = d.getHours();
+  return greetingFor(d.getHours());
+}
+
+export function greetingFor(h: number): string {
   if (h < 5) return 'Still up';
   if (h < 12) return 'Good morning';
   if (h < 17) return 'Good afternoon';

@@ -11,8 +11,7 @@ import { Text } from '@/components/text';
 import { Button, Card, Choice, Divider, Screen, tap } from '@/components/ui';
 import { WidgetMock } from '@/components/widget-mock';
 import { useIsDark, useTheme } from '@/hooks/use-theme';
-import { MoodValue } from '@/lib/moods';
-import { awardBadges, DEFAULT_WIDGET_PREFS, getState, recordMood, setWidgetPrefs, toggleTask, useAppState } from '@/lib/store';
+import { DEFAULT_WIDGET_PREFS, getState, setWidgetPrefs, toggleTask, useAppState } from '@/lib/store';
 import { lookFor, WIDGETS, WidgetSpec } from '@/widgets/catalogue';
 import { snapshot } from '@/widgets/data';
 
@@ -162,12 +161,14 @@ function Customise({ name }: { name: 'Matrix' | 'Circle' }) {
   );
 }
 
-/** Taps in a preview do what the real widget does. */
+/**
+ * Taps in a preview mostly do what the real widget does. A mood tap opens Today instead of checking in,
+ * so trying the preview cannot record a mood (or nudge a buddy) by accident.
+ */
 async function onWidgetClick(action: string, data: Record<string, unknown>) {
   tap();
   if (action === 'MOOD') {
-    await recordMood(Number(data.value) as MoodValue);
-    awardBadges();
+    router.navigate('/today');
   } else if (action === 'TASK_DONE') {
     const id = String(data.id ?? '');
     if (getState().tasks.some((x) => x.id === id && !x.done)) toggleTask(id);

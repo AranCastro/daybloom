@@ -14,7 +14,7 @@ import { Button, Card, Choice, Screen, tap } from '@/components/ui';
 import { Fonts, TabBarInset } from '@/constants/theme';
 import { useAppActive } from '@/hooks/use-app-active';
 import { useIsDark, useTheme } from '@/hooks/use-theme';
-import { dayKey } from '@/lib/dates';
+import { useToday } from '@/hooks/use-today';
 import { FlowerKind, GOLDEN_EVERY, RARITY_LABEL } from '@/lib/flowers';
 import {
   completeBreak,
@@ -62,9 +62,10 @@ export default function FocusScreen() {
   const active = useAppState((s) => s.focus.active);
   const sessions = useAppState((s) => s.focus.sessions);
   const garden = useAppState((s) => s.garden);
-  const gardenSize = garden.length;
+  const gardenSize = useAppState((s) => s.bloomCount);
   const tasks = useAppState((s) => s.tasks);
-  const lowToday = useAppState((s) => isLow(s.checkins[dayKey()]));
+  const todayKey = useToday();
+  const lowToday = useAppState((s) => isLow(s.checkins[todayKey]));
   const defaultPreset = useAppState((s) => s.settings.focusPreset);
 
   const [now, setNow] = useState(() => Date.now());
@@ -134,7 +135,7 @@ export default function FocusScreen() {
   }, [progress, ring]);
   const ringProps = useAnimatedProps(() => ({ strokeDashoffset: CIRC * (1 - ring.value) }));
 
-  const today = sessionsOn(sessions, dayKey());
+  const today = sessionsOn(sessions, todayKey);
   const focusTask = tasks.find((x) => x.id === (active?.taskId ?? taskId));
   // The task saved with the finished session (survives the app being closed mid-session).
   const rewardTask = reward?.session.taskId ? tasks.find((x) => x.id === reward.session.taskId) : undefined;
@@ -392,9 +393,4 @@ const styles = StyleSheet.create({
   statsRow: { flexDirection: 'row', alignSelf: 'stretch', borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 12 },
   gardenStats: { flexDirection: 'row', paddingTop: 10 },
   gardenHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
-  bed: { flexDirection: 'row', flexWrap: 'wrap', borderRadius: 18, padding: 8, gap: 2 },
-  bedCell: { width: '16.66%', alignItems: 'center' },
-  collection: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 10 },
-  collCell: { width: '25%', alignItems: 'center', gap: 2 },
-  locked: { width: 40, height: 40, borderRadius: 20, borderWidth: 1.5, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
 });

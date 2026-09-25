@@ -43,8 +43,9 @@ export default function Onboarding() {
   }
 
   async function finish() {
-    update({ onboarded: true, reminder: { enabled: true, hour, minute: 0 } });
-    await scheduleDailyReminder(hour, 0);
+    // The reminder only counts as on if notifications were actually allowed.
+    const ok = Platform.OS === 'web' ? false : await scheduleDailyReminder(hour, 0);
+    update({ onboarded: true, reminder: { enabled: ok, hour, minute: 0 } });
     router.replace('/today');
   }
 
@@ -83,7 +84,7 @@ export default function Onboarding() {
                 <HowRow n="1" icon="sun" title="Tap once a day" text="Choose how today feels. No writing, no journaling." />
                 <HowRow n="2" icon="leaf" title="Everything grows your garden" text="Check-ins, tasks, focus sessions, games and reaching out each grow a flower." />
                 <HowRow n="3" icon="people" title="Pick one buddy" text="After a few low days in a row, they get one line: “Call you today.”" />
-                <HowRow n="4" icon="lock" title="Nothing else leaves your phone" text="Your buddy never sees your moods or learns why." />
+                <HowRow n="4" icon="lock" title="Nothing else is shared" text="Your buddy never sees your answers. They only know a nudge means a few hard days." />
               </View>
               <View style={{ flex: 1 }} />
               <Button title="Sounds good" onPress={next} />

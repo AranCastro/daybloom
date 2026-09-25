@@ -9,7 +9,7 @@ import type { Task } from '@/lib/store';
 export type DayWork = { tasks: number; focus: number; score: number };
 export type HeatLevel = 0 | 1 | 2 | 3 | 4;
 
-export function workByDay(tasks: Task[], sessions: FocusSession[]): Record<string, DayWork> {
+export function workByDay(tasks: Task[], sessions: FocusSession[], cleared: Record<string, number> = {}): Record<string, DayWork> {
   const out: Record<string, DayWork> = {};
   const add = (at: number, kind: 'tasks' | 'focus') => {
     const k = dayKey(new Date(at));
@@ -19,6 +19,11 @@ export function workByDay(tasks: Task[], sessions: FocusSession[]): Record<strin
   };
   for (const t of tasks) if (t.done && t.doneAt) add(t.doneAt, 'tasks');
   for (const s of sessions) add(s.at, 'focus');
+  for (const [k, n] of Object.entries(cleared)) {
+    const d = (out[k] ??= { tasks: 0, focus: 0, score: 0 });
+    d.tasks += n;
+    d.score += n;
+  }
   return out;
 }
 

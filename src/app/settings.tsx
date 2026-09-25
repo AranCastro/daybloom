@@ -11,6 +11,7 @@ import { Card, Choice, Divider, Input, Row, Screen, tap } from '@/components/ui'
 import { useTheme } from '@/hooks/use-theme';
 import { prettyTime } from '@/lib/dates';
 import { cancelFocusAlarm, cancelReminders, scheduleDailyReminder } from '@/lib/reminders';
+import { helpline } from '@/lib/region';
 import { AppState, resetAll, setSettings, update, useAppState } from '@/lib/store';
 
 const TIMES = [
@@ -30,13 +31,21 @@ export default function Settings() {
   const reminder = useAppState((s) => s.reminder);
   const streak = useAppState((s) => s.streak);
   const prefs = useAppState((s) => s.settings);
+  const help = helpline();
 
   async function setReminder(next: AppState['reminder']) {
     update({ reminder: next });
     if (next.enabled) {
       const ok = await scheduleDailyReminder(next.hour, next.minute);
-      if (!ok && Platform.OS !== 'web') {
-        Alert.alert('Notifications are off', 'Allow notifications for Daybloom in your phone settings to get the daily reminder.');
+      if (!ok) {
+        // Nothing was scheduled, so do not show the reminder as on.
+        update({ reminder: { ...next, enabled: false } });
+        if (Platform.OS !== 'web') {
+          Alert.alert('Notifications are off', 'Allow notifications for Daybloom in your phone settings to get the daily reminder.', [
+            { text: 'Not now', style: 'cancel' },
+            { text: 'Open settings', onPress: () => Linking.openSettings().catch(() => {}) },
+          ]);
+        }
       }
     } else {
       await cancelReminders();
@@ -185,9 +194,18 @@ export default function Settings() {
       </Card>
 
       <Card>
-        <Row icon="shield" title="Your data stays here" detail="Moods, tasks and your circle are stored only on this phone. No account, no ads, no tracking." />
+        <Row
+          icon="shield"
+          title="Your data stays with you"
+          detail="Moods, tasks and your circle are stored on this phone, and in backups you choose to make. No account, no ads, no tracking."
+        />
         <Divider />
-        <Row icon="phone" title="Talk to someone now" detail="Tele-MANAS 14416 · free, 24 hours" onPress={() => Linking.openURL('tel:14416')} />
+        <Row
+          icon="phone"
+          title="Talk to someone now"
+          detail={help.number ? `${help.name} ${help.number} · free, 24 hours` : `${help.name} · helplines in your country`}
+          onPress={() => Linking.openURL(help.number ? `tel:${help.number}` : help.link!).catch(() => {})}
+        />
         <Divider />
         <Row icon="lock" title="Privacy policy" onPress={() => Linking.openURL(PRIVACY_URL)} />
       </Card>
@@ -200,7 +218,7 @@ export default function Settings() {
 
       <Text variant="small" color="textMuted" center style={{ marginTop: 4 }}>
         Daybloom {Constants.expoConfig?.version ?? ''} · Designed by Dr Aran Castro{'\n'}Not a medical service. In an
-        emergency, call 112.
+        emergency, call {help.emergency}.
       </Text>
     </Screen>
   );

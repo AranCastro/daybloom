@@ -27,7 +27,7 @@ Choose how today feels, from Bright to Heavy. No writing, no journaling. Your st
 Checking in, finishing a task, a focus session, a short game, reaching out to someone and earning a badge each grow a flower. Collect twelve kinds, including rare finds such as Neelakurinji, and a Golden Lotus every twentieth bloom.
 
 **Nudge a Friend**
-Pick one trusted person. If you have a few low days in a row, they receive one short line: "Call Aran today." They never see your moods and are never told why.
+Pick one trusted person. If you have a few low days in a row, they receive one short line: "Call Aran today." They never see your answers; they only know a nudge means a few hard days.
 
 **Tasks that know what matters**
 Sort tasks into an Eisenhower Matrix: Do first, Schedule, Delegate and Later. Today shows what is due. On a low day, it shows only one task.
@@ -48,7 +48,7 @@ Bronze, silver and gold badges for streaks, for days noted, for coming back afte
 Eight widgets in light and dark: the full Eisenhower Matrix and your people circle, with your choice of theme, opacity and text size; check in with one tap, tick off today's tasks, see your garden and streak, start a focus session, or call someone from your circle, without opening the app.
 
 **Private by design**
-No account, no advertising, no tracking. Your moods, tasks, circle and garden stay on your phone. The only thing that ever leaves it is the one-line nudge to the buddy you choose.
+No account, no advertising, no tracking. Your moods, tasks, circle and garden stay on your phone, and in backups you choose to save (for example to your Google Drive). The only thing the app sends is the one-line nudge to the buddy you choose.
 
 Daybloom is not a medical or emergency service. If you are in distress in India, call Tele-MANAS on 14416 (free, 24 hours) or emergency services on 112.
 
@@ -62,6 +62,13 @@ Daybloom is not a medical or emergency service. If you are in distress in India,
 | Is data encrypted in transit? | Yes (HTTPS to ntfy.sh). |
 | Can users request deletion? | Yes: Settings → Erase all data, or uninstall. |
 | Data shared with third parties | First name in the nudge message, delivered via ntfy.sh to the buddy's device. |
+| Backups | The app writes a backup file only when the user asks (or weekly, kept in the app's own storage) and hands it to the share menu; it uploads nothing itself. Android's own Google backup (`allowBackup`) may copy app data to the user's Google account. Check Play's current Data safety help on how to declare Android backup before submitting; the privacy policy already describes it. |
+
+## Other Play Console declarations (before any release, including testing tracks)
+
+- **Health apps declaration:** declare the mood check-in, breathing exercise and buddy nudge as wellbeing / stress-management features (Mental and Behavioral Health), not a medical device. Keep the answers consistent with the Data safety form and the privacy policy.
+- **Content rating, target audience (18+), ads (none), app access (no login).**
+- **Countries:** the in-app helpline is Tele-MANAS (India) for phones set to India; other regions are shown findahelpline.com. Distributing only in India keeps this simple.
 
 ## Graphics checklist
 

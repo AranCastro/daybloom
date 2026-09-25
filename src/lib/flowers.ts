@@ -42,8 +42,12 @@ export const GOLDEN_EVERY = 20;
  */
 export function pickFlower(n: number, lastId?: string, rareChance = 0.1, rand: () => number = Math.random): FlowerKind {
   if (n > 0 && n % GOLDEN_EVERY === 0) return flowerOf('golden-lotus');
-  const pool = FLOWERS.filter((f) => f.rarity === (rand() < rareChance ? 'rare' : 'common') && f.id !== lastId);
-  return pool[Math.floor(rand() * pool.length)];
+  // Decide the rarity once, then pick a flower of that rarity (not the one grown last time).
+  const rarity = rand() < rareChance ? 'rare' : 'common';
+  const pool = FLOWERS.filter((f) => f.rarity === rarity && f.id !== lastId);
+  const fallback = FLOWERS.filter((f) => f.rarity !== 'legendary' && f.id !== lastId);
+  const from = pool.length ? pool : fallback;
+  return from[Math.min(from.length - 1, Math.floor(rand() * from.length))];
 }
 
 export const RARITY_LABEL: Record<Rarity, string> = { common: 'Common', rare: 'Rare', legendary: 'Legendary' };

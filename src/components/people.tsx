@@ -8,6 +8,7 @@ import { Text } from '@/components/text';
 import { Button, Input, tap } from '@/components/ui';
 import { Fonts, Radius } from '@/constants/theme';
 import { useIsDark, useTheme } from '@/hooks/use-theme';
+import { confirmThen } from '@/lib/confirm';
 import { CIRCLE, circleOf } from '@/lib/circle';
 import { canPickContacts, pickContact } from '@/lib/pick-contact';
 import { call, sms, whatsapp } from '@/lib/reach';
@@ -165,10 +166,12 @@ function SheetBody({ onClose, person, defaultQuadrant = 1 }: SheetProps) {
           <Button title={person ? 'Save changes' : 'Add person'} icon={person ? 'check' : 'plus'} onPress={save} disabled={!name.trim()} />
           {person && (
             <Pressable
-              onPress={() => {
-                deletePerson(person.id);
-                onClose();
-              }}
+              onPress={() =>
+                confirmThen(`Remove ${person.name}?`, 'They will be taken out of your circle on this phone.', 'Remove', () => {
+                  deletePerson(person.id);
+                  onClose();
+                })
+              }
               style={styles.delete}>
               <Icon name="trash" color={t.textMuted} size={18} />
               <Text variant="small" color="textMuted">

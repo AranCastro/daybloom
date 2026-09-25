@@ -3,8 +3,10 @@
 #
 # Runs when app code changes on main (not for docs-only changes), or manually from the
 # Actions tab ("Run workflow").
-# The APK is signed with the Expo template's debug key: fine for testing and sharing,
-# not for the Play Store (use `eas build --profile production` for that).
+# Signing: when the repository secrets ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD,
+# ANDROID_KEY_ALIAS and ANDROID_KEY_PASSWORD are set, the APK is signed with that private key.
+# Without them it keeps the Expo template's public debug key (test builds only; see README).
+# Play Store builds come from `eas build --profile production`.
 name: Build Android APK
 
 on:
@@ -16,7 +18,7 @@ on:
       - '**.md'
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: android-apk
@@ -25,9 +27,12 @@ concurrency:
 jobs:
   apk:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     timeout-minutes: 60
     env:
       EXPO_NO_TELEMETRY: 1
+      KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
       NODE_OPTIONS: --max-old-space-size=4096
     steps:
       - uses: actions/checkout@v4
@@ -54,6 +59,22 @@ jobs:
       - name: Build release APK
         working-directory: android
         run: ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a,armeabi-v7a
+
+      - name: Sign with the Daybloom release key
+        if: ${{ env.KEYSTORE_B64 != '' }}
+        env:
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          APK=android/app/build/outputs/apk/release/app-release.apk
+          "$BT/apksigner" sign --ks "$RUNNER_TEMP/release.jks" --ks-pass env:KS_PASS \
+            --ks-key-alias "$KEY_ALIAS" --key-pass env:KEY_PASS --out "$RUNNER_TEMP/signed.apk" "$APK"
+          "$BT/apksigner" verify --print-certs "$RUNNER_TEMP/signed.apk" | head -3
+          mv "$RUNNER_TEMP/signed.apk" "$APK"
+          rm -f "$RUNNER_TEMP/release.jks"
 
       - name: Name the APK
         id: apk
@@ -84,5 +105,5 @@ jobs:
             2. When Android asks, allow installing apps from your browser.
             3. Open **Daybloom**.
 
-            This is a test build signed with a debug key: good for trying and sharing the app, but not
-            the Play Store version. Built from commit ${{ github.sha }}.
+            ${{ env.KEYSTORE_B64 != '' && 'Signed with the Daybloom release key.' || 'Test build signed with the public Expo debug key: for trying the app only.' }}
+            Not the Play Store version. Built from commit ${{ github.sha }}.

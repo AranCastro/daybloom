@@ -22,19 +22,3 @@ export function isLowStreak(
   const oldest = recent[recent.length - 1];
   return daysBetween(oldest, today) <= streak;
 }
-
-/** Count of consecutive calendar days with a check-in, ending today or yesterday. */
-export function checkinStreak(checkins: Record<string, number>, today: string): number {
-  const keys = new Set(Object.keys(checkins));
-  const cursor = new Date(today + 'T12:00:00');
-  if (!keys.has(today)) cursor.setDate(cursor.getDate() - 1);
-  let count = 0;
-  for (;;) {
-    const y = cursor.getFullYear();
-    const m = String(cursor.getMonth() + 1).padStart(2, '0');
-    const d = String(cursor.getDate()).padStart(2, '0');
-    if (!keys.has(`${y}-${m}-${d}`)) return count;
-    count += 1;
-    cursor.setDate(cursor.getDate() - 1);
-  }
-}

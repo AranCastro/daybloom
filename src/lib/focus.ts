@@ -83,7 +83,8 @@ export function completeFocus(): { flower: FlowerKind; session: FocusSession } |
   const minutes = Math.round(a.total / 60_000);
   // The flower goes into the shared garden; the focus screen shows its own reveal, so no toast.
   const flower = bloom('focus', { ref: a.taskId, note: `${minutes}-minute focus`, rareChance: 0.15, silent: true });
-  const session: FocusSession = { at: Date.now(), minutes, flower: flower.id, taskId: a.taskId };
+  // Dated when it ended, not when the flower was collected (it may be collected the next day).
+  const session: FocusSession = { at: a.endAt ?? Date.now(), minutes, flower: flower.id, taskId: a.taskId };
   update((s) => ({ focus: { sessions: [session, ...s.focus.sessions].slice(0, 500), active: null } }));
   return { flower, session };
 }

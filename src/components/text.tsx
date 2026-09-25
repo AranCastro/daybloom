@@ -12,7 +12,8 @@ export function Text({ variant = 'body', color, center, style, ...rest }: AppTex
   const fallback: ThemeColor = variant === 'small' || variant === 'label' ? 'textSecondary' : 'text';
   return (
     <RNText
-      style={[styles[variant], { color: theme[color ?? fallback] }, center && styles.center, style]}
+      // Accent text uses the darker, readable shade of the accent colour.
+      style={[styles[variant], { color: theme[color === 'accent' ? 'accentText' : (color ?? fallback)] }, center && styles.center, style]}
       {...rest}
     />
   );
