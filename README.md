@@ -62,6 +62,17 @@ contact picker).
 WhatsApp links need an international number. A bare 10-digit number is treated as Indian (+91); numbers
 saved with a country code (for example +44 …) are used as they are (`src/lib/reach.ts`).
 
+## Download a test APK (no setup needed)
+
+Every change to `mobile/` on `main` is built automatically by GitHub Actions
+(`.github/workflows/android-apk.yml`) and published as a release:
+
+**https://github.com/AranCastro/AranCastro.github.io/releases/latest**
+
+Open that page on an Android phone, tap the `.apk`, and allow installing from the browser when asked.
+To rebuild by hand: GitHub → **Actions** → **Build Android APK** → **Run workflow**. These test builds
+are signed with a debug key; Play Store builds come from `eas build --profile production` (below).
+
 ## Build for the Play Store
 
 The build runs in Expo's cloud (EAS), so no Android SDK is needed locally.
