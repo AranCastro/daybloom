@@ -1,6 +1,8 @@
-# Nudge a Friend — mobile app
+# Daybloom — mobile app
 
-Two tools in one calm app:
+*Grow a little every day.*
+
+One calm app where everything you do grows the same garden:
 
 - **Nudge a Friend.** Tap your mood once a day. After a set number of low days in a row (default three),
   one trusted friend receives a single line: "Call Aran today." They are never told why.
@@ -75,7 +77,7 @@ eas submit -p android          # uploads to the Play Console internal track
 
 Before the first production build:
 
-- **Package name** is `online.draran.nudge` in `app.json`. It cannot be changed after the first
+- **Package name** is `online.draran.daybloom` in `app.json`. It cannot be changed after the first
   Play Store upload, so confirm it now.
 - **Privacy policy URL** for the Play listing: `https://arancastro.github.io/privacy/`.
 - **Data safety form**: the app collects no personal data on a server. The only network call is

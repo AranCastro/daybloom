@@ -31,7 +31,7 @@ export default function Settings() {
     if (next.enabled) {
       const ok = await scheduleDailyReminder(next.hour, next.minute);
       if (!ok && Platform.OS !== 'web') {
-        Alert.alert('Notifications are off', 'Allow notifications for Nudge in your phone settings to get the daily reminder.');
+        Alert.alert('Notifications are off', 'Allow notifications for Daybloom in your phone settings to get the daily reminder.');
       }
     } else {
       await cancelReminders();
@@ -124,7 +124,7 @@ export default function Settings() {
       </Card>
 
       <Text variant="small" color="textMuted" center style={{ marginTop: 4 }}>
-        Nudge a Friend {Constants.expoConfig?.version ?? ''} · Designed by Dr Aran Castro{'\n'}Not a medical service. In an
+        Daybloom {Constants.expoConfig?.version ?? ''} · Designed by Dr Aran Castro{'\n'}Not a medical service. In an
         emergency, call 112.
       </Text>
     </Screen>

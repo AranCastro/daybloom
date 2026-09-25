@@ -47,7 +47,7 @@ export async function scheduleDailyReminder(hour: number, minute: number): Promi
   await Notifications.cancelScheduledNotificationAsync(DAILY_ID).catch(() => {});
   await Notifications.scheduleNotificationAsync({
     identifier: DAILY_ID,
-    content: { title: 'Nudge', body: LINES[new Date().getDate() % LINES.length] },
+    content: { title: 'Daybloom', body: LINES[new Date().getDate() % LINES.length] },
     trigger: { type: Notifications.SchedulableTriggerInputTypes.DAILY, hour, minute, channelId: CHANNEL },
   });
   return true;

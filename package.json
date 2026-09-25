@@ -1,5 +1,5 @@
 {
-  "name": "nudge-a-friend",
+  "name": "daybloom",
   "main": "expo-router/entry",
   "version": "1.0.0",
   "dependencies": {

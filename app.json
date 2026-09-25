@@ -1,19 +1,19 @@
 {
   "expo": {
-    "name": "Nudge a Friend",
-    "slug": "nudge-a-friend",
+    "name": "Daybloom",
+    "slug": "daybloom",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "nudge",
+    "scheme": "daybloom",
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/images/icon.png",
-      "bundleIdentifier": "online.draran.nudge",
+      "bundleIdentifier": "online.draran.daybloom",
       "supportsTablet": false
     },
     "android": {
-      "package": "online.draran.nudge",
+      "package": "online.draran.daybloom",
       "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#F6F2EC",
@@ -32,7 +32,7 @@
     "web": {
       "output": "single",
       "favicon": "./assets/images/favicon.png",
-      "name": "Nudge a Friend",
+      "name": "Daybloom",
       "themeColor": "#2F4A3F",
       "backgroundColor": "#F6F2EC"
     },
@@ -60,7 +60,7 @@
       [
         "expo-contacts",
         {
-          "contactsPermission": "Allow Nudge to read the contact you pick, so you can call or message them in one tap."
+          "contactsPermission": "Allow Daybloom to read the contact you pick, so you can call or message them in one tap."
         }
       ]
     ],
@@ -68,7 +68,7 @@
       "typedRoutes": true,
       "reactCompiler": true
     },
-    "description": "Tap your mood once a day. After a few low days in a row, one trusted friend is quietly asked to call you.",
+    "description": "Grow a little every day: a one-tap mood check-in, tasks, focus timer, calm games and your circle, all growing one garden. After a few low days, one trusted friend is quietly asked to call you.",
     "backgroundColor": "#F6F2EC",
     "primaryColor": "#2F4A3F"
   }

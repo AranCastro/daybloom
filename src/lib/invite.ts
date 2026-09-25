@@ -5,7 +5,7 @@ import { inviteLink } from '@/lib/ntfy';
 export function inviteMessage(buddyName: string, myName: string, topic: string): string {
   const opener = myName ? `Hi ${buddyName}, it's ${myName}. ` : `Hi ${buddyName}, `;
   return (
-    `${opener}I've picked you as my quiet buddy on Nudge a Friend. ` +
+    `${opener}I've picked you as my quiet buddy on Daybloom. ` +
     `If I ever have a few rough days in a row, you'll get one short note asking you to give me a call. Nothing else is shared. ` +
     `It takes a minute to set up: ${inviteLink(topic, myName || 'your friend')}`
   );

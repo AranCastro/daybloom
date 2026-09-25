@@ -77,13 +77,13 @@ export default function Onboarding() {
             <>
               <View style={{ gap: 10 }}>
                 <Text variant="label">How it works</Text>
-                <Text variant="title">Help that arrives{'\n'}without asking.</Text>
+                <Text variant="title">One calm app.{'\n'}One growing garden.</Text>
               </View>
               <View style={{ gap: 18, marginTop: 8 }}>
                 <HowRow n="1" icon="sun" title="Tap once a day" text="Choose how today feels. No writing, no journaling." />
-                <HowRow n="2" icon="people" title="Pick one buddy" text="Someone who would want to know you are having a hard time." />
-                <HowRow n="3" icon="bell" title="We nudge, quietly" text="After a few low days in a row, they get one line: “Call you today.”" />
-                <HowRow n="4" icon="lock" title="Nothing else leaves your phone" text="They never see your moods or learn why." />
+                <HowRow n="2" icon="leaf" title="Everything grows your garden" text="Check-ins, tasks, focus sessions, games and reaching out each grow a flower." />
+                <HowRow n="3" icon="people" title="Pick one buddy" text="After a few low days in a row, they get one line: “Call you today.”" />
+                <HowRow n="4" icon="lock" title="Nothing else leaves your phone" text="Your buddy never sees your moods or learns why." />
               </View>
               <View style={{ flex: 1 }} />
               <Button title="Sounds good" onPress={next} />
@@ -179,9 +179,9 @@ function Welcome({ onNext }: { onNext: () => void }) {
         ))}
       </View>
       <Animated.View entering={FadeInDown.delay(500).duration(600)} style={{ gap: 14 }}>
-        <Text variant="hero">Nudge a Friend</Text>
+        <Text variant="hero">Daybloom</Text>
         <Text variant="quote" color="textSecondary">
-          People who are struggling rarely ask for help. So let help find them.
+          Grow a little every day. And on the heavy days, let help find you.
         </Text>
       </Animated.View>
       <View style={{ flex: 1 }} />

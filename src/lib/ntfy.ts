@@ -58,7 +58,7 @@ export function sendNudge(topic: string, name: string): Promise<boolean> {
 export function sendTest(topic: string, name: string): Promise<boolean> {
   return publish({
     topic,
-    title: 'Nudge a Friend — test',
+    title: 'Daybloom — test',
     message: `You're set up as ${name}'s buddy. If a nudge ever arrives, a call or a message is all it asks.`,
     tags: ['wave'],
     priority: 3,
