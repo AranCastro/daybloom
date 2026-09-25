@@ -1,0 +1,66 @@
+{
+  "expo": {
+    "name": "Nudge a Friend",
+    "slug": "nudge-a-friend",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "nudge",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "icon": "./assets/images/icon.png",
+      "bundleIdentifier": "online.draran.nudge",
+      "supportsTablet": false
+    },
+    "android": {
+      "package": "online.draran.nudge",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "backgroundColor": "#F6F2EC",
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "backgroundImage": "./assets/images/android-icon-background.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.POST_NOTIFICATIONS"
+      ]
+    },
+    "web": {
+      "output": "single",
+      "favicon": "./assets/images/favicon.png",
+      "name": "Nudge a Friend",
+      "themeColor": "#2F4A3F",
+      "backgroundColor": "#F6F2EC"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#F6F2EC",
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 120,
+          "dark": {
+            "backgroundColor": "#12110F",
+            "image": "./assets/images/splash-icon.png"
+          }
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#2F4A3F"
+        }
+      ],
+      "expo-sqlite"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    },
+    "description": "Tap your mood once a day. After a few low days in a row, one trusted friend is quietly asked to call you.",
+    "backgroundColor": "#F6F2EC",
+    "primaryColor": "#2F4A3F"
+  }
+}
