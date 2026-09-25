@@ -10,6 +10,7 @@ import { AppState as RNAppState } from 'react-native';
 import { BloomToast } from '@/components/garden';
 import { useIsDark, useTheme } from '@/hooks/use-theme';
 import { flushQueued, refreshBuddyJoined } from '@/lib/store';
+import { startWidgetSync } from '@/widgets/sync';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -39,6 +40,9 @@ export default function RootLayout() {
     return () => sub.remove();
   }, []);
 
+  // Home-screen widgets redraw whenever something changes in the app (Android).
+  useEffect(() => startWidgetSync(), []);
+
   if (!loaded && !error) return null;
 
   return (
@@ -52,6 +56,7 @@ export default function RootLayout() {
         <Stack.Screen name="settings" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="focus" options={{ animation: 'slide_from_bottom' }} />
         <Stack.Screen name="badges" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="widgets" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="game/[id]" options={{ animation: 'fade_from_bottom', gestureEnabled: false }} />
       </Stack>
       <BloomToast />

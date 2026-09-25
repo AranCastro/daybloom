@@ -66,6 +66,16 @@ export default function Settings() {
       </Animated.View>
 
       <Card>
+        <Row
+          icon="grid"
+          title="Home screen widgets"
+          detail="Check in, tick off tasks and start focus from your home screen"
+          onPress={() => router.push('/widgets')}
+          right={<Icon name="arrow" color={t.textMuted} size={18} />}
+        />
+      </Card>
+
+      <Card>
         <Text variant="label">Your first name</Text>
         <Input
           value={name}

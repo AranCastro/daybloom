@@ -39,6 +39,14 @@ One calm app where everything you do grows the same garden:
   (formerly Journey) holds the illustrated garden, "ways to grow today", latest blooms, the 12-flower
   collection, badges and the mood journal.
 
+- **Home-screen widgets (Android).** Six widgets, each in light and dark: Mood check-in (4 × 1; tap a mood to
+  check in), Focus today (4 × 2; tick off tasks, each grows a flower), Garden (2 × 2), Focus timer (2 × 2; 15/25/50
+  minute presets open the timer), Streak (2 × 1) and Reach out (4 × 1; one tap to call or message). Settings →
+  Home screen widgets shows live previews and an **Add to home screen** button. Built with
+  [react-native-android-widget](https://github.com/sAleksovski/react-native-android-widget); the code is in
+  `src/widgets/` and the widget list in the plugin entry of `app.json`. Widgets need the APK or a development
+  build; they do not run in Expo Go.
+
 Moods, tasks, people, scores, focus sessions, badges and the garden never leave the phone.
 
 Built with Expo SDK 57 (React Native 0.86, Expo Router, TypeScript).
@@ -57,7 +65,7 @@ Built with Expo SDK 57 (React Native 0.86, Expo Router, TypeScript).
 3. Install **Expo Go** from the Play Store and scan the QR code shown in the terminal.
 
 Everything in this app works in Expo Go (local notifications, haptics, SQLite storage, SVG, gradients,
-contact picker).
+contact picker) except the home-screen widgets, which need the APK (below).
 
 WhatsApp links need an international number. A bare 10-digit number is treated as Indian (+91); numbers
 saved with a country code (for example +44 …) are used as they are (`src/lib/reach.ts`).
@@ -127,10 +135,12 @@ src/app/                  screens (Expo Router)
   game/[id].tsx           full-screen game (breathe, bubbles, memory, colours)
   (tabs)/circle.tsx       People: circle matrix, nudge buddy, invite, test nudge
   settings.tsx            name, reminder, threshold, privacy, erase (gear on Today)
+  widgets.tsx             widget gallery: live previews and "Add to home screen"
   focus.tsx               Pomodoro timer, flower reward and Focus Garden
   badges.tsx              streak, rest days and badge collection
 src/components/           design system: text, buttons, cards, icons, mood orb, tab bar
 src/components/games/     the four games and their shared frame
+src/widgets/              Android home-screen widgets: layouts, data, background tap handler, sync
 src/lib/                  state store (moods, tasks), nudge rule, quadrants, ntfy client, reminders, dates
 assets/images/            app icon, adaptive icon, splash
 ```

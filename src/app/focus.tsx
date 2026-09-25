@@ -57,7 +57,7 @@ function confirmStop(onYes: () => void) {
 export default function FocusScreen() {
   const t = useTheme();
   const dark = useIsDark();
-  const params = useLocalSearchParams<{ task?: string }>();
+  const params = useLocalSearchParams<{ task?: string; preset?: string }>();
   const active = useAppState((s) => s.focus.active);
   const sessions = useAppState((s) => s.focus.sessions);
   const garden = useAppState((s) => s.garden);
@@ -68,7 +68,9 @@ export default function FocusScreen() {
   const [now, setNow] = useState(() => Date.now());
   const [reward, setReward] = useState<{ flower: FlowerKind; session: FocusSession } | null>(null);
   const [breakOver, setBreakOver] = useState(false);
-  const [preset, setPreset] = useState<FocusPreset>(active?.preset ?? (lowToday ? 'gentle' : 'classic'));
+  const [preset, setPreset] = useState<FocusPreset>(
+    active?.preset ?? (params.preset && params.preset in PRESETS ? (params.preset as FocusPreset) : lowToday ? 'gentle' : 'classic'),
+  );
   const [taskId, setTaskId] = useState<string | undefined>(params.task);
 
   // One ticker: refreshes the clock and completes a timer that has run out (also after the app was closed).

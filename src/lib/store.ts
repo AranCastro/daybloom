@@ -146,6 +146,18 @@ export function getState(): AppState {
   return state;
 }
 
+/** Re-reads saved state (a home-screen widget may have changed it while the app was closed). */
+export function reloadState(): void {
+  state = load();
+  listeners.forEach((l) => l());
+}
+
+/** Plain change subscription, for code outside React (home-screen widgets). */
+export function subscribe(l: () => void): () => void {
+  listeners.add(l);
+  return () => listeners.delete(l);
+}
+
 export function useAppState<T>(select: (s: AppState) => T): T {
   return useSyncExternalStore(
     (cb) => {
