@@ -25,7 +25,13 @@ Two tools in one calm app:
   Golden Lotus every 10th session), with a collection to complete, day streak and hours. Stopping early
   grows nothing.
 
-Moods, tasks, people, scores and focus sessions never leave the phone.
+- **Streak and badges.** Daily check-in streak with a rest day (after 7 check-ins in a row, one missed day is
+  forgiven), best streak and a 14-day strip. 12 badges in bronze, silver and gold: first check-in,
+  3/7/14/30/60/100-day streaks, 10/50/100 days noted, Honest day (checking in on a Low or Heavy day) and
+  Welcome back (returning after 3+ days away). New badges are celebrated after the check-in; earned badges
+  are kept even if a streak ends.
+
+Moods, tasks, people, scores, focus sessions and badges never leave the phone.
 
 Built with Expo SDK 57 (React Native 0.86, Expo Router, TypeScript).
 
@@ -100,6 +106,7 @@ src/app/                  screens (Expo Router)
   (tabs)/circle.tsx       People: circle matrix, nudge buddy, invite, test nudge
   settings.tsx            name, reminder, threshold, privacy, erase (gear on Today)
   focus.tsx               Pomodoro timer, flower reward and Focus Garden
+  badges.tsx              streak, rest days and badge collection
 src/components/           design system: text, buttons, cards, icons, mood orb, tab bar
 src/components/games/     the four games and their shared frame
 src/lib/                  state store (moods, tasks), nudge rule, quadrants, ntfy client, reminders, dates

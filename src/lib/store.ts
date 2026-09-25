@@ -7,6 +7,7 @@ import { useSyncExternalStore } from 'react';
 
 import { dayKey } from '@/lib/dates';
 import { readItem, removeItem, writeItem } from '@/lib/kv';
+import { Badge, newlyEarned } from '@/lib/badges';
 import type { ActiveTimer, FocusSession } from '@/lib/focus';
 import { MoodValue } from '@/lib/moods';
 import { buddyHasJoined, sendNudge, sendTest } from '@/lib/ntfy';
@@ -68,6 +69,8 @@ export type AppState = {
   people: Person[];
   /** Best scores and play counts per game id. */
   games: { best: Record<string, number>; plays: Record<string, number> };
+  /** Badge id -> epoch ms when earned. Kept even if a streak later ends. */
+  badges: Record<string, number>;
   /** Pomodoro: completed sessions (newest first) and the running timer. */
   focus: { sessions: FocusSession[]; active: ActiveTimer | null };
 };
@@ -88,6 +91,7 @@ const initial: AppState = {
   people: [],
   games: { best: {}, plays: {} },
   focus: { sessions: [], active: null },
+  badges: {},
 };
 
 function load(): AppState {
@@ -258,4 +262,16 @@ export function recordGame(id: string, score: number, lowerIsBetter = false): bo
     },
   }));
   return isBest;
+}
+
+// ── Badges ───────────────────────────────────────────────────────────────────
+
+/** Awards any badges now earned and returns the new ones (for the celebration). */
+export function awardBadges(): Badge[] {
+  const fresh = newlyEarned(state.checkins, state.badges);
+  if (fresh.length) {
+    const at = Date.now();
+    update((s) => ({ badges: { ...s.badges, ...Object.fromEntries(fresh.map((b) => [b.id, at])) } }));
+  }
+  return fresh;
 }

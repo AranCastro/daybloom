@@ -28,7 +28,8 @@ export type IconName =
   | 'star'
   | 'leaf'
   | 'moon'
-  | 'clock';
+  | 'clock'
+  | 'flame';
 
 type Props = { name: IconName; size?: number; color: string; strokeWidth?: number; fill?: string };
 
@@ -129,6 +130,9 @@ export function Icon({ name, size = 22, color, strokeWidth = 1.8, fill = 'none' 
           <Circle cx={12} cy={12} r={8.5} {...p} />
           <Path d="M12 7.5V12l3 2" {...p} />
         </>
+      )}
+      {name === 'flame' && (
+        <Path d="M12 21c-3.7 0-6.2-2.5-6.2-5.8 0-3.3 2.5-5.2 3.7-7.6.5 1.7 1.5 2.7 2.7 3.1.1-2.8 1.4-5.4 3.5-7.2.2 2.6 1.2 4 2.4 5.8 1 1.4 1.6 2.7 1.6 4.3C19.7 18.3 16.3 21 12 21z" {...p} />
       )}
       {name === 'close' && <Path d="M6 6l12 12M18 6L6 18" {...p} />}
       {name === 'refresh' && <Path d="M19.5 12a7.5 7.5 0 11-2.2-5.3M19.5 4.5v4h-4" {...p} />}

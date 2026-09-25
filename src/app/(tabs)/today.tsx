@@ -15,11 +15,13 @@ import { useTheme } from '@/hooks/use-theme';
 import { addDays, dayKey, greeting, prettyDate, weekdayShort } from '@/lib/dates';
 import { isLow, MOODS, MoodValue, moodOf } from '@/lib/moods';
 import { circleOf } from '@/lib/circle';
+import { BadgeCelebration } from '@/components/badge';
 import { Flower } from '@/components/flower';
 import { flowerOf } from '@/lib/flowers';
 import { remaining, sessionsOn } from '@/lib/focus';
 import { gameForMood } from '@/lib/games';
-import { openTasks, peopleIn, Person, recordMood, Task, useAppState } from '@/lib/store';
+import { awardBadges, openTasks, peopleIn, Person, recordMood, Task, useAppState } from '@/lib/store';
+import { Badge, streakInfo } from '@/lib/badges';
 
 export default function Today() {
   const t = useTheme();
@@ -28,6 +30,8 @@ export default function Today() {
   const buddy = useAppState((s) => s.buddy);
   const nudges = useAppState((s) => s.nudges);
   const [editing, setEditing] = useState(false);
+  const [celebrate, setCelebrate] = useState<Badge[]>([]);
+  const streak = streakInfo(checkins);
 
   const today = dayKey();
   const todayMood = moodOf(checkins[today]);
@@ -38,13 +42,28 @@ export default function Today() {
     if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setEditing(false);
     await recordMood(v);
+    const fresh = awardBadges();
+    if (fresh.length) setCelebrate(fresh);
   }
 
   return (
     <Screen bottomInset={TabBarInset + 24}>
+      <BadgeCelebration badges={celebrate} onClose={() => setCelebrate([])} />
       <Animated.View entering={FadeInDown.duration(500)} style={styles.header}>
         <View style={[styles.inline, { justifyContent: 'space-between' }]}>
           <Text variant="label">{prettyDate(new Date())}</Text>
+          <View style={styles.inline}>
+          <Pressable
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel={`${streak.current} day streak. Badges`}
+            onPress={() => (tap(), router.push('/badges'))}
+            style={[styles.streakChip, { backgroundColor: streak.checkedToday ? t.accentSoft : t.surface, borderColor: t.line }]}>
+            <Icon name="flame" color={t.accent} size={18} fill={streak.checkedToday ? t.accent : 'none'} />
+            <Text variant="bodyStrong" style={{ fontSize: 14 }}>
+              {streak.current}
+            </Text>
+          </Pressable>
           <Pressable
             hitSlop={12}
             accessibilityRole="button"
@@ -53,6 +72,7 @@ export default function Today() {
             style={[styles.gear, { backgroundColor: t.surface, borderColor: t.line }]}>
             <Icon name="settings" color={t.text} size={19} />
           </Pressable>
+          </View>
         </View>
         <Text variant="title">
           {greeting()}
@@ -399,6 +419,7 @@ const styles = StyleSheet.create({
   inline: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   gameLink: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderRadius: 26, borderWidth: 1 },
   gameIcon: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  streakChip: { flexDirection: 'row', alignItems: 'center', gap: 5, height: 40, paddingHorizontal: 12, borderRadius: 20, borderWidth: 1 },
   gear: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   reach: { gap: 10, paddingTop: 10 },
   avatar: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },

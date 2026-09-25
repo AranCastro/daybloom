@@ -10,7 +10,9 @@ import { TabBarInset } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { dayKey } from '@/lib/dates';
 import { MOODS, moodOf } from '@/lib/moods';
-import { checkinStreak } from '@/lib/nudge-rule';
+import { BADGES, badgeOf, streakInfo } from '@/lib/badges';
+import { Medal } from '@/components/badge';
+import { router } from 'expo-router';
 import { useAppState } from '@/lib/store';
 
 const MONTHS = [
@@ -36,7 +38,13 @@ export default function Journey() {
   const monthKeys = cells.filter(Boolean).map((d) => dayKey(d as Date));
   const logged = monthKeys.filter((k) => checkins[k] !== undefined);
   const counts = MOODS.map((m) => ({ mood: m, n: logged.filter((k) => checkins[k] === m.value).length }));
-  const streak = checkinStreak(checkins, dayKey());
+  const streak = streakInfo(checkins).current;
+  const earned = useAppState((s) => s.badges);
+  const recent = Object.entries(earned)
+    .sort((a, b) => b[1] - a[1])
+    .map(([id]) => badgeOf(id))
+    .filter((b): b is NonNullable<typeof b> => !!b)
+    .slice(0, 5);
   const today = dayKey();
 
   return (
@@ -56,6 +64,24 @@ export default function Journey() {
           <Text variant="small">days noted this month</Text>
         </Card>
       </View>
+
+      <Pressable onPress={() => (tap(), router.push('/badges'))} accessibilityRole="button" accessibilityLabel="Streak and badges">
+        <Card>
+          <View style={styles.badgeHead}>
+            <Text variant="label">Badges · {recent.length ? Object.keys(earned).length : 0} of {BADGES.length}</Text>
+            <Icon name="arrow" color={t.textMuted} size={18} />
+          </View>
+          {recent.length ? (
+            <View style={styles.badgeRow}>
+              {recent.map((b) => (
+                <Medal key={b.id} badge={b} size={48} />
+              ))}
+            </View>
+          ) : (
+            <Text variant="small">Your first check-in earns your first badge.</Text>
+          )}
+        </Card>
+      </Pressable>
 
       <Card>
         <View style={styles.monthHead}>
@@ -130,6 +156,8 @@ export default function Journey() {
 
 const styles = StyleSheet.create({
   stats: { flexDirection: 'row', gap: 12 },
+  badgeHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  badgeRow: { flexDirection: 'row', gap: 10, marginTop: 4 },
   stat: { flex: 1, gap: 0 },
   monthHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
   grid: { flexDirection: 'row', flexWrap: 'wrap' },
