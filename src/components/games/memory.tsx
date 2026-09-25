@@ -22,6 +22,7 @@ import { Choice } from '@/components/ui';
 import { useIsDark, useTheme } from '@/hooks/use-theme';
 import { gameOf } from '@/lib/games';
 import { recordGame, useAppState } from '@/lib/store';
+import { useAppActive } from '@/hooks/use-app-active';
 
 const SYMBOLS: { icon: IconName; color: string; soft: string }[] = [
   { icon: 'sun', color: '#D9962B', soft: '#FAEDD3' },
@@ -82,15 +83,18 @@ export function MemoryGame() {
   /** Bumped on every reset so timers from an abandoned board do nothing. */
   const roundRef = useRef(0);
 
+  // Timers pause while the app is in the background.
+  const appActive = useAppActive();
+
   // Clock runs from the first flip until the board is cleared.
   useEffect(() => {
-    if (!started || result) return;
+    if (!started || result || !appActive) return;
     const id = setInterval(() => {
       secondsRef.current += 1;
       setSeconds(secondsRef.current);
     }, 1000);
     return () => clearInterval(id);
-  }, [started, result]);
+  }, [started, result, appActive]);
 
   function reset(next: Level = level) {
     roundRef.current += 1;

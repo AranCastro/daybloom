@@ -25,6 +25,7 @@ import { Button, Card } from '@/components/ui';
 import { useIsDark } from '@/hooks/use-theme';
 import { gameOf } from '@/lib/games';
 import { recordGame, useAppState } from '@/lib/store';
+import { useAppActive } from '@/hooks/use-app-active';
 
 const PALETTE: [string, string][] = [
   ['#FBE3A8', '#F2B84B'],
@@ -63,9 +64,12 @@ export function BubblesGame() {
   // Bubbles rise from the bottom of the field by the window height; the field clips them.
   const { height: travel } = useWindowDimensions();
 
+  // Timers pause while the app is in the background.
+  const appActive = useAppActive();
+
   // Spawner. Dash mode speeds up over the minute.
   useEffect(() => {
-    if (!playing) return;
+    if (!playing || !appActive) return;
     const spawn = () => {
       const elapsed = (Date.now() - startedAt.current) / 1000;
       const speedUp = mode === 'dash' ? Math.min(0.45, (elapsed / DASH_SECONDS) * 0.45) : 0;
@@ -89,11 +93,11 @@ export function BubblesGame() {
     spawn();
     const id = setInterval(spawn, mode === 'dash' ? 520 : 700);
     return () => clearInterval(id);
-  }, [playing, mode]);
+  }, [playing, mode, appActive]);
 
   // Dash countdown; ends the round itself.
   useEffect(() => {
-    if (!playing || mode !== 'dash') return;
+    if (!playing || mode !== 'dash' || !appActive) return;
     const id = setInterval(() => {
       leftRef.current -= 1;
       setLeft(leftRef.current);
@@ -103,7 +107,7 @@ export function BubblesGame() {
       }
     }, 1000);
     return () => clearInterval(id);
-  }, [playing, mode]);
+  }, [playing, mode, appActive]);
 
   // Leaving Zen mode mid-way still counts the session.
   useEffect(

@@ -1,5 +1,6 @@
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
+import { useState } from 'react';
 import { Alert, Linking, Platform, Pressable, Switch, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
@@ -9,7 +10,7 @@ import { Card, Choice, Divider, Input, Row, Screen, tap } from '@/components/ui'
 import { useTheme } from '@/hooks/use-theme';
 import { prettyTime } from '@/lib/dates';
 import { cancelFocusAlarm, cancelReminders, scheduleDailyReminder } from '@/lib/reminders';
-import { AppState, getState, resetAll, update, useAppState } from '@/lib/store';
+import { AppState, resetAll, update, useAppState } from '@/lib/store';
 
 const TIMES = [
   { label: '8 AM', value: 8 },
@@ -23,6 +24,8 @@ export const PRIVACY_URL = 'https://arancastro.github.io/privacy/';
 export default function Settings() {
   const t = useTheme();
   const name = useAppState((s) => s.name);
+  // Typed locally and saved once, so each keystroke does not rewrite storage and redraw widgets.
+  const [draft, setDraft] = useState(name);
   const reminder = useAppState((s) => s.reminder);
   const streak = useAppState((s) => s.streak);
 
@@ -78,13 +81,14 @@ export default function Settings() {
       <Card>
         <Text variant="label">Your first name</Text>
         <Input
-          value={name}
-          onChangeText={(v) => update({ name: v.replace(/^\s+/, '') })}
-          onEndEditing={() => update({ name: getState().name.trim() })}
+          value={draft}
+          onChangeText={(v) => setDraft(v.replace(/^\s+/, ''))}
+          onEndEditing={() => draft.trim() !== name && update({ name: draft.trim() })}
+          onBlur={() => draft.trim() !== name && update({ name: draft.trim() })}
           placeholder="Shown in the nudge"
           autoCapitalize="words"
         />
-        <Text variant="small">Your buddy will see: “Call {name || 'your friend'} today.”</Text>
+        <Text variant="small">Your buddy will see: “Call {draft.trim() || 'your friend'} today.”</Text>
       </Card>
 
       <Card>

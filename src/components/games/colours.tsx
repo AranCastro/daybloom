@@ -16,6 +16,7 @@ import { Fonts } from '@/constants/theme';
 import { useIsDark, useTheme } from '@/hooks/use-theme';
 import { gameOf } from '@/lib/games';
 import { recordGame, useAppState } from '@/lib/store';
+import { useAppActive } from '@/hooks/use-app-active';
 
 const SECONDS = 30;
 const SHUFFLE_AFTER = 10;
@@ -73,9 +74,12 @@ export function ColoursGame() {
   const pop = useSharedValue(1);
   const wordStyle = useAnimatedStyle(() => ({ transform: [{ translateX: shake.value }, { scale: pop.value }] }));
 
+  // Timers pause while the app is in the background.
+  const appActive = useAppActive();
+
   // Round clock; it ends the round itself so the result is recorded exactly once.
   useEffect(() => {
-    if (phase !== 'play') return;
+    if (phase !== 'play' || !appActive) return;
     const id = setInterval(() => {
       s.current.left -= 1;
       setLeft(s.current.left);
@@ -90,7 +94,7 @@ export function ColoursGame() {
       }
     }, 1000);
     return () => clearInterval(id);
-  }, [phase]);
+  }, [phase, appActive]);
 
   function start() {
     s.current = { score: 0, correct: 0, answers: 0, streak: 0, bestStreak: 0, left: SECONDS };

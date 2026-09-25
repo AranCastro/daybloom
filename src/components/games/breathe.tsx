@@ -16,6 +16,7 @@ import { Button, Choice } from '@/components/ui';
 import { useIsDark, useTheme } from '@/hooks/use-theme';
 import { gameOf } from '@/lib/games';
 import { recordGame, useAppState } from '@/lib/store';
+import { useAppActive } from '@/hooks/use-app-active';
 
 type Phase = { label: string; secs: number; scale: number };
 type Pattern = { key: 'calm' | 'box' | 'unwind'; name: string; recipe: string; rounds: number; phases: Phase[] };
@@ -99,9 +100,12 @@ export function BreatheGame() {
   const where = locate(pattern, Math.min(tick ?? 0, total - 1));
   const round = Math.min(pattern.rounds, Math.floor((tick ?? 0) / cycleOf(pattern)) + 1);
 
+  // Timers pause while the app is in the background.
+  const appActive = useAppActive();
+
   // One interval drives the session; it ends the session itself so the result is recorded once.
   useEffect(() => {
-    if (!running) return;
+    if (!running || !appActive) return;
     const id = setInterval(() => {
       tickRef.current += 1;
       setTick(tickRef.current);
@@ -112,7 +116,7 @@ export function BreatheGame() {
       }
     }, 1000);
     return () => clearInterval(id);
-  }, [running, total]);
+  }, [running, total, appActive]);
 
   // At the start of each phase, animate the orb and pulse the glow.
   const phaseKey = running && where.isStart ? `${tick}` : null;

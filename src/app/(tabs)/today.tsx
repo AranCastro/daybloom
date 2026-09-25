@@ -1,5 +1,5 @@
 import * as Haptics from 'expo-haptics';
-import { router } from 'expo-router';
+import { router, useIsFocused } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Linking, Platform, Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown, ZoomIn } from 'react-native-reanimated';
@@ -230,7 +230,8 @@ function FocusTimerCard() {
   const todays = sessionsOn(sessions, dayKey());
   const [now, setNow] = useState(() => Date.now());
   const appActive = useAppActive();
-  const ticking = !!active && active.endAt !== null && appActive;
+  const focused = useIsFocused();
+  const ticking = !!active && active.endAt !== null && appActive && focused;
   // Re-render once a second while a timer runs, so the card flips to "Collect" on time.
   useEffect(() => {
     if (!ticking) return;
