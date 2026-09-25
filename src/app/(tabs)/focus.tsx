@@ -1,6 +1,6 @@
 /** Pomodoro focus timer with a Focus Garden: each finished session grows a flower. */
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useIsFocused, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Alert, Platform, Pressable, StyleSheet, View } from 'react-native';
 import Animated, { Easing, FadeIn, FadeInDown, useAnimatedProps, useSharedValue, withTiming, ZoomIn } from 'react-native-reanimated';
@@ -11,7 +11,7 @@ import { Confetti, haptic } from '@/components/games/fx';
 import { Icon } from '@/components/icons';
 import { Text } from '@/components/text';
 import { Button, Card, Choice, Screen, tap } from '@/components/ui';
-import { Fonts } from '@/constants/theme';
+import { Fonts, TabBarInset } from '@/constants/theme';
 import { useAppActive } from '@/hooks/use-app-active';
 import { useIsDark, useTheme } from '@/hooks/use-theme';
 import { dayKey } from '@/lib/dates';
@@ -75,13 +75,23 @@ export default function FocusScreen() {
   );
   const [taskId, setTaskId] = useState<string | undefined>(params.task);
 
+  // The tab stays mounted, so pick up a preset or task passed later (widget buttons, "Focus on this task").
+  const [seen, setSeen] = useState({ preset: params.preset, task: params.task });
+  if (seen.preset !== params.preset || seen.task !== params.task) {
+    setSeen({ preset: params.preset, task: params.task });
+    if (!active && params.preset && params.preset in PRESETS) setPreset(params.preset as FocusPreset);
+    if (!active && params.task !== seen.task) setTaskId(params.task);
+  }
+
   const running = !!active && active.endAt !== null;
   const appActive = useAppActive();
+  // A tab stays mounted: tick and keep the screen awake only while this tab is on show.
+  const focused = useIsFocused();
 
   // One ticker while a timer runs (once a second, only in the foreground): refreshes the clock and
   // completes a timer that has run out, also one that ran out while the app was closed.
   useEffect(() => {
-    if (!running || !appActive) return;
+    if (!running || !appActive || !focused) return;
     const tick = () => {
       setNow(Date.now());
       const a = getState().focus.active;
@@ -103,15 +113,15 @@ export default function FocusScreen() {
       clearTimeout(first);
       clearInterval(id);
     };
-  }, [running, appActive]);
+  }, [running, appActive, focused]);
 
   useEffect(() => {
-    if (!running) return;
+    if (!running || !focused) return;
     activateKeepAwakeAsync('focus').catch(() => {});
     return () => {
       deactivateKeepAwake('focus').catch(() => {});
     };
-  }, [running]);
+  }, [running, focused]);
 
   const left = active ? remaining(active, now) : PRESETS[preset].focus * 60_000;
   const total = active ? active.total : PRESETS[preset].focus * 60_000;
@@ -138,11 +148,8 @@ export default function FocusScreen() {
   }
 
   return (
-    <Screen>
-      <View style={styles.top}>
-        <Pressable hitSlop={12} onPress={() => (tap(), router.back())} accessibilityLabel="Back">
-          <Icon name="back" color={t.textSecondary} />
-        </Pressable>
+    <Screen bottomInset={TabBarInset + 24}>
+      <View style={[styles.top, { justifyContent: 'flex-end' }]}>
         <View style={[styles.todayPill, { backgroundColor: t.surface, borderColor: t.line }]}>
           <Icon name="leaf" color="#3A9477" size={15} />
           <Text variant="bodyStrong" style={{ fontSize: 13 }}>

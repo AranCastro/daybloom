@@ -12,6 +12,7 @@ import { useTheme } from '@/hooks/use-theme';
 const ICONS: Record<string, IconName> = {
   today: 'sun',
   matrix: 'grid',
+  focus: 'clock',
   journey: 'leaf',
   circle: 'people',
   play: 'play',
@@ -62,8 +63,8 @@ const styles = StyleSheet.create({
     height: TabBarHeight,
     borderRadius: Radius.pill,
     borderWidth: 1,
-    padding: 7,
-    gap: 4,
+    padding: 6,
+    gap: 3,
     shadowColor: '#000',
     shadowOpacity: 0.12,
     shadowRadius: 24,
@@ -73,10 +74,10 @@ const styles = StyleSheet.create({
   item: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 7,
-    paddingHorizontal: 14,
+    gap: 6,
+    paddingHorizontal: 12,
     borderRadius: Radius.pill,
-    minWidth: 50,
+    minWidth: 46,
     justifyContent: 'center',
   },
 });

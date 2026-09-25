@@ -64,7 +64,6 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="quadrant/[q]" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="settings" options={{ animation: 'slide_from_right' }} />
-        <Stack.Screen name="focus" options={{ animation: 'slide_from_bottom' }} />
         <Stack.Screen name="badges" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="widgets" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="calendar" options={{ animation: 'slide_from_right' }} />

@@ -27,7 +27,7 @@ One calm app where everything you do grows the same garden:
   - Colour Clash (Good or Bright): 30 s word-colour challenge with streak multipliers and shuffling keys.
   Answers and pops register on touch-down, so quick taps are never lost. Best scores are kept.
 
-- **Focus timer (Pomodoro).** Gentle 15/3, Classic 25/5 or Deep 50/10 (Gentle is suggested on a low day),
+- **Focus timer (Pomodoro)**, its own tab in the menu. Gentle 15/3, Classic 25/5 or Deep 50/10 (Gentle is suggested on a low day),
   optionally linked to a task. The timer is stored as an end time, so it stays right when the app is
   closed; an alarm notification fires at the end and the screen stays awake while it runs.
   **Reward:** every finished session grows a flower in the shared garden (15% rare chance), revealed on
@@ -158,6 +158,7 @@ src/app/                  screens (Expo Router)
   onboarding.tsx          five-step first run
   (tabs)/today.tsx        mood check-in, focus list, week strip, support card
   (tabs)/matrix.tsx       Eisenhower matrix (2 × 2 quadrant cards, add button)
+  (tabs)/focus.tsx        Focus tab: Pomodoro timer, flower reward and Focus Garden
   quadrant/[q].tsx        one quadrant in full, with completed tasks and Arrange (up/down)
   calendar.tsx            month calendar of due tasks; tasks, mood and flowers for a chosen day
   (tabs)/journey.tsx      Garden tab: garden bed, ways to grow, collection, badges, mood journal
@@ -166,7 +167,6 @@ src/app/                  screens (Expo Router)
   (tabs)/circle.tsx       People: circle matrix, nudge buddy, invite, test nudge
   settings.tsx            name, reminder, threshold, privacy, erase (gear on Today)
   widgets.tsx             widget gallery: live previews and "Add to home screen"
-  focus.tsx               Pomodoro timer, flower reward and Focus Garden
   badges.tsx              streak, rest days and badge collection
 src/components/           design system: text, buttons, cards, icons, mood orb, tab bar
 src/components/games/     the four games and their shared frame
