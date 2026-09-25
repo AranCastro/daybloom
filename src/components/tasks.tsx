@@ -147,7 +147,7 @@ function SheetBody({ onClose, task, defaultQuadrant = 1 }: SheetProps) {
   }
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'web' ? undefined : 'padding'}>
       <Pressable style={styles.scrim} onPress={onClose} accessibilityLabel="Close" />
       <View style={[styles.sheet, { backgroundColor: t.surface }]}>
         <View style={[styles.grabber, { backgroundColor: t.line }]} />

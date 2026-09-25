@@ -49,7 +49,7 @@ export default function Onboarding() {
   }
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'web' ? undefined : 'padding'}>
       <Screen contentStyle={{ paddingBottom: 12 }}>
         <View style={styles.topRow}>
           {step > 0 ? (

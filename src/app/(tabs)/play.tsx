@@ -87,7 +87,7 @@ function PickCard({ game, moodLabel }: { game: GameInfo; moodLabel: string }) {
 function GameCard({ game, highlighted }: { game: GameInfo; highlighted: boolean }) {
   const t = useTheme();
   const { color, soft } = useGameColors(game);
-  const best = useAppState((s) => s.games.best[game.id]);
+  const record = useAppState((s) => game.record(s.games.best, s.games.plays));
   return (
     <Pressable
       accessibilityRole="button"
@@ -107,9 +107,9 @@ function GameCard({ game, highlighted }: { game: GameInfo; highlighted: boolean 
         {game.tagline}
       </Text>
       <View style={styles.meta}>
-        <Icon name={best !== undefined ? 'spark' : 'play'} color={color} size={14} />
+        <Icon name={record ? 'star' : 'clock'} color={color} fill={record ? color : 'none'} size={14} />
         <Text variant="small" style={{ color, fontSize: 12, fontFamily: Fonts.bodyStrong }}>
-          {best !== undefined ? game.bestLabel(best) : game.minutes}
+          {record ?? game.minutes}
         </Text>
       </View>
     </Pressable>

@@ -11,8 +11,12 @@ Two tools in one calm app:
   Call anytime, Quick call, Message first, Light chat. On a Low or Heavy day, Today suggests one person to
   call and one to message (least recently reached first), with one-tap Call, SMS and WhatsApp.
 
-- **Play.** Four short games, one picked for today's mood: Breathe (Heavy), Bubble Pop (Low),
-  Pair Up memory game (Okay), Colour Clash word-colour challenge (Good or Bright). Best scores are kept.
+- **Play.** Four short games, one picked for today's mood:
+  - Breathe (Heavy): Calm 4-2-6, Box 4-4-4-4 or Unwind 4-7-8, with a session progress ring.
+  - Bubble Pop (Low): Zen (untimed) or a 60-second dash; rare golden bubbles are worth 5.
+  - Pair Up (Okay): Easy, Normal or Hard memory board with 3D flips, timer and star rating.
+  - Colour Clash (Good or Bright): 30 s word-colour challenge with streak multipliers and shuffling keys.
+  Answers and pops register on touch-down, so quick taps are never lost. Best scores are kept.
 
 Moods, tasks, people and scores never leave the phone.
 

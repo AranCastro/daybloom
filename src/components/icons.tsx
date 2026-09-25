@@ -24,12 +24,16 @@ export type IconName =
   | 'chat'
   | 'play'
   | 'close'
-  | 'refresh';
+  | 'refresh'
+  | 'star'
+  | 'leaf'
+  | 'moon'
+  | 'clock';
 
-type Props = { name: IconName; size?: number; color: string; strokeWidth?: number };
+type Props = { name: IconName; size?: number; color: string; strokeWidth?: number; fill?: string };
 
-export function Icon({ name, size = 22, color, strokeWidth = 1.8 }: Props) {
-  const p = { stroke: color, strokeWidth, fill: 'none', strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
+export function Icon({ name, size = 22, color, strokeWidth = 1.8, fill = 'none' }: Props) {
+  const p = { stroke: color, strokeWidth, fill, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24">
       {name === 'sun' && (
@@ -108,6 +112,22 @@ export function Icon({ name, size = 22, color, strokeWidth = 1.8 }: Props) {
           <Path d="M8 10.2v3M6.5 11.7h3" {...p} />
           <Circle cx={15.8} cy={10.9} r={0.5} {...p} />
           <Circle cx={17.4} cy={12.6} r={0.5} {...p} />
+        </>
+      )}
+      {name === 'star' && (
+        <Path d="M12 3.6l2.5 5.2 5.7.8-4.1 4 1 5.7L12 16.6l-5.1 2.7 1-5.7-4.1-4 5.7-.8L12 3.6z" {...p} />
+      )}
+      {name === 'leaf' && (
+        <>
+          <Path d="M5 19c0-8 5.5-13.5 14-14 .2 8.8-5.5 14-14 14z" {...p} />
+          <Path d="M5 19l8-8" {...p} />
+        </>
+      )}
+      {name === 'moon' && <Path d="M19.5 14.5A8 8 0 019.5 4.5a7.5 7.5 0 1010 10z" {...p} />}
+      {name === 'clock' && (
+        <>
+          <Circle cx={12} cy={12} r={8.5} {...p} />
+          <Path d="M12 7.5V12l3 2" {...p} />
         </>
       )}
       {name === 'close' && <Path d="M6 6l12 12M18 6L6 18" {...p} />}
