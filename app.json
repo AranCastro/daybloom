@@ -66,7 +66,8 @@
     ],
     "experiments": {
       "typedRoutes": true,
-      "reactCompiler": true
+      "reactCompiler": true,
+      "baseUrl": "/app"
     },
     "description": "Grow a little every day: a one-tap mood check-in, tasks, focus timer, calm games and your circle, all growing one garden. After a few low days, one trusted friend is quietly asked to call you.",
     "backgroundColor": "#F6F2EC",
