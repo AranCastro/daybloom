@@ -1,4 +1,4 @@
-# Daybloom — mobile app
+# Daybloom: Mood & Garden — mobile app
 
 *Grow a little every day.*
 
@@ -77,6 +77,9 @@ eas submit -p android          # uploads to the Play Console internal track
 
 Before the first production build:
 
+- **Names:** the Play Store title is **Daybloom: Mood & Garden**; the name under the icon (`name` in
+  `app.json`) stays **Daybloom**, because launchers truncate long names. Listing text:
+  `docs/daybloom_store-listing_v1.md`.
 - **Package name** is `online.draran.daybloom` in `app.json`. It cannot be changed after the first
   Play Store upload, so confirm it now.
 - **Privacy policy URL** for the Play listing: `https://arancastro.github.io/privacy/`.
