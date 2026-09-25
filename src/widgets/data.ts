@@ -7,6 +7,7 @@ import { circleOf } from '@/lib/circle';
 import { dayKey, fromKey, shortDate } from '@/lib/dates';
 import { FlowerKind, flowerOf, GOLDEN_EVERY } from '@/lib/flowers';
 import { isLow, moodOf, MoodValue } from '@/lib/moods';
+import { sortOpen } from '@/lib/quadrants';
 import type { AppState, Person, Task } from '@/lib/store';
 
 export type Snapshot = ReturnType<typeof snapshot>;
@@ -44,14 +45,7 @@ export function snapshot(s: AppState, now: Date = new Date()) {
 /** Each Eisenhower quadrant: open tasks (dated first, soonest due), then finished ones if asked for. */
 function matrixCells(tasks: Task[], today: string, withDone: boolean) {
   return ([1, 2, 3, 4] as const).map((q) => {
-    const open = tasks
-      .filter((t) => t.quadrant === q && !t.done)
-      .sort((a, b) => {
-        if (a.due && b.due) return a.due.localeCompare(b.due);
-        if (a.due) return -1;
-        if (b.due) return 1;
-        return a.createdAt - b.createdAt;
-      });
+    const open = sortOpen(tasks.filter((t) => t.quadrant === q && !t.done));
     const done = withDone ? tasks.filter((t) => t.quadrant === q && t.done).sort((a, b) => (b.doneAt ?? 0) - (a.doneAt ?? 0)) : [];
     return {
       q,

@@ -57,6 +57,7 @@ export default function RootLayout() {
         <Stack.Screen name="focus" options={{ animation: 'slide_from_bottom' }} />
         <Stack.Screen name="badges" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="widgets" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="calendar" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="game/[id]" options={{ animation: 'fade_from_bottom', gestureEnabled: false }} />
       </Stack>
       <BloomToast />

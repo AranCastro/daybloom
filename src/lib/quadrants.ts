@@ -1,5 +1,5 @@
 import { daysBetween } from '@/lib/dates';
-import type { Quadrant } from '@/lib/store';
+import type { Quadrant, Task } from '@/lib/store';
 
 export type QuadrantInfo = {
   id: Quadrant;
@@ -51,6 +51,19 @@ export const QUADRANTS: readonly QuadrantInfo[] = [
     soft: { light: '#DDEFE7', dark: '#17302A' },
   },
 ];
+
+/** Arranged tasks first (by hand), then dated ones (soonest due), then by creation. */
+export function sortOpen<T extends Pick<Task, 'order' | 'due' | 'createdAt'>>(tasks: T[]): T[] {
+  return [...tasks].sort((a, b) => {
+    const oa = a.order ?? Infinity;
+    const ob = b.order ?? Infinity;
+    if (oa !== ob) return oa - ob;
+    if (a.due && b.due && a.due !== b.due) return a.due.localeCompare(b.due);
+    if (a.due && !b.due) return -1;
+    if (b.due && !a.due) return 1;
+    return a.createdAt - b.createdAt;
+  });
+}
 
 export function quadrantOf(q: Quadrant): QuadrantInfo {
   return QUADRANTS[q - 1];

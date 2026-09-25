@@ -33,6 +33,14 @@ export default function Matrix() {
     <View style={{ flex: 1 }}>
       <Screen scroll={false} bottomInset={TabBarInset + 6}>
         <Animated.View entering={FadeInDown.duration(450)} style={styles.header}>
+          <Pressable
+            onPress={() => (tap(), router.push('/calendar'))}
+            accessibilityRole="button"
+            accessibilityLabel="Calendar"
+            hitSlop={8}
+            style={[styles.calBtn, { backgroundColor: t.surface, borderColor: t.line }]}>
+            <Icon name="calendar" color={t.text} size={20} />
+          </Pressable>
           <Text variant="label">Priorities</Text>
           <Text variant="title">Eisenhower Matrix</Text>
           <Text variant="small">
@@ -127,6 +135,7 @@ function QuadrantCard({ q, tasks, today, onOpen }: { q: Quadrant; tasks: Task[];
 
 const styles = StyleSheet.create({
   header: { gap: 2, marginTop: 8 },
+  calBtn: { position: 'absolute', right: 0, top: 0, width: 42, height: 42, borderRadius: 21, borderWidth: 1, alignItems: 'center', justifyContent: 'center', zIndex: 1 },
   grid: { flex: 1, gap: 12, marginTop: 4 },
   gridRow: { flex: 1, flexDirection: 'row', gap: 12 },
   card: { flex: 1, borderRadius: 24, borderWidth: 1, paddingHorizontal: 14, paddingTop: 14, overflow: 'hidden' },

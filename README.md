@@ -8,6 +8,9 @@ One calm app where everything you do grows the same garden:
   one trusted friend receives a single line: "Call Aran today." They are never told why.
 - **Eisenhower Matrix.** Sort tasks into Do first, Schedule, Delegate and Later, with due-date badges.
   Today's screen shows a short Focus list (due or late first, then Do first), reduced to one task on a low day.
+  **Arrange** (in each quadrant, or Move up / Move down in a task) sets your own order; the widgets follow it.
+  **Calendar** (icon on the Matrix tab): a month view with a dot per task due, in quadrant colours; pick a day
+  to see, tick or add its tasks, with that day's mood and flowers. Any due date can be picked from a calendar.
 
 - **Circle matrix.** Sort trusted people by closeness (close / wider) and how to reach them (call / message):
   Call anytime, Quick call, Message first, Light chat. On a Low or Heavy day, Today suggests one person to
@@ -132,7 +135,8 @@ src/app/                  screens (Expo Router)
   onboarding.tsx          five-step first run
   (tabs)/today.tsx        mood check-in, focus list, week strip, support card
   (tabs)/matrix.tsx       Eisenhower matrix (2 × 2 quadrant cards, add button)
-  quadrant/[q].tsx        one quadrant in full, with completed tasks
+  quadrant/[q].tsx        one quadrant in full, with completed tasks and Arrange (up/down)
+  calendar.tsx            month calendar of due tasks; tasks, mood and flowers for a chosen day
   (tabs)/journey.tsx      Garden tab: garden bed, ways to grow, collection, badges, mood journal
   (tabs)/play.tsx         Play: today's game pick and all four games
   game/[id].tsx           full-screen game (breathe, bubbles, memory, colours)

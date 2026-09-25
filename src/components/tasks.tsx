@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import Animated, { FadeIn, useAnimatedStyle, useSharedValue, withSequence, withSpring } from 'react-native-reanimated';
 
+import { MonthCalendar } from '@/components/calendar';
 import { Icon } from '@/components/icons';
 import { Text } from '@/components/text';
 import { Button, Input, tap } from '@/components/ui';
@@ -20,7 +21,7 @@ import { Fonts, Radius } from '@/constants/theme';
 import { useIsDark, useTheme } from '@/hooks/use-theme';
 import { addDays, dayKey, fromKey, prettyDate } from '@/lib/dates';
 import { dueBadge, QUADRANTS, quadrantOf } from '@/lib/quadrants';
-import { addTask, deleteTask, editTask, Quadrant, Task, toggleTask } from '@/lib/store';
+import { addTask, deleteTask, editTask, moveTask, openTasks, Quadrant, Task, toggleTask, useAppState } from '@/lib/store';
 
 export function useQuadrantColors(q: Quadrant) {
   const dark = useIsDark();
@@ -120,6 +121,8 @@ type SheetProps = {
   /** Existing task to edit; omit to create. */
   task?: Task | null;
   defaultQuadrant?: Quadrant;
+  /** Due date for a new task (e.g. the day picked in the calendar). */
+  defaultDue?: string;
 };
 
 export function TaskSheet(props: SheetProps) {
@@ -131,12 +134,19 @@ export function TaskSheet(props: SheetProps) {
   );
 }
 
-function SheetBody({ onClose, task, defaultQuadrant = 1 }: SheetProps) {
+function SheetBody({ onClose, task, defaultQuadrant = 1, defaultDue }: SheetProps) {
   const t = useTheme();
   const today = dayKey();
   const [title, setTitle] = useState(task?.title ?? '');
   const [q, setQ] = useState<Quadrant>(task?.quadrant ?? defaultQuadrant);
-  const [due, setDue] = useState<string | undefined>(task?.due);
+  const [due, setDue] = useState<string | undefined>(task ? task.due : defaultDue);
+  const [picking, setPicking] = useState(false);
+  const presets = DUE_CHOICES.map((c) => (c.days === null ? undefined : dayKey(addDays(fromKey(today), c.days))));
+  const custom = !!due && !presets.includes(due);
+  // Position of this task among the open tasks of its quadrant (for Move up / Move down).
+  const siblings = useAppState((s) => s.tasks);
+  const list = task && !task.done ? openTasks(siblings, task.quadrant).map((x) => x.id) : [];
+  const index = task ? list.indexOf(task.id) : -1;
 
   function save() {
     const clean = title.trim();
@@ -181,7 +191,7 @@ function SheetBody({ onClose, task, defaultQuadrant = 1 }: SheetProps) {
                 return (
                   <Pressable
                     key={c.label}
-                    onPress={() => (tap(), setDue(value))}
+                    onPress={() => (tap(), setDue(value), setPicking(false))}
                     style={[styles.dueChip, { borderColor: on ? t.text : t.line, backgroundColor: on ? t.text : 'transparent' }]}>
                     <Text variant="small" style={{ color: on ? t.background : t.text, fontFamily: Fonts.bodyStrong }}>
                       {c.label}
@@ -190,14 +200,38 @@ function SheetBody({ onClose, task, defaultQuadrant = 1 }: SheetProps) {
                 );
               })}
             </View>
-            {due && (
-              <Text variant="small">
-                {prettyDate(fromKey(due))}
+            <Pressable
+              onPress={() => (tap(), setPicking((v) => !v))}
+              accessibilityRole="button"
+              accessibilityLabel="Pick a date"
+              style={[styles.dueChip, styles.pick, { borderColor: custom || picking ? t.text : t.line, backgroundColor: custom ? t.text : 'transparent' }]}>
+              <Icon name="calendar" color={custom ? t.background : t.text} size={16} />
+              <Text variant="small" style={{ color: custom ? t.background : t.text, fontFamily: Fonts.bodyStrong }}>
+                {custom && due ? prettyDate(fromKey(due)) : 'Pick a date'}
               </Text>
+            </Pressable>
+            {picking && (
+              <View style={[styles.calendar, { borderColor: t.line }]}>
+                <MonthCalendar
+                  compact
+                  selected={due}
+                  onSelect={(d) => {
+                    setDue(d);
+                    setPicking(false);
+                  }}
+                />
+              </View>
             )}
+            {due && !picking && <Text variant="small">{prettyDate(fromKey(due))}</Text>}
           </View>
 
           <Button title={task ? 'Save changes' : 'Add task'} icon={task ? 'check' : 'plus'} onPress={save} disabled={!title.trim()} />
+          {index >= 0 && list.length > 1 && (
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <Button title="Move up" kind="secondary" disabled={index === 0} onPress={() => moveTask(task!.id, 'up')} style={{ flex: 1 }} />
+              <Button title="Move down" kind="secondary" disabled={index === list.length - 1} onPress={() => moveTask(task!.id, 'down')} style={{ flex: 1 }} />
+            </View>
+          )}
           {task && !task.done && (
             <Button
               title="Focus on this task"
@@ -278,6 +312,8 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
   },
   dueWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  pick: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start' },
+  calendar: { borderWidth: 1, borderRadius: Radius.md, padding: 10 },
   dueChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: Radius.pill, borderWidth: 1 },
   delete: { flexDirection: 'row', gap: 8, alignSelf: 'center', alignItems: 'center', padding: 8 },
 });
