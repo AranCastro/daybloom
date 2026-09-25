@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Alert, Linking, Platform, Pressable, Switch, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
+import { BackupCard } from '@/components/backup';
 import { Icon } from '@/components/icons';
 import { Text } from '@/components/text';
 import { Card, Choice, Divider, Input, Row, Screen, tap } from '@/components/ui';
@@ -190,6 +191,8 @@ export default function Settings() {
         <Divider />
         <Row icon="lock" title="Privacy policy" onPress={() => Linking.openURL(PRIVACY_URL)} />
       </Card>
+
+      <BackupCard />
 
       <Card>
         <Row icon="spark" title="Erase all data" detail="Start fresh on this phone" onPress={wipe} />

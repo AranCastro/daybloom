@@ -61,6 +61,14 @@ One calm app where everything you do grows the same garden:
   week starts on Sunday or Monday, and the usual focus session (15, 25 or 50 minutes), plus name, daily
   reminder, nudge threshold and home-screen widgets.
 
+- **Backup and restore.** Settings → Backup and restore: **Back up to Google Drive** writes a backup file
+  (JSON) and opens the share menu, where Drive can be chosen; **Restore from a backup** opens a backup file
+  from Drive or the phone, shows what it contains and asks before replacing anything. **Weekly backup** (on
+  by default) keeps a fresh backup in the app's storage every week (the last four are kept) and shows a
+  "Save to Drive" card on Today. Android's own Google backup (`allowBackup`) also includes the app's data.
+  Code: `src/lib/backup-core.ts` (file format and checks), `src/lib/backup.ts` / `backup.web.ts`,
+  `src/components/backup.tsx`.
+
 Moods, tasks, people, scores, focus sessions, badges and the garden never leave the phone.
 
 Built with Expo SDK 57 (React Native 0.86, Expo Router, TypeScript).
