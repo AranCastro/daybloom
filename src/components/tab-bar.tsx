@@ -12,7 +12,7 @@ import { useTheme } from '@/hooks/use-theme';
 const ICONS: Record<string, IconName> = {
   today: 'sun',
   matrix: 'grid',
-  journey: 'calendar',
+  journey: 'leaf',
   circle: 'people',
   play: 'play',
 };
@@ -31,7 +31,7 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
             <Pressable
               key={route.key}
               accessibilityRole="tab"
-              accessibilityState={{ selected: focused }}
+              aria-selected={focused}
               accessibilityLabel={title}
               onPress={() => {
                 const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });

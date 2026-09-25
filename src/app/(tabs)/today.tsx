@@ -80,6 +80,8 @@ export default function Today() {
         </Text>
       </Animated.View>
 
+      <TodayBlooms />
+
       {showPicker ? (
         <Animated.View entering={FadeIn.duration(400)} key="picker">
           <Card style={styles.hero}>
@@ -185,6 +187,37 @@ export default function Today() {
         </Pressable>
       </Card>
     </Screen>
+  );
+}
+
+/** Today's flowers from every activity, one tap from the garden. */
+function TodayBlooms() {
+  const t = useTheme();
+  const garden = useAppState((s) => s.garden);
+  const today = garden.filter((b) => dayKey(new Date(b.at)) === dayKey());
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${today.length} flowers today. Open garden`}
+      onPress={() => (tap(), router.navigate('/journey'))}
+      style={[styles.blooms, { backgroundColor: t.surface, borderColor: t.line }]}>
+      <Icon name="leaf" color="#3A9477" size={18} />
+      {today.length ? (
+        <View style={styles.bloomRow}>
+          {today.slice(0, 7).map((b) => (
+            <Flower key={b.id} kind={flowerOf(b.flower)} size={24} />
+          ))}
+          <Text variant="small" style={{ marginLeft: 4 }}>
+            {today.length} {today.length === 1 ? 'bloom' : 'blooms'} today
+          </Text>
+        </View>
+      ) : (
+        <Text variant="small" style={{ flex: 1 }}>
+          Check in, finish a task or focus to grow today&apos;s first flower.
+        </Text>
+      )}
+      <Icon name="arrow" color={t.textMuted} size={16} />
+    </Pressable>
   );
 }
 
@@ -420,6 +453,8 @@ const styles = StyleSheet.create({
   gameLink: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderRadius: 26, borderWidth: 1 },
   gameIcon: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   streakChip: { flexDirection: 'row', alignItems: 'center', gap: 5, height: 40, paddingHorizontal: 12, borderRadius: 20, borderWidth: 1 },
+  blooms: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, paddingHorizontal: 14, borderRadius: 20, borderWidth: 1 },
+  bloomRow: { flex: 1, flexDirection: 'row', alignItems: 'center' },
   gear: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   reach: { gap: 10, paddingTop: 10 },
   avatar: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },

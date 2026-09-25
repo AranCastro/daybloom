@@ -26,21 +26,23 @@ export const FLOWERS: readonly FlowerKind[] = [
   { id: 'neelakurinji', name: 'Neelakurinji', rarity: 'rare', petals: 10, shape: 'round', petal: '#7E6FD0', petalInner: '#A99CEB', center: '#EDE7FF', line: 'Rare find: the Western Ghats bloom that comes about once in twelve years.' },
   { id: 'parijat', name: 'Night Jasmine', rarity: 'rare', petals: 6, shape: 'thin', petal: '#FFFFFF', petalInner: '#FFF6E8', center: '#F28C28', line: 'Rare find: white petals, a coral heart.' },
   { id: 'orchid', name: 'Blue Orchid', rarity: 'rare', petals: 5, shape: 'round', petal: '#5B8DEF', petalInner: '#93B4F5', center: '#FFFFFF', line: 'Rare find: patience, in bloom.' },
-  { id: 'golden-lotus', name: 'Golden Lotus', rarity: 'legendary', petals: 12, shape: 'pointed', petal: '#E8A317', petalInner: '#FFE08A', center: '#FFF4C2', line: 'Every tenth session: a golden bloom for steady work.' },
+  { id: 'golden-lotus', name: 'Golden Lotus', rarity: 'legendary', petals: 12, shape: 'pointed', petal: '#E8A317', petalInner: '#FFE08A', center: '#FFF4C2', line: 'Every twentieth bloom: a golden flower for steady days.' },
 ];
 
 export function flowerOf(id: string): FlowerKind {
   return FLOWERS.find((f) => f.id === id) ?? FLOWERS[0];
 }
 
+export const GOLDEN_EVERY = 20;
+
 /**
- * Picks the flower for session number `n` (1-based).
- * Every 10th is the Golden Lotus; otherwise 15% rare, else common,
+ * Picks the flower for bloom number `n` (1-based, across the whole garden).
+ * Every 20th bloom is the Golden Lotus; otherwise `rareChance` decides rare vs common,
  * avoiding the flower grown last time.
  */
-export function pickFlower(n: number, lastId?: string, rand: () => number = Math.random): FlowerKind {
-  if (n > 0 && n % 10 === 0) return flowerOf('golden-lotus');
-  const pool = FLOWERS.filter((f) => f.rarity === (rand() < 0.15 ? 'rare' : 'common') && f.id !== lastId);
+export function pickFlower(n: number, lastId?: string, rareChance = 0.1, rand: () => number = Math.random): FlowerKind {
+  if (n > 0 && n % GOLDEN_EVERY === 0) return flowerOf('golden-lotus');
+  const pool = FLOWERS.filter((f) => f.rarity === (rand() < rareChance ? 'rare' : 'common') && f.id !== lastId);
   return pool[Math.floor(rand() * pool.length)];
 }
 

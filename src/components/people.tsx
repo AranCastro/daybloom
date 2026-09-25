@@ -190,7 +190,7 @@ function CircleOption({ q, selected, onPress }: { q: CircleQuadrant; selected: b
     <Pressable
       onPress={() => (tap(), onPress())}
       accessibilityRole="radio"
-      accessibilityState={{ selected }}
+      aria-selected={selected}
       style={[styles.qOption, { backgroundColor: selected ? soft : t.background, borderColor: selected ? color : t.line }]}>
       <CircleChip q={q} size={24} />
       <View style={{ flex: 1 }}>

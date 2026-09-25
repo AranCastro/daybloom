@@ -14,7 +14,7 @@ import { Button, Card, Choice, Screen, tap } from '@/components/ui';
 import { Fonts } from '@/constants/theme';
 import { useIsDark, useTheme } from '@/hooks/use-theme';
 import { dayKey } from '@/lib/dates';
-import { FlowerKind, flowerOf, FLOWERS, RARITY_LABEL } from '@/lib/flowers';
+import { FlowerKind, GOLDEN_EVERY, RARITY_LABEL } from '@/lib/flowers';
 import {
   completeBreak,
   completeFocus,
@@ -32,7 +32,8 @@ import {
   stopTimer,
 } from '@/lib/focus';
 import { isLow } from '@/lib/moods';
-import { getState, openTasks, toggleTask, useAppState } from '@/lib/store';
+import { Bloom, getState, openTasks, toggleTask, useAppState } from '@/lib/store';
+import { GardenBed } from '@/components/garden';
 
 const RING = 280;
 const STROKE = 10;
@@ -59,6 +60,8 @@ export default function FocusScreen() {
   const params = useLocalSearchParams<{ task?: string }>();
   const active = useAppState((s) => s.focus.active);
   const sessions = useAppState((s) => s.focus.sessions);
+  const garden = useAppState((s) => s.garden);
+  const gardenSize = garden.length;
   const tasks = useAppState((s) => s.tasks);
   const lowToday = useAppState((s) => isLow(s.checkins[dayKey()]));
 
@@ -144,7 +147,7 @@ export default function FocusScreen() {
         <RewardView
           reward={reward}
           todayCount={today.length}
-          total={sessions.length}
+          total={gardenSize}
           taskTitle={rewardTask && !rewardTask.done ? rewardTask.title : undefined}
           onTaskDone={() => reward.session.taskId && toggleTask(reward.session.taskId)}
           restMinutes={PRESETS[preset].rest}
@@ -249,7 +252,7 @@ export default function FocusScreen() {
         </>
       )}
 
-      <Garden sessions={sessions} />
+      <FocusStats sessions={sessions} garden={garden} />
     </Screen>
   );
 }
@@ -302,7 +305,7 @@ function RewardView({
         <View style={[styles.statsRow, { borderColor: t.line }]}>
           <Stat label="Today" value={`${todayCount}`} />
           <Stat label="Garden" value={`${total}`} />
-          <Stat label="Next golden" value={`${10 - (total % 10)}`} />
+          <Stat label="Next golden" value={`${GOLDEN_EVERY - (total % GOLDEN_EVERY)}`} />
         </View>
         {taskTitle && !taskMarked && (
           <Button
@@ -337,60 +340,25 @@ function Stat({ label, value }: { label: string; value: string }) {
   );
 }
 
-function Garden({ sessions }: { sessions: FocusSession[] }) {
-  const t = useTheme();
-  const found = new Set(sessions.map((s) => s.flower));
+function FocusStats({ sessions, garden }: { sessions: FocusSession[]; garden: Bloom[] }) {
   const minutes = sessions.reduce((n, s) => n + s.minutes, 0);
   return (
-    <Card>
-      <Text variant="label">Your Focus Garden</Text>
-      <View style={styles.gardenStats}>
-        <Stat label="Flowers" value={`${sessions.length}`} />
-        <Stat label="Day streak" value={`${focusStreak(sessions)}`} />
-        <Stat label="Hours" value={(minutes / 60).toFixed(1)} />
-      </View>
-
-      {sessions.length === 0 ? (
-        <Text variant="small" center style={{ paddingVertical: 10 }}>
-          Your garden is empty for now. One focus session plants the first flower.
-        </Text>
-      ) : (
-        <View style={[styles.bed, { backgroundColor: t.surfaceAlt }]}>
-          {sessions.slice(0, 24).map((s) => (
-            <View key={s.at} style={styles.bedCell}>
-              <Flower kind={flowerOf(s.flower)} size={46} stem />
-            </View>
-          ))}
+    <Pressable onPress={() => (tap(), router.navigate('/journey'))} accessibilityRole="button" accessibilityLabel="Open your garden">
+      <Card>
+        <View style={styles.gardenHead}>
+          <Text variant="label">Your garden · {garden.length} blooms</Text>
+          <Text variant="small" color="accent">
+            Open garden
+          </Text>
         </View>
-      )}
-
-      <Text variant="label" style={{ marginTop: 6 }}>
-        Collection · {found.size} of {FLOWERS.length}
-      </Text>
-      <View style={styles.collection}>
-        {FLOWERS.map((f) =>
-          found.has(f.id) ? (
-            <View key={f.id} style={styles.collCell}>
-              <Flower kind={f} size={40} />
-              <Text variant="small" numberOfLines={1} style={{ fontSize: 10.5 }}>
-                {f.name}
-              </Text>
-            </View>
-          ) : (
-            <View key={f.id} style={styles.collCell}>
-              <View style={[styles.locked, { borderColor: t.line }]}>
-                <Text variant="bodyStrong" color="textMuted">
-                  ?
-                </Text>
-              </View>
-              <Text variant="small" color="textMuted" style={{ fontSize: 10.5 }}>
-                {RARITY_LABEL[f.rarity]}
-              </Text>
-            </View>
-          ),
-        )}
-      </View>
-    </Card>
+        <GardenBed blooms={garden} max={12} height={150} />
+        <View style={styles.gardenStats}>
+          <Stat label="Focus sessions" value={`${sessions.length}`} />
+          <Stat label="Focus streak" value={`${focusStreak(sessions)} d`} />
+          <Stat label="Focus hours" value={(minutes / 60).toFixed(1)} />
+        </View>
+      </Card>
+    </Pressable>
   );
 }
 
@@ -407,7 +375,8 @@ const styles = StyleSheet.create({
   bloomGlow: { position: 'absolute', width: 150, height: 150, borderRadius: 75, opacity: 0.45 },
   rarity: { paddingHorizontal: 12, paddingVertical: 4, borderRadius: 999 },
   statsRow: { flexDirection: 'row', alignSelf: 'stretch', borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 12 },
-  gardenStats: { flexDirection: 'row', paddingVertical: 6 },
+  gardenStats: { flexDirection: 'row', paddingTop: 10 },
+  gardenHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
   bed: { flexDirection: 'row', flexWrap: 'wrap', borderRadius: 18, padding: 8, gap: 2 },
   bedCell: { width: '16.66%', alignItems: 'center' },
   collection: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 10 },

@@ -9,7 +9,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="matrix" options={{ title: 'Matrix' }} />
       <Tabs.Screen name="play" options={{ title: 'Play' }} />
       <Tabs.Screen name="circle" options={{ title: 'People' }} />
-      <Tabs.Screen name="journey" options={{ title: 'Journey' }} />
+      <Tabs.Screen name="journey" options={{ title: 'Garden' }} />
     </Tabs>
   );
 }

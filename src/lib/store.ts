@@ -8,6 +8,7 @@ import { useSyncExternalStore } from 'react';
 import { dayKey } from '@/lib/dates';
 import { readItem, removeItem, writeItem } from '@/lib/kv';
 import { Badge, newlyEarned } from '@/lib/badges';
+import { FlowerKind, flowerOf, pickFlower } from '@/lib/flowers';
 import type { ActiveTimer, FocusSession } from '@/lib/focus';
 import { MoodValue } from '@/lib/moods';
 import { buddyHasJoined, sendNudge, sendTest } from '@/lib/ntfy';
@@ -52,6 +53,20 @@ export type Person = {
   createdAt: number;
 };
 
+/** Everything the user does can grow a flower. */
+export type BloomSource = 'checkin' | 'task' | 'focus' | 'game' | 'reach' | 'badge';
+
+export type Bloom = {
+  id: string;
+  at: number;
+  flower: string;
+  source: BloomSource;
+  /** Task id, game id, person id or badge id that earned it. */
+  ref?: string;
+  /** Short human note, e.g. the task title. */
+  note?: string;
+};
+
 export type AppState = {
   version: 1;
   onboarded: boolean;
@@ -69,6 +84,8 @@ export type AppState = {
   people: Person[];
   /** Best scores and play counts per game id. */
   games: { best: Record<string, number>; plays: Record<string, number> };
+  /** The unified garden, newest first. */
+  garden: Bloom[];
   /** Badge id -> epoch ms when earned. Kept even if a streak later ends. */
   badges: Record<string, number>;
   /** Pomodoro: completed sessions (newest first) and the running timer. */
@@ -92,13 +109,20 @@ const initial: AppState = {
   games: { best: {}, plays: {} },
   focus: { sessions: [], active: null },
   badges: {},
+  garden: [],
 };
 
 function load(): AppState {
   const raw = readItem(KEY);
   if (!raw) return initial;
   try {
-    return { ...initial, ...(JSON.parse(raw) as Partial<AppState>) };
+    const saved = JSON.parse(raw) as Partial<AppState>;
+    const merged = { ...initial, ...saved };
+    // Gardens began with focus sessions only: carry those flowers over once.
+    if (!saved.garden && saved.focus?.sessions?.length) {
+      merged.garden = saved.focus.sessions.map((f, i) => ({ id: `m${i}-${f.at}`, at: f.at, flower: f.flower, source: 'focus' as const, ref: f.taskId }));
+    }
+    return merged;
   } catch {
     return initial;
   }
@@ -144,9 +168,11 @@ export function resetAll() {
  */
 export async function recordMood(mood: MoodValue): Promise<boolean> {
   const today = dayKey();
+  const firstToday = state.checkins[today] === undefined;
   const checkins = { ...state.checkins, [today]: mood };
   const armed = mood > 2 ? true : state.armed;
   update({ checkins, armed });
+  if (firstToday) bloom('checkin', { note: 'Daily check-in' });
 
   const { buddy, streak } = state;
   if (!buddy || !armed || !isLowStreak(checkins, streak, today)) return false;
@@ -198,9 +224,14 @@ export function editTask(id: string, patch: Partial<Pick<Task, 'title' | 'quadra
 }
 
 export function toggleTask(id: string) {
+  const task = state.tasks.find((t) => t.id === id);
+  if (!task) return;
   update((s) => ({
     tasks: s.tasks.map((t) => (t.id === id ? { ...t, done: !t.done, doneAt: t.done ? undefined : Date.now() } : t)),
   }));
+  // A finished task grows a flower; un-finishing it takes that flower back.
+  if (!task.done) bloom('task', { ref: id, note: task.title, rareChance: task.quadrant === 1 ? 0.15 : 0.1 });
+  else update((s) => ({ garden: s.garden.filter((b) => !(b.source === 'task' && b.ref === id)) }));
 }
 
 export function deleteTask(id: string) {
@@ -239,7 +270,9 @@ export function deletePerson(id: string) {
 }
 
 export function markReached(id: string) {
+  const person = state.people.find((p) => p.id === id);
   update((s) => ({ people: s.people.map((p) => (p.id === id ? { ...p, lastReachedAt: Date.now() } : p)) }));
+  if (!bloomedToday('reach')) bloom('reach', { ref: id, note: person ? `Reached out to ${person.name}` : 'Reached out' });
 }
 
 /** People in a quadrant, least recently reached first, so suggestions rotate around the circle. */
@@ -252,7 +285,12 @@ export function peopleIn(people: Person[], quadrant: CircleQuadrant): Person[] {
 // ── Games ────────────────────────────────────────────────────────────────────
 
 /** Records a finished round. Returns true when it beats the previous best. */
+const GAME_NAMES: Record<string, string> = { breathe: 'Breathe', bubbles: 'Bubble Pop', memory: 'Pair Up', colours: 'Colour Clash' };
+
 export function recordGame(id: string, score: number, lowerIsBetter = false): boolean {
+  // First finish of each game per day grows a flower.
+  const game = id.startsWith('bubbles') ? 'bubbles' : id.split('-')[0];
+  if (!bloomedToday('game', game)) bloom('game', { ref: game, note: GAME_NAMES[game] ?? 'Game' });
   const prev = state.games.best[id];
   const isBest = prev === undefined || (lowerIsBetter ? score < prev : score > prev);
   update((s) => ({
@@ -272,6 +310,35 @@ export function awardBadges(): Badge[] {
   if (fresh.length) {
     const at = Date.now();
     update((s) => ({ badges: { ...s.badges, ...Object.fromEntries(fresh.map((b) => [b.id, at])) } }));
+    // Every badge brings a rare flower.
+    fresh.forEach((b) => bloom('badge', { ref: b.id, note: `Badge: ${b.title}`, rareChance: 1 }));
   }
   return fresh;
 }
+
+// ── Garden ───────────────────────────────────────────────────────────────────
+
+type BloomListener = (b: Bloom, kind: FlowerKind) => void;
+const bloomListeners = new Set<BloomListener>();
+
+/** Subscribe to new blooms (used by the global "a flower bloomed" toast). */
+export function onBloom(l: BloomListener): () => void {
+  bloomListeners.add(l);
+  return () => bloomListeners.delete(l);
+}
+
+export function bloomedToday(source: BloomSource, ref?: string): boolean {
+  const today = dayKey();
+  return state.garden.some((b) => b.source === source && (ref === undefined || b.ref === ref) && dayKey(new Date(b.at)) === today);
+}
+
+/** Grows one flower. `silent` skips the toast (the focus screen shows its own reveal). */
+export function bloom(source: BloomSource, opts: { ref?: string; note?: string; rareChance?: number; silent?: boolean } = {}): FlowerKind {
+  const kind = pickFlower(state.garden.length + 1, state.garden[0]?.flower, opts.rareChance ?? 0.1);
+  const b: Bloom = { id: newId(), at: Date.now(), flower: kind.id, source, ref: opts.ref, note: opts.note };
+  update((s) => ({ garden: [b, ...s.garden].slice(0, 2000) }));
+  if (!opts.silent) bloomListeners.forEach((l) => l(b, kind));
+  return kind;
+}
+
+export { flowerOf };

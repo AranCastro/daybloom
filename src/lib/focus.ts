@@ -1,12 +1,12 @@
 /**
  * Pomodoro focus timer. The running timer is stored as an absolute end time, so it stays
  * correct when the app is backgrounded or closed; an alarm notification fires at the end.
- * Every completed focus session grows one flower in the Focus Garden.
+ * Every completed focus session grows one flower in the shared garden.
  */
 import { addDays, dayKey } from '@/lib/dates';
-import { FlowerKind, pickFlower } from '@/lib/flowers';
+import { FlowerKind } from '@/lib/flowers';
 import { cancelFocusAlarm, scheduleFocusAlarm } from '@/lib/reminders';
-import { getState, update } from '@/lib/store';
+import { bloom, getState, update } from '@/lib/store';
 
 export type FocusPreset = 'gentle' | 'classic' | 'deep';
 
@@ -80,8 +80,10 @@ export function completeFocus(): { flower: FlowerKind; session: FocusSession } |
   const { focus } = getState();
   const a = focus.active;
   if (!a || a.kind !== 'focus' || remaining(a) > 0) return null;
-  const flower = pickFlower(focus.sessions.length + 1, focus.sessions[0]?.flower);
-  const session: FocusSession = { at: Date.now(), minutes: Math.round(a.total / 60_000), flower: flower.id, taskId: a.taskId };
+  const minutes = Math.round(a.total / 60_000);
+  // The flower goes into the shared garden; the focus screen shows its own reveal, so no toast.
+  const flower = bloom('focus', { ref: a.taskId, note: `${minutes}-minute focus`, rareChance: 0.15, silent: true });
+  const session: FocusSession = { at: Date.now(), minutes, flower: flower.id, taskId: a.taskId };
   update((s) => ({ focus: { sessions: [session, ...s.focus.sessions].slice(0, 500), active: null } }));
   return { flower, session };
 }

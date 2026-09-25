@@ -21,9 +21,8 @@ Two tools in one calm app:
 - **Focus timer (Pomodoro).** Gentle 15/3, Classic 25/5 or Deep 50/10 (Gentle is suggested on a low day),
   optionally linked to a task. The timer is stored as an end time, so it stays right when the app is
   closed; an alarm notification fires at the end and the screen stays awake while it runs.
-  **Reward:** every finished session grows a flower in the Focus Garden (7 common, 4 rare at 15%,
-  Golden Lotus every 10th session), with a collection to complete, day streak and hours. Stopping early
-  grows nothing.
+  **Reward:** every finished session grows a flower in the shared garden (15% rare chance), revealed on
+  screen. Stopping early grows nothing.
 
 - **Streak and badges.** Daily check-in streak with a rest day (after 7 check-ins in a row, one missed day is
   forgiven), best streak and a 14-day strip. 12 badges in bronze, silver and gold: first check-in,
@@ -31,7 +30,14 @@ Two tools in one calm app:
   Welcome back (returning after 3+ days away). New badges are celebrated after the check-in; earned badges
   are kept even if a streak ends.
 
-Moods, tasks, people, scores, focus sessions and badges never leave the phone.
+- **One garden for everything.** Every activity grows a flower in the same garden: the daily check-in
+  (one a day), each finished task (unticking takes it back), each focus session, the first finish of each
+  game per day, reaching out to someone (one a day) and every badge (always rare). Golden Lotus every 20th
+  bloom. A toast announces each bloom anywhere in the app; Today shows today's blooms; the **Garden tab**
+  (formerly Journey) holds the illustrated garden, "ways to grow today", latest blooms, the 12-flower
+  collection, badges and the mood journal.
+
+Moods, tasks, people, scores, focus sessions, badges and the garden never leave the phone.
 
 Built with Expo SDK 57 (React Native 0.86, Expo Router, TypeScript).
 
@@ -100,7 +106,7 @@ src/app/                  screens (Expo Router)
   (tabs)/today.tsx        mood check-in, focus list, week strip, support card
   (tabs)/matrix.tsx       Eisenhower matrix (2 × 2 quadrant cards, add button)
   quadrant/[q].tsx        one quadrant in full, with completed tasks
-  (tabs)/journey.tsx      month calendar and mood mix
+  (tabs)/journey.tsx      Garden tab: garden bed, ways to grow, collection, badges, mood journal
   (tabs)/play.tsx         Play: today's game pick and all four games
   game/[id].tsx           full-screen game (breathe, bubbles, memory, colours)
   (tabs)/circle.tsx       People: circle matrix, nudge buddy, invite, test nudge

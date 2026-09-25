@@ -47,7 +47,7 @@ export function Checkbox({ checked, color, onPress, size = 22 }: { checked: bool
     <Pressable
       hitSlop={10}
       accessibilityRole="checkbox"
-      accessibilityState={{ checked }}
+      aria-checked={checked}
       onPress={() => {
         s.set(withSequence(withSpring(0.8, { stiffness: 600, damping: 20 }), withSpring(1, { damping: 10 })));
         if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -236,7 +236,7 @@ function QuadrantOption({ q, selected, onPress }: { q: Quadrant; selected: boole
     <Pressable
       onPress={() => (tap(), onPress())}
       accessibilityRole="radio"
-      accessibilityState={{ selected }}
+      aria-selected={selected}
       style={[styles.qOption, { backgroundColor: selected ? soft : t.background, borderColor: selected ? color : t.line }]}>
       <QuadrantChip q={q} size={24} />
       <View style={{ flex: 1 }}>
