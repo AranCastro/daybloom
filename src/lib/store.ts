@@ -4,6 +4,7 @@
  * ever leaves it is the one-line nudge sent to the buddy's ntfy topic.
  */
 import { useSyncExternalStore } from 'react';
+import { Platform } from 'react-native';
 
 import { dayKey } from '@/lib/dates';
 import { readItem, removeItem, writeItem } from '@/lib/kv';
@@ -95,7 +96,24 @@ export type AppState = {
   focus: { sessions: FocusSession[]; active: ActiveTimer | null };
   /** Look of the matrix-style home-screen widgets, set in Settings → Home screen widgets. */
   widgetPrefs: Record<'Matrix' | 'Circle', WidgetPrefs>;
+  /** App-wide preferences from Settings. */
+  settings: Settings;
 };
+
+export type Settings = {
+  /** Light or dark look; "system" follows the phone. */
+  appearance: 'system' | 'light' | 'dark';
+  /** Vibration on taps, check-ins and games. */
+  haptics: boolean;
+  /** Turns off decorative animation (breathing orb, screen transitions' flourishes). */
+  reduceMotion: boolean;
+  /** First day of the week in the calendar: 0 Sunday, 1 Monday. */
+  weekStart: 0 | 1;
+  /** Session the focus timer suggests (a low day still suggests Gentle). */
+  focusPreset: 'gentle' | 'classic' | 'deep';
+};
+
+export const DEFAULT_SETTINGS: Settings = { appearance: 'system', haptics: true, reduceMotion: false, weekStart: 0, focusPreset: 'classic' };
 
 export type WidgetPrefs = {
   theme: 'auto' | 'light' | 'dark';
@@ -129,6 +147,7 @@ const initial: AppState = {
   badges: {},
   garden: [],
   widgetPrefs: { Matrix: DEFAULT_WIDGET_PREFS, Circle: DEFAULT_WIDGET_PREFS },
+  settings: DEFAULT_SETTINGS,
 };
 
 function load(): AppState {
@@ -138,6 +157,7 @@ function load(): AppState {
     const saved = JSON.parse(raw) as Partial<AppState>;
     const merged = { ...initial, ...saved };
     merged.widgetPrefs = { ...initial.widgetPrefs, ...saved.widgetPrefs };
+    merged.settings = { ...DEFAULT_SETTINGS, ...saved.settings };
     // Gardens began with focus sessions only: carry those flowers over once.
     if (!saved.garden && saved.focus?.sessions?.length) {
       merged.garden = saved.focus.sessions.map((f, i) => ({ id: `m${i}-${f.at}`, at: f.at, flower: f.flower, source: 'focus' as const, ref: f.taskId }));
@@ -187,6 +207,15 @@ export function useAppState<T>(select: (s: AppState) => T): T {
     () => select(state),
     () => select(state),
   );
+}
+
+export function setSettings(patch: Partial<Settings>) {
+  update((s) => ({ settings: { ...s.settings, ...patch } }));
+}
+
+/** Whether to vibrate (off on web and when switched off in Settings). */
+export function hapticsOn(): boolean {
+  return Platform.OS !== 'web' && state.settings.haptics;
 }
 
 export function setWidgetPrefs(name: keyof AppState['widgetPrefs'], patch: Partial<WidgetPrefs>) {

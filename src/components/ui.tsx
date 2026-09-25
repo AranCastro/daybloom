@@ -3,7 +3,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { ReactNode } from 'react';
 import {
   ActivityIndicator,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -19,9 +18,10 @@ import { Icon, IconName } from '@/components/icons';
 import { Text } from '@/components/text';
 import { Fonts, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { hapticsOn } from '@/lib/store';
 
 export function tap(style: 'light' | 'medium' = 'light') {
-  if (Platform.OS === 'web') return;
+  if (!hapticsOn()) return;
   Haptics.impactAsync(style === 'light' ? Haptics.ImpactFeedbackStyle.Light : Haptics.ImpactFeedbackStyle.Medium);
 }
 

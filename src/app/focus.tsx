@@ -65,12 +65,13 @@ export default function FocusScreen() {
   const gardenSize = garden.length;
   const tasks = useAppState((s) => s.tasks);
   const lowToday = useAppState((s) => isLow(s.checkins[dayKey()]));
+  const defaultPreset = useAppState((s) => s.settings.focusPreset);
 
   const [now, setNow] = useState(() => Date.now());
   const [reward, setReward] = useState<{ flower: FlowerKind; session: FocusSession } | null>(null);
   const [breakOver, setBreakOver] = useState(false);
   const [preset, setPreset] = useState<FocusPreset>(
-    active?.preset ?? (params.preset && params.preset in PRESETS ? (params.preset as FocusPreset) : lowToday ? 'gentle' : 'classic'),
+    active?.preset ?? (params.preset && params.preset in PRESETS ? (params.preset as FocusPreset) : lowToday ? 'gentle' : defaultPreset),
   );
   const [taskId, setTaskId] = useState<string | undefined>(params.task);
 

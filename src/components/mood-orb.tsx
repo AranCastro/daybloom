@@ -16,6 +16,7 @@ import Svg, { Circle, Path } from 'react-native-svg';
 
 import { useAppActive } from '@/hooks/use-app-active';
 import { Mood } from '@/lib/moods';
+import { useAppState } from '@/lib/store';
 
 /** Mouth curve per mood: positive bends up (smile), negative bends down. */
 const CURVE: Record<number, number> = { 5: 7, 4: 4.5, 3: 0.5, 2: -3, 1: -5 };
@@ -29,7 +30,9 @@ export function MoodOrb({ mood, size, breathe = false, face = true }: Props) {
   // endless animation would otherwise keep the phone redrawing (and warm) on every other screen.
   const focused = useIsFocused();
   const appActive = useAppActive();
-  const reduceMotion = useReducedMotion();
+  const systemReduce = useReducedMotion();
+  const settingReduce = useAppState((s) => s.settings.reduceMotion);
+  const reduceMotion = systemReduce || settingReduce;
   const run = breathe && focused && appActive && !reduceMotion;
 
   useEffect(() => {

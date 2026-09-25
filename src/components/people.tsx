@@ -11,7 +11,7 @@ import { useIsDark, useTheme } from '@/hooks/use-theme';
 import { CIRCLE, circleOf } from '@/lib/circle';
 import { canPickContacts, pickContact } from '@/lib/pick-contact';
 import { call, sms, whatsapp } from '@/lib/reach';
-import { addPerson, CircleQuadrant, deletePerson, editPerson, markReached, Person } from '@/lib/store';
+import { addPerson, CircleQuadrant, deletePerson, editPerson, markReached, Person, hapticsOn } from '@/lib/store';
 
 export function useCircleColors(q: CircleQuadrant) {
   const dark = useIsDark();
@@ -59,7 +59,7 @@ export function ReachButtons({ person, compact }: { person: Person; compact?: bo
   }
   const phone = person.phone;
   const go = (fn: () => Promise<boolean>) => async () => {
-    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (hapticsOn()) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     if (await fn()) markReached(person.id);
   };
   const actions: { key: string; label: string; icon: IconName; run: () => void }[] = [
@@ -124,7 +124,7 @@ function SheetBody({ onClose, person, defaultQuadrant = 1 }: SheetProps) {
     if (!name.trim()) return;
     if (person) editPerson(person.id, { name: name.trim(), phone: phone.trim() || undefined, quadrant: q });
     else addPerson(name, q, phone);
-    if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    if (hapticsOn()) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     onClose();
   }
 
