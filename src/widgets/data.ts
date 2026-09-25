@@ -8,6 +8,7 @@ import { dayKey, fromKey, shortDate } from '@/lib/dates';
 import { FlowerKind, flowerOf, GOLDEN_EVERY } from '@/lib/flowers';
 import { isLow, moodOf, MoodValue } from '@/lib/moods';
 import { sortOpen } from '@/lib/quadrants';
+import { cleanNumber, whatsappNumber } from '@/lib/reach';
 import type { AppState, Person, Task } from '@/lib/store';
 
 export type Snapshot = ReturnType<typeof snapshot>;
@@ -61,7 +62,13 @@ function circleCells(people: Person[]) {
     const list = people
       .filter((p) => p.quadrant === q)
       .sort((a, b) => (a.lastReachedAt ?? 0) - (b.lastReachedAt ?? 0) || a.createdAt - b.createdAt)
-      .map((p) => ({ id: p.id, name: p.name, uri: reachUri(p.phone, info.mode, info.opener) }));
+      .map((p) => ({
+        id: p.id,
+        name: p.name,
+        uri: reachUri(p.phone, info.mode, info.opener),
+        tel: p.phone ? `tel:${cleanNumber(p.phone)}` : null,
+        whatsapp: p.phone ? `https://wa.me/${whatsappNumber(p.phone)}?text=${encodeURIComponent(info.opener)}` : null,
+      }));
     return { q, mode: info.mode, people: list };
   });
 }

@@ -34,6 +34,15 @@ export function orbSvg(colors: readonly [string, string], size: number, ring?: s
   );
 }
 
+/** WhatsApp-style mark: a green round speech bubble with a white handset. */
+export function whatsappSvg(size = 20): string {
+  return (
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24">` +
+    `<path d="M12 2.5a9.5 9.5 0 00-8.2 14.3L2.5 21.5l4.8-1.3A9.5 9.5 0 1012 2.5z" fill="#25D366"/>` +
+    `<path d="M8.9 7.2c.2 0 .4 0 .5.4l.7 1.7c.1.2 0 .4-.1.6l-.5.6c-.1.1-.2.3 0 .5.4.8 1 1.5 1.7 2 .5.4 1.1.7 1.6.9.2.1.4 0 .5-.1l.6-.7c.2-.2.3-.2.5-.1l1.6.8c.2.1.4.2.4.3.1.4-.1 1.2-.6 1.6-.5.5-1.4.7-2.2.5-1.4-.4-2.7-1.2-3.8-2.3-1-1-1.8-2.2-2.1-3.5-.2-.8 0-1.6.5-2.1.3-.3.5-.4.7-.4z" fill="#FFFFFF"/></svg>`
+  );
+}
+
 /** A tick circle for task rows. */
 export function tickSvg(color: string, size = 22): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5" fill="none" stroke="${color}" stroke-width="1.8"/></svg>`;

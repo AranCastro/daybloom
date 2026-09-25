@@ -156,7 +156,7 @@ function Customise({ name }: { name: 'Matrix' | 'Circle' }) {
         onChange={(font) => set({ font })}
       />
       <Divider />
-      {toggle(name === 'Matrix' ? 'Show checkboxes' : 'Show call and message icons', prefs.checkbox, (checkbox) => set({ checkbox }))}
+      {toggle(name === 'Matrix' ? 'Show checkboxes' : 'Show call and WhatsApp buttons', prefs.checkbox, (checkbox) => set({ checkbox }))}
       {name === 'Matrix' && toggle('Show completed tasks', prefs.completed, (completed) => set({ completed }))}
     </View>
   );

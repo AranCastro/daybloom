@@ -13,7 +13,7 @@ import { CIRCLE } from '@/lib/circle';
 import { MOODS } from '@/lib/moods';
 import { QUADRANTS } from '@/lib/quadrants';
 import type { Snapshot } from '@/widgets/data';
-import { budSvg, doneSvg, flowerSvg, iconSvg, orbSvg, tickSvg } from '@/widgets/svg';
+import { budSvg, doneSvg, flowerSvg, iconSvg, orbSvg, tickSvg, whatsappSvg } from '@/widgets/svg';
 
 // ── Palette ──────────────────────────────────────────────────────────────────
 
@@ -610,6 +610,7 @@ export function CircleWidget({ s, p, width, height, scale = 1, checkbox = true }
   const titleH = Math.round(18 * k) + 4;
   const lineH = Math.round(28 * k);
   const dot = Math.round(20 * k);
+  const icon = Math.round(16 * k);
 
   return (
     <Grid
@@ -634,21 +635,29 @@ export function CircleWidget({ s, p, width, height, scale = 1, checkbox = true }
               <Empty text="No one yet" p={p} k={k} uri={LINK.circle} />
             ) : (
               people.slice(0, show).map((x) => (
-                <FlexWidget
-                  key={x.id}
-                  {...open(x.uri)}
-                  accessibilityLabel={`${info.mode === 'call' ? 'Call' : 'Message'} ${x.name}`}
-                  style={{ flexDirection: 'row', alignItems: 'center', height: lineH, width: 'match_parent' }}
-                >
-                  <FlexWidget style={{ height: dot, width: dot, borderRadius: dot / 2, backgroundColor: soft, alignItems: 'center', justifyContent: 'center' }}>
-                    <TextWidget text={x.name.slice(0, 1).toUpperCase()} style={{ fontSize: 10.5 * k, fontFamily: BOLD, color }} />
+                <FlexWidget key={x.id} style={{ flexDirection: 'row', alignItems: 'center', height: lineH, width: 'match_parent' }}>
+                  <FlexWidget
+                    {...open(x.uri)}
+                    accessibilityLabel={`${info.mode === 'call' ? 'Call' : 'Message'} ${x.name}`}
+                    style={{ flex: 1, flexDirection: 'row', alignItems: 'center', height: 'match_parent' }}
+                  >
+                    <FlexWidget style={{ height: dot, width: dot, borderRadius: dot / 2, backgroundColor: soft, alignItems: 'center', justifyContent: 'center' }}>
+                      <TextWidget text={x.name.slice(0, 1).toUpperCase()} style={{ fontSize: 10.5 * k, fontFamily: BOLD, color }} />
+                    </FlexWidget>
+                    <Spacer size={8} />
+                    <FlexWidget style={{ flex: 1 }}>
+                      <TextWidget text={x.name} style={{ fontSize: 13.5 * k, fontFamily: BODY, color: p.ink }} maxLines={1} truncate="END" />
+                    </FlexWidget>
                   </FlexWidget>
-                  <Spacer size={8} />
-                  <FlexWidget style={{ flex: 1 }}>
-                    <TextWidget text={x.name} style={{ fontSize: 13.5 * k, fontFamily: BODY, color: p.ink }} maxLines={1} truncate="END" />
-                  </FlexWidget>
-                  {checkbox && (
-                    <SvgWidget svg={iconSvg(info.mode === 'call' ? 'phone' : 'chat', color, Math.round(15 * k))} style={{ height: Math.round(15 * k), width: Math.round(15 * k), marginLeft: 6 }} />
+                  {checkbox && x.tel && (
+                    <FlexWidget {...open(x.tel)} accessibilityLabel={`Call ${x.name}`} style={{ paddingHorizontal: 4, height: 'match_parent', justifyContent: 'center' }}>
+                      <SvgWidget svg={iconSvg('phone', color, icon)} style={{ height: icon, width: icon }} />
+                    </FlexWidget>
+                  )}
+                  {checkbox && x.whatsapp && (
+                    <FlexWidget {...open(x.whatsapp)} accessibilityLabel={`WhatsApp ${x.name}`} style={{ paddingLeft: 4, height: 'match_parent', justifyContent: 'center' }}>
+                      <SvgWidget svg={whatsappSvg(icon + 2)} style={{ height: icon + 2, width: icon + 2 }} />
+                    </FlexWidget>
                   )}
                 </FlexWidget>
               ))
