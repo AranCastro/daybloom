@@ -98,6 +98,8 @@ export type AppState = {
   widgetPrefs: Record<'Matrix' | 'Circle', WidgetPrefs>;
   /** App-wide preferences from Settings. */
   settings: Settings;
+  /** When backups were last made (kept on this phone; not replaced by a restore). */
+  backup: { lastManual?: number; lastAuto?: number; lastRestore?: number; pendingSave?: boolean };
 };
 
 export type Settings = {
@@ -111,9 +113,11 @@ export type Settings = {
   weekStart: 0 | 1;
   /** Session the focus timer suggests (a low day still suggests Gentle). */
   focusPreset: 'gentle' | 'classic' | 'deep';
+  /** Keep a fresh backup file on the phone every week and offer to save it to Drive. */
+  autoBackup: boolean;
 };
 
-export const DEFAULT_SETTINGS: Settings = { appearance: 'system', haptics: true, reduceMotion: false, weekStart: 0, focusPreset: 'classic' };
+export const DEFAULT_SETTINGS: Settings = { appearance: 'system', haptics: true, reduceMotion: false, weekStart: 0, focusPreset: 'classic', autoBackup: true };
 
 export type WidgetPrefs = {
   theme: 'auto' | 'light' | 'dark';
@@ -148,21 +152,27 @@ const initial: AppState = {
   garden: [],
   widgetPrefs: { Matrix: DEFAULT_WIDGET_PREFS, Circle: DEFAULT_WIDGET_PREFS },
   settings: DEFAULT_SETTINGS,
+  backup: {},
 };
+
+/** Fills in anything a saved (or restored) state is missing, so older data keeps working. */
+function mergeSaved(saved: Partial<AppState>): AppState {
+  const merged = { ...initial, ...saved };
+  merged.widgetPrefs = { ...initial.widgetPrefs, ...saved.widgetPrefs };
+  merged.settings = { ...DEFAULT_SETTINGS, ...saved.settings };
+  merged.backup = { ...initial.backup, ...saved.backup };
+  // Gardens began with focus sessions only: carry those flowers over once.
+  if (!saved.garden && saved.focus?.sessions?.length) {
+    merged.garden = saved.focus.sessions.map((f, i) => ({ id: `m${i}-${f.at}`, at: f.at, flower: f.flower, source: 'focus' as const, ref: f.taskId }));
+  }
+  return merged;
+}
 
 function load(): AppState {
   const raw = readItem(KEY);
   if (!raw) return initial;
   try {
-    const saved = JSON.parse(raw) as Partial<AppState>;
-    const merged = { ...initial, ...saved };
-    merged.widgetPrefs = { ...initial.widgetPrefs, ...saved.widgetPrefs };
-    merged.settings = { ...DEFAULT_SETTINGS, ...saved.settings };
-    // Gardens began with focus sessions only: carry those flowers over once.
-    if (!saved.garden && saved.focus?.sessions?.length) {
-      merged.garden = saved.focus.sessions.map((f, i) => ({ id: `m${i}-${f.at}`, at: f.at, flower: f.flower, source: 'focus' as const, ref: f.taskId }));
-    }
-    return merged;
+    return mergeSaved(JSON.parse(raw) as Partial<AppState>);
   } catch {
     return initial;
   }
@@ -220,6 +230,21 @@ export function hapticsOn(): boolean {
 
 export function setWidgetPrefs(name: keyof AppState['widgetPrefs'], patch: Partial<WidgetPrefs>) {
   update((s) => ({ widgetPrefs: { ...s.widgetPrefs, [name]: { ...s.widgetPrefs[name], ...patch } } }));
+}
+
+/**
+ * Replaces everything with a restored backup. Backup bookkeeping stays as it is on this phone,
+ * and a focus timer that was running when the backup was made is dropped.
+ */
+export function replaceState(saved: Partial<AppState>) {
+  const next = mergeSaved(saved);
+  next.backup = { ...state.backup, lastRestore: Date.now(), pendingSave: false };
+  next.focus = { ...next.focus, active: null };
+  set(next);
+}
+
+export function setBackupInfo(patch: Partial<AppState['backup']>) {
+  update((s) => ({ backup: { ...s.backup, ...patch } }));
 }
 
 export function resetAll() {

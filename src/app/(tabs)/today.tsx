@@ -17,6 +17,7 @@ import { addDays, dayKey, greeting, prettyDate, weekdayShort } from '@/lib/dates
 import { isLow, MOODS, MoodValue, moodOf } from '@/lib/moods';
 import { circleOf } from '@/lib/circle';
 import { BadgeCelebration } from '@/components/badge';
+import { WeeklyBackupCard } from '@/components/backup';
 import { Flower } from '@/components/flower';
 import { flowerOf } from '@/lib/flowers';
 import { remaining, sessionsOn } from '@/lib/focus';
@@ -82,6 +83,7 @@ export default function Today() {
       </Animated.View>
 
       <TodayBlooms />
+      <WeeklyBackupCard />
 
       {showPicker ? (
         <Animated.View entering={FadeIn.duration(400)} key="picker">

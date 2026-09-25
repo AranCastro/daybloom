@@ -10,6 +10,7 @@ import { ReducedMotionConfig, ReduceMotion } from 'react-native-reanimated';
 
 import { BloomToast } from '@/components/garden';
 import { useIsDark, useTheme } from '@/hooks/use-theme';
+import { weeklyBackupIfDue } from '@/lib/backup';
 import { flushQueued, refreshBuddyJoined, useAppState } from '@/lib/store';
 import { startWidgetSync } from '@/widgets/sync';
 
@@ -35,6 +36,7 @@ export default function RootLayout() {
     const sync = () => {
       flushQueued();
       refreshBuddyJoined();
+      weeklyBackupIfDue();
     };
     sync();
     const sub = RNAppState.addEventListener('change', (s) => s === 'active' && sync());
