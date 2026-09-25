@@ -1,6 +1,9 @@
-# Daybloom: Mood & Garden — mobile app
+# Daybloom: Mood & Garden
 
 *Grow a little every day.*
+
+Website, privacy policy and a live web demo: https://arancastro.github.io/ (source in
+[AranCastro/AranCastro.github.io](https://github.com/AranCastro/AranCastro.github.io)).
 
 One calm app where everything you do grows the same garden:
 
@@ -60,11 +63,12 @@ Built with Expo SDK 57 (React Native 0.86, Expo Router, TypeScript).
 
 ## Run it on your phone (Windows, no Android Studio)
 
-1. Install Node.js 22 LTS from https://nodejs.org.
+1. Install Node.js 22 LTS from https://nodejs.org and Git from https://git-scm.com.
 2. In PowerShell:
 
    ```powershell
-   cd mobile
+   git clone https://github.com/AranCastro/daybloom.git
+   cd daybloom
    npm install
    npx expo start
    ```
@@ -79,14 +83,28 @@ saved with a country code (for example +44 …) are used as they are (`src/lib/r
 
 ## Download a test APK (no setup needed)
 
-Every change to `mobile/` on `main` is built automatically by GitHub Actions
+Every change to the app on `main` is built automatically by GitHub Actions
 (`.github/workflows/android-apk.yml`) and published as a release:
 
-**https://github.com/AranCastro/AranCastro.github.io/releases/latest**
+**https://github.com/AranCastro/daybloom/releases/latest**
+
+Builds up to 1.3.3 were published from the website repository and remain at
+https://github.com/AranCastro/AranCastro.github.io/releases.
 
 Open that page on an Android phone, tap the `.apk`, and allow installing from the browser when asked.
 To rebuild by hand: GitHub → **Actions** → **Build Android APK** → **Run workflow**. These test builds
 are signed with a debug key; Play Store builds come from `eas build --profile production` (below).
+
+## Web demo on the website
+
+The live demo at https://arancastro.github.io/app/ is the web build of this app
+(`experiments.baseUrl` is `/app` in `app.json`). To refresh it after changes:
+
+```powershell
+npx expo export --platform web
+```
+
+then copy the contents of `dist/` into the `app/` folder of the website repository.
 
 ## Build for the Play Store
 

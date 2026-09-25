@@ -1,0 +1,88 @@
+# Builds an installable Android APK of Daybloom on GitHub's machines and publishes it
+# as a GitHub Release, so it can be downloaded straight onto a phone.
+#
+# Runs when app code changes on main (not for docs-only changes), or manually from the
+# Actions tab ("Run workflow").
+# The APK is signed with the Expo template's debug key: fine for testing and sharing,
+# not for the Play Store (use `eas build --profile production` for that).
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-apk
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      EXPO_NO_TELEMETRY: 1
+      NODE_OPTIONS: --max-old-space-size=4096
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate native Android project
+        run: npx expo prebuild --platform android --no-install
+
+      - name: Build release APK
+        working-directory: android
+        run: ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a,armeabi-v7a
+
+      - name: Name the APK
+        id: apk
+        run: |
+          VERSION=$(node -p "require('./app.json').expo.version")
+          NAME="daybloom-${VERSION}-build${GITHUB_RUN_NUMBER}.apk"
+          cp android/app/build/outputs/apk/release/app-release.apk "$NAME"
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Keep a copy as a workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: daybloom-apk
+          path: ${{ steps.apk.outputs.name }}
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk-build-${{ github.run_number }}
+          name: Daybloom ${{ steps.apk.outputs.version }} (test build ${{ github.run_number }})
+          make_latest: true
+          files: ${{ steps.apk.outputs.name }}
+          body: |
+            Installable test build of **Daybloom: Mood & Garden** for Android.
+
+            1. Open this page on your Android phone and tap the `.apk` file below.
+            2. When Android asks, allow installing apps from your browser.
+            3. Open **Daybloom**.
+
+            This is a test build signed with a debug key: good for trying and sharing the app, but not
+            the Play Store version. Built from commit ${{ github.sha }}.
