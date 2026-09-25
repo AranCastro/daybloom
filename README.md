@@ -9,7 +9,8 @@ One calm app where everything you do grows the same garden:
 - **Eisenhower Matrix.** Sort tasks into Do first, Schedule, Delegate and Later, with due-date badges.
   Today's screen shows a short Focus list (due or late first, then Do first), reduced to one task on a low day.
   **Arrange** (in each quadrant, or Move up / Move down in a task) sets your own order; the widgets follow it.
-  **Calendar** (icon on the Matrix tab): a month view with a dot per task due, in quadrant colours; pick a day
+  **Calendar** (icon on the Matrix tab): past days shaded from pale to deep green by productivity (tasks finished +
+  focus sessions: 1, 2–3, 4–5, 6+), a dot per task due in quadrant colours; pick a day
   to see, tick or add its tasks, with that day's mood and flowers. Any due date can be picked from a calendar.
 
 - **Circle matrix.** Sort trusted people by closeness (close / wider) and how to reach them (call / message):

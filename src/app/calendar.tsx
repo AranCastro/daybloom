@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
-import { MonthCalendar } from '@/components/calendar';
+import { HeatLegend, MonthCalendar } from '@/components/calendar';
 import { Icon } from '@/components/icons';
 import { MoodOrb } from '@/components/mood-orb';
 import { TaskRow, TaskSheet } from '@/components/tasks';
@@ -13,6 +13,7 @@ import { Button, Card, Divider, Screen, tap } from '@/components/ui';
 import { useIsDark, useTheme } from '@/hooks/use-theme';
 import { dayKey, fromKey, prettyDate } from '@/lib/dates';
 import { moodOf } from '@/lib/moods';
+import { HeatLevel, levelOf, workByDay, workLine } from '@/lib/productivity';
 import { quadrantOf, sortOpen } from '@/lib/quadrants';
 import { Task, useAppState } from '@/lib/store';
 
@@ -22,6 +23,7 @@ export default function CalendarScreen() {
   const tasks = useAppState((s) => s.tasks);
   const checkins = useAppState((s) => s.checkins);
   const garden = useAppState((s) => s.garden);
+  const sessions = useAppState((s) => s.focus.sessions);
   const today = dayKey();
   const [day, setDay] = useState(today);
   const [sheet, setSheet] = useState<{ open: boolean; task?: Task | null }>({ open: false });
@@ -32,6 +34,10 @@ export default function CalendarScreen() {
     const c = quadrantOf(x.quadrant).color[dark ? 'dark' : 'light'];
     (marks[x.due!] ??= []).push(x.done ? t.textMuted : c);
   }
+
+  // Past days are shaded by how much got done: tasks finished plus focus sessions.
+  const work = workByDay(tasks, sessions);
+  const heat: Record<string, HeatLevel> = Object.fromEntries(Object.entries(work).map(([k, w]) => [k, levelOf(w.score)]));
 
   const open = sortOpen(tasks.filter((x) => x.due === day && !x.done)).sort((a, b) => a.quadrant - b.quadrant);
   const done = tasks.filter((x) => x.due === day && x.done);
@@ -51,7 +57,11 @@ export default function CalendarScreen() {
       </Animated.View>
 
       <Card>
-        <MonthCalendar selected={day} onSelect={setDay} marks={marks} />
+        <MonthCalendar selected={day} onSelect={setDay} marks={marks} heat={heat} />
+        <HeatLegend />
+        <Text variant="small" color="textMuted" style={{ fontSize: 12 }}>
+          Past days are shaded by tasks finished and focus sessions. Dots show tasks due.
+        </Text>
       </Card>
 
       <Card>
@@ -62,9 +72,11 @@ export default function CalendarScreen() {
           </View>
           {mood && <MoodOrb mood={mood} size={34} face={false} />}
         </View>
-        {(mood || blooms > 0) && (
+        {day <= today && (
           <Text variant="small">
-            {[mood && `Mood: ${mood.label}`, blooms > 0 && `${blooms} ${blooms === 1 ? 'flower' : 'flowers'} grown`].filter(Boolean).join(' · ')}
+            {[workLine(work[day]), mood && `Mood: ${mood.label}`, blooms > 0 && `${blooms} ${blooms === 1 ? 'flower' : 'flowers'}`]
+              .filter(Boolean)
+              .join(' · ')}
           </Text>
         )}
 

@@ -6,8 +6,9 @@ import { Icon } from '@/components/icons';
 import { Text } from '@/components/text';
 import { tap } from '@/components/ui';
 import { Fonts } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
+import { useIsDark, useTheme } from '@/hooks/use-theme';
 import { dayKey, fromKey } from '@/lib/dates';
+import { HEAT, HeatLevel } from '@/lib/productivity';
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const WEEK = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
@@ -22,10 +23,13 @@ type Props = {
   /** Called when the visible month changes (first day of the month). */
   onMonth?: (first: Date) => void;
   compact?: boolean;
+  /** Day -> productivity level; shades today and past days only. */
+  heat?: Record<string, HeatLevel>;
 };
 
-export function MonthCalendar({ selected, onSelect, marks = {}, onMonth, compact }: Props) {
+export function MonthCalendar({ selected, onSelect, marks = {}, onMonth, compact, heat }: Props) {
   const t = useTheme();
+  const shades = HEAT[useIsDark() ? 'dark' : 'light'];
   const today = dayKey();
   const start = selected ? fromKey(selected) : new Date();
   const [month, setMonth] = useState(() => new Date(start.getFullYear(), start.getMonth(), 1));
@@ -77,19 +81,23 @@ export function MonthCalendar({ selected, onSelect, marks = {}, onMonth, compact
             const isSel = key === selected;
             const isToday = key === today;
             const dots = (marks[key] ?? []).slice(0, 3);
+            const level = heat && key <= today ? (heat[key] ?? 0) : 0;
             return (
               <Pressable
                 key={key}
                 onPress={() => (tap(), onSelect(key))}
                 accessibilityRole="button"
-                accessibilityLabel={`${d.getDate()} ${MONTHS[d.getMonth()]}${dots.length ? `, ${marks[key].length} due` : ''}`}
+                accessibilityLabel={`${d.getDate()} ${MONTHS[d.getMonth()]}${dots.length ? `, ${marks[key].length} due` : ''}${level ? `, activity ${level} of 4` : ''}`}
                 aria-selected={isSel}
                 style={[styles.cellWrap, { width: `${100 / 7}%`, height: cell + 8 }]}>
                 <View
                   style={[
                     styles.cell,
                     { width: cell, height: cell, borderRadius: cell / 2 },
-                    isSel && { backgroundColor: t.brand },
+                    level > 0 && { backgroundColor: shades[level] },
+                    // Selected: a solid ring, so the day's shade stays visible (unshaded days get a soft fill).
+                    isSel && heat && { borderWidth: 2.5, borderColor: t.text, backgroundColor: level > 0 ? shades[level] : t.surfaceAlt },
+                    isSel && !heat && { backgroundColor: t.brand },
                     !isSel && isToday && { borderWidth: 1.5, borderColor: t.accent },
                   ]}>
                   <Text
@@ -97,7 +105,7 @@ export function MonthCalendar({ selected, onSelect, marks = {}, onMonth, compact
                     style={{
                       fontSize: 15,
                       fontFamily: isSel || isToday ? Fonts.bodyStrong : Fonts.body,
-                      color: isSel ? t.brandText : inMonth ? t.text : t.textMuted,
+                      color: isSel && !heat ? t.brandText : level === 4 ? '#FFFFFF' : inMonth ? t.text : t.textMuted,
                       opacity: inMonth ? 1 : 0.55,
                     }}>
                     {d.getDate()}
@@ -126,4 +134,25 @@ const styles = StyleSheet.create({
   cell: { alignItems: 'center', justifyContent: 'center' },
   dots: { flexDirection: 'row', gap: 3, height: 6, marginTop: 2 },
   dot: { width: 5, height: 5, borderRadius: 3 },
+  legend: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 4 },
+  swatch: { width: 14, height: 14, borderRadius: 4 },
 });
+
+/** "Less ▢▢▢▢▢ More" key for the productivity shading. */
+export function HeatLegend() {
+  const t = useTheme();
+  const shades = HEAT[useIsDark() ? 'dark' : 'light'];
+  return (
+    <View style={styles.legend} accessibilityLabel="Shading: lighter is less finished, deeper green is more">
+      <Text variant="small" color="textMuted" style={{ fontSize: 12 }}>
+        Less
+      </Text>
+      {shades.map((c, i) => (
+        <View key={i} style={[styles.swatch, { backgroundColor: i === 0 ? t.surfaceAlt : c }]} />
+      ))}
+      <Text variant="small" color="textMuted" style={{ fontSize: 12 }}>
+        More
+      </Text>
+    </View>
+  );
+}
