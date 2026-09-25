@@ -11,7 +11,10 @@ Two tools in one calm app:
   Call anytime, Quick call, Message first, Light chat. On a Low or Heavy day, Today suggests one person to
   call and one to message (least recently reached first), with one-tap Call, SMS and WhatsApp.
 
-Moods, tasks and people never leave the phone.
+- **Play.** Four short games, one picked for today's mood: Breathe (Heavy), Bubble Pop (Low),
+  Pair Up memory game (Okay), Colour Clash word-colour challenge (Good or Bright). Best scores are kept.
+
+Moods, tasks, people and scores never leave the phone.
 
 Built with Expo SDK 57 (React Native 0.86, Expo Router, TypeScript).
 
@@ -81,9 +84,12 @@ src/app/                  screens (Expo Router)
   (tabs)/matrix.tsx       Eisenhower matrix (2 × 2 quadrant cards, add button)
   quadrant/[q].tsx        one quadrant in full, with completed tasks
   (tabs)/journey.tsx      month calendar and mood mix
+  (tabs)/play.tsx         Play: today's game pick and all four games
+  game/[id].tsx           full-screen game (breathe, bubbles, memory, colours)
   (tabs)/circle.tsx       People: circle matrix, nudge buddy, invite, test nudge
-  (tabs)/settings.tsx     name, reminder, threshold, privacy, erase
+  settings.tsx            name, reminder, threshold, privacy, erase (gear on Today)
 src/components/           design system: text, buttons, cards, icons, mood orb, tab bar
+src/components/games/     the four games and their shared frame
 src/lib/                  state store (moods, tasks), nudge rule, quadrants, ntfy client, reminders, dates
 assets/images/            app icon, adaptive icon, splash
 ```

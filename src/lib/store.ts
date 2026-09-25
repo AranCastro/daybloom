@@ -65,6 +65,8 @@ export type AppState = {
   armed: boolean;
   tasks: Task[];
   people: Person[];
+  /** Best scores and play counts per game id. */
+  games: { best: Record<string, number>; plays: Record<string, number> };
 };
 
 const KEY = 'nudge.state.v1';
@@ -81,6 +83,7 @@ const initial: AppState = {
   armed: true,
   tasks: [],
   people: [],
+  games: { best: {}, plays: {} },
 };
 
 function load(): AppState {
@@ -236,4 +239,19 @@ export function peopleIn(people: Person[], quadrant: CircleQuadrant): Person[] {
   return people
     .filter((p) => p.quadrant === quadrant)
     .sort((a, b) => (a.lastReachedAt ?? 0) - (b.lastReachedAt ?? 0) || a.createdAt - b.createdAt);
+}
+
+// ── Games ────────────────────────────────────────────────────────────────────
+
+/** Records a finished round. Returns true when it beats the previous best. */
+export function recordGame(id: string, score: number, lowerIsBetter = false): boolean {
+  const prev = state.games.best[id];
+  const isBest = prev === undefined || (lowerIsBetter ? score < prev : score > prev);
+  update((s) => ({
+    games: {
+      best: isBest ? { ...s.games.best, [id]: score } : s.games.best,
+      plays: { ...s.games.plays, [id]: (s.games.plays[id] ?? 0) + 1 },
+    },
+  }));
+  return isBest;
 }

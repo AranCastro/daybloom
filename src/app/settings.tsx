@@ -1,11 +1,11 @@
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
-import { Alert, Linking, Platform, Switch, View } from 'react-native';
+import { Alert, Linking, Platform, Pressable, Switch, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
+import { Icon } from '@/components/icons';
 import { Text } from '@/components/text';
-import { Card, Choice, Divider, Input, Row, Screen } from '@/components/ui';
-import { TabBarInset } from '@/constants/theme';
+import { Card, Choice, Divider, Input, Row, Screen, tap } from '@/components/ui';
 import { useTheme } from '@/hooks/use-theme';
 import { prettyTime } from '@/lib/dates';
 import { cancelReminders, scheduleDailyReminder } from '@/lib/reminders';
@@ -55,8 +55,11 @@ export default function Settings() {
   }
 
   return (
-    <Screen bottomInset={TabBarInset + 24}>
-      <Animated.View entering={FadeInDown.duration(450)} style={{ gap: 4, marginTop: 8 }}>
+    <Screen>
+      <Pressable hitSlop={12} onPress={() => (tap(), router.back())} accessibilityLabel="Back" style={{ height: 32, justifyContent: 'center' }}>
+        <Icon name="back" color={t.textSecondary} />
+      </Pressable>
+      <Animated.View entering={FadeInDown.duration(450)} style={{ gap: 4 }}>
         <Text variant="label">Settings</Text>
         <Text variant="title">Made to fit you.</Text>
       </Animated.View>

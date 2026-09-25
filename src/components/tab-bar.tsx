@@ -14,7 +14,7 @@ const ICONS: Record<string, IconName> = {
   matrix: 'grid',
   journey: 'calendar',
   circle: 'people',
-  settings: 'settings',
+  play: 'play',
 };
 
 export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {

@@ -21,7 +21,10 @@ export type IconName =
   | 'plus'
   | 'trash'
   | 'flag'
-  | 'chat';
+  | 'chat'
+  | 'play'
+  | 'close'
+  | 'refresh';
 
 type Props = { name: IconName; size?: number; color: string; strokeWidth?: number };
 
@@ -99,6 +102,16 @@ export function Icon({ name, size = 22, color, strokeWidth = 1.8 }: Props) {
       {name === 'trash' && (
         <Path d="M4.5 7h15M9.5 7V5a1 1 0 011-1h3a1 1 0 011 1v2M6.5 7l.9 11.2A2 2 0 009.4 20h5.2a2 2 0 002-1.8L17.5 7M10 11v5M14 11v5" {...p} />
       )}
+      {name === 'play' && (
+        <>
+          <Path d="M7.5 7.5h9a4.5 4.5 0 014.4 5.5l-.8 3.6a2.3 2.3 0 01-4 .9L14.3 15.5H9.7l-1.8 2a2.3 2.3 0 01-4-.9L3.1 13a4.5 4.5 0 014.4-5.5z" {...p} />
+          <Path d="M8 10.2v3M6.5 11.7h3" {...p} />
+          <Circle cx={15.8} cy={10.9} r={0.5} {...p} />
+          <Circle cx={17.4} cy={12.6} r={0.5} {...p} />
+        </>
+      )}
+      {name === 'close' && <Path d="M6 6l12 12M18 6L6 18" {...p} />}
+      {name === 'refresh' && <Path d="M19.5 12a7.5 7.5 0 11-2.2-5.3M19.5 4.5v4h-4" {...p} />}
       {name === 'chat' && (
         <Path d="M5 5.5h14A1.5 1.5 0 0120.5 7v8.5A1.5 1.5 0 0119 17h-7.5L7 20.5V17H5a1.5 1.5 0 01-1.5-1.5V7A1.5 1.5 0 015 5.5z" {...p} />
       )}

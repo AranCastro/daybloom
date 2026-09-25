@@ -15,6 +15,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { addDays, dayKey, greeting, prettyDate, weekdayShort } from '@/lib/dates';
 import { isLow, MOODS, MoodValue, moodOf } from '@/lib/moods';
 import { circleOf } from '@/lib/circle';
+import { gameForMood } from '@/lib/games';
 import { openTasks, peopleIn, Person, recordMood, Task, useAppState } from '@/lib/store';
 
 export default function Today() {
@@ -39,7 +40,17 @@ export default function Today() {
   return (
     <Screen bottomInset={TabBarInset + 24}>
       <Animated.View entering={FadeInDown.duration(500)} style={styles.header}>
-        <Text variant="label">{prettyDate(new Date())}</Text>
+        <View style={[styles.inline, { justifyContent: 'space-between' }]}>
+          <Text variant="label">{prettyDate(new Date())}</Text>
+          <Pressable
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Settings"
+            onPress={() => (tap(), router.push('/settings'))}
+            style={[styles.gear, { backgroundColor: t.surface, borderColor: t.line }]}>
+            <Icon name="settings" color={t.text} size={19} />
+          </Pressable>
+        </View>
         <Text variant="title">
           {greeting()}
           {name ? `, ${name}` : ''}
@@ -124,6 +135,8 @@ export default function Today() {
 
       <FocusCard lowDay={isLow(checkins[today]) && !editing} />
 
+      {todayMood && !editing && <GameLink mood={todayMood.value} />}
+
       <WeekStrip checkins={checkins} />
 
       <Card>
@@ -147,6 +160,28 @@ export default function Today() {
         </Pressable>
       </Card>
     </Screen>
+  );
+}
+
+/** One-line suggestion of today's game, matched to the mood. */
+function GameLink({ mood }: { mood: MoodValue }) {
+  const t = useTheme();
+  const game = gameForMood(mood);
+  if (!game) return null;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={() => (tap(), router.push({ pathname: '/game/[id]', params: { id: game.id } }))}
+      style={({ pressed }) => [styles.gameLink, { backgroundColor: t.surface, borderColor: t.line, opacity: pressed ? 0.8 : 1 }]}>
+      <View style={[styles.gameIcon, { backgroundColor: t.surfaceAlt }]}>
+        <Icon name="play" color={t.text} size={20} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text variant="bodyStrong">A small break: {game.title}</Text>
+        <Text variant="small">{game.tagline}</Text>
+      </View>
+      <Icon name="arrow" color={t.textMuted} size={20} />
+    </Pressable>
   );
 }
 
@@ -305,6 +340,9 @@ const styles = StyleSheet.create({
   orbWrap: { alignItems: 'center', marginBottom: 20, marginTop: 8 },
   change: { alignSelf: 'center', paddingVertical: 10, paddingHorizontal: 16, marginTop: 6 },
   inline: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  gameLink: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderRadius: 26, borderWidth: 1 },
+  gameIcon: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  gear: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   reach: { gap: 10, paddingTop: 10 },
   avatar: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   week: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 },
