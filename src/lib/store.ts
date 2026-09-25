@@ -37,6 +37,19 @@ export type Task = {
   createdAt: number;
 };
 
+/** Circle quadrant: 1 call anytime, 2 quick call, 3 message first, 4 light chat. */
+export type CircleQuadrant = 1 | 2 | 3 | 4;
+
+export type Person = {
+  id: string;
+  name: string;
+  /** As stored in the phone book or typed; digits and a leading + are kept for dialling. */
+  phone?: string;
+  quadrant: CircleQuadrant;
+  lastReachedAt?: number;
+  createdAt: number;
+};
+
 export type AppState = {
   version: 1;
   onboarded: boolean;
@@ -51,6 +64,7 @@ export type AppState = {
   /** False after a nudge fires; re-armed by the next day that is not low. */
   armed: boolean;
   tasks: Task[];
+  people: Person[];
 };
 
 const KEY = 'nudge.state.v1';
@@ -66,6 +80,7 @@ const initial: AppState = {
   nudges: [],
   armed: true,
   tasks: [],
+  people: [],
 };
 
 function load(): AppState {
@@ -195,4 +210,30 @@ export function openTasks(tasks: Task[], quadrant: Quadrant): Task[] {
       if (b.due) return 1;
       return a.createdAt - b.createdAt;
     });
+}
+
+// ── People (support circle matrix) ───────────────────────────────────────────
+
+export function addPerson(name: string, quadrant: CircleQuadrant, phone?: string) {
+  const person: Person = { id: newId(), name: name.trim(), phone: phone?.trim() || undefined, quadrant, createdAt: Date.now() };
+  update((s) => ({ people: [...s.people, person] }));
+}
+
+export function editPerson(id: string, patch: Partial<Pick<Person, 'name' | 'phone' | 'quadrant'>>) {
+  update((s) => ({ people: s.people.map((p) => (p.id === id ? { ...p, ...patch } : p)) }));
+}
+
+export function deletePerson(id: string) {
+  update((s) => ({ people: s.people.filter((p) => p.id !== id) }));
+}
+
+export function markReached(id: string) {
+  update((s) => ({ people: s.people.map((p) => (p.id === id ? { ...p, lastReachedAt: Date.now() } : p)) }));
+}
+
+/** People in a quadrant, least recently reached first, so suggestions rotate around the circle. */
+export function peopleIn(people: Person[], quadrant: CircleQuadrant): Person[] {
+  return people
+    .filter((p) => p.quadrant === quadrant)
+    .sort((a, b) => (a.lastReachedAt ?? 0) - (b.lastReachedAt ?? 0) || a.createdAt - b.createdAt);
 }

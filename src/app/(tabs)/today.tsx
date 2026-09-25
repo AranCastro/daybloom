@@ -6,6 +6,7 @@ import Animated, { FadeIn, FadeInDown, ZoomIn } from 'react-native-reanimated';
 
 import { Icon } from '@/components/icons';
 import { MoodOrb } from '@/components/mood-orb';
+import { Avatar, ReachButtons } from '@/components/people';
 import { TaskRow, TaskSheet } from '@/components/tasks';
 import { Text } from '@/components/text';
 import { Card, Screen, tap } from '@/components/ui';
@@ -13,7 +14,8 @@ import { TabBarInset } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { addDays, dayKey, greeting, prettyDate, weekdayShort } from '@/lib/dates';
 import { isLow, MOODS, MoodValue, moodOf } from '@/lib/moods';
-import { openTasks, recordMood, Task, useAppState } from '@/lib/store';
+import { circleOf } from '@/lib/circle';
+import { openTasks, peopleIn, Person, recordMood, Task, useAppState } from '@/lib/store';
 
 export default function Today() {
   const t = useTheme();
@@ -118,6 +120,8 @@ export default function Today() {
         </Animated.View>
       )}
 
+      {isLow(checkins[today]) && !editing && <ReachOutCard />}
+
       <FocusCard lowDay={isLow(checkins[today]) && !editing} />
 
       <WeekStrip checkins={checkins} />
@@ -143,6 +147,55 @@ export default function Today() {
         </Pressable>
       </Card>
     </Screen>
+  );
+}
+
+/**
+ * On a low day: one person to call and one to message, taken from the circle matrix.
+ * Least recently reached first, so the same person is not always asked.
+ */
+function ReachOutCard() {
+  const people = useAppState((s) => s.people);
+  const caller = peopleIn(people, 1)[0] ?? peopleIn(people, 2)[0];
+  const texter = peopleIn(people, 3)[0] ?? peopleIn(people, 4)[0];
+  const picks = [caller, texter].filter((p): p is Person => !!p);
+
+  return (
+    <Animated.View entering={FadeInDown.delay(120)}>
+      <Card>
+        <Text variant="label">Reach out today</Text>
+        {picks.length === 0 ? (
+          <>
+            <Text variant="body" color="textSecondary">
+              Add the people who lift you, and on days like this we will suggest who to call or message.
+            </Text>
+            <Pressable onPress={() => (tap(), router.navigate('/circle'))} style={{ paddingVertical: 6 }}>
+              <Text variant="bodyStrong" color="accent">
+                Build your circle
+              </Text>
+            </Pressable>
+          </>
+        ) : (
+          <>
+            <Text variant="quote" color="textSecondary" style={{ fontSize: 16, lineHeight: 22 }}>
+              A short hello can change the shape of a day.
+            </Text>
+            {picks.map((person) => (
+              <View key={person.id} style={styles.reach}>
+                <View style={styles.inline}>
+                  <Avatar person={person} size={40} />
+                  <View style={{ flex: 1 }}>
+                    <Text variant="bodyStrong">{person.name}</Text>
+                    <Text variant="small">{circleOf(person.quadrant).title}</Text>
+                  </View>
+                </View>
+                <ReachButtons person={person} compact />
+              </View>
+            ))}
+          </>
+        )}
+      </Card>
+    </Animated.View>
   );
 }
 
@@ -252,6 +305,7 @@ const styles = StyleSheet.create({
   orbWrap: { alignItems: 'center', marginBottom: 20, marginTop: 8 },
   change: { alignSelf: 'center', paddingVertical: 10, paddingHorizontal: 16, marginTop: 6 },
   inline: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  reach: { gap: 10, paddingTop: 10 },
   avatar: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   week: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 },
   weekDay: { alignItems: 'center', gap: 6 },

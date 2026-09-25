@@ -1,16 +1,18 @@
 import { useState } from 'react';
-import { Alert, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { Icon } from '@/components/icons';
 import { Text } from '@/components/text';
-import { Button, Card, Divider, Input, Screen } from '@/components/ui';
+import { Button, Card, Divider, Input, Screen, tap } from '@/components/ui';
 import { TabBarInset } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { prettyDate } from '@/lib/dates';
 import { shareInvite } from '@/lib/invite';
 import { newTopic } from '@/lib/ntfy';
-import { getState, testNudge, update, useAppState } from '@/lib/store';
+import { Avatar, CircleChip, PersonSheet, useCircleColors } from '@/components/people';
+import { CIRCLE, circleOf } from '@/lib/circle';
+import { CircleQuadrant, getState, Person, peopleIn, testNudge, update, useAppState } from '@/lib/store';
 
 function confirm(title: string, message: string, onYes: () => void) {
   if (Platform.OS === 'web') {
@@ -52,9 +54,17 @@ export default function Circle() {
   return (
     <Screen bottomInset={TabBarInset + 24}>
       <Animated.View entering={FadeInDown.duration(450)} style={{ gap: 4, marginTop: 8 }}>
-        <Text variant="label">Your buddy</Text>
-        <Text variant="title">One person who{'\n'}would want to know.</Text>
+        <Text variant="label">Your circle</Text>
+        <Text variant="title">Who lifts you{'\n'}on a low day?</Text>
+        <Text variant="small">Sort the people you trust by how close they are and how you reach them.</Text>
       </Animated.View>
+
+      <CircleMatrix />
+
+      <View style={{ gap: 4, marginTop: 12 }}>
+        <Text variant="label">Your nudge buddy</Text>
+        <Text variant="heading">One person who would want to know.</Text>
+      </View>
 
       {!buddy ? (
         <Card>
@@ -153,6 +163,95 @@ export default function Circle() {
   );
 }
 
+/** 2 × 2 people matrix: columns Close / Wider, rows Call / Message. */
+function CircleMatrix() {
+  const people = useAppState((s) => s.people);
+  const [sheet, setSheet] = useState<{ open: boolean; person?: Person | null; q?: CircleQuadrant }>({ open: false });
+
+  return (
+    <View style={{ gap: 8 }}>
+      <View style={styles.axisRow}>
+        <Text variant="label" center style={{ flex: 1 }}>
+          Close
+        </Text>
+        <Text variant="label" center style={{ flex: 1 }}>
+          Wider circle
+        </Text>
+      </View>
+      {[0, 2].map((start) => (
+        <View key={start} style={styles.circleRow}>
+          {CIRCLE.slice(start, start + 2).map((info, i) => (
+            <Animated.View key={info.id} entering={FadeInDown.delay(70 * (start + i)).duration(400)} style={{ flex: 1 }}>
+              <CircleCard
+                q={info.id}
+                people={peopleIn(people, info.id)}
+                onPerson={(person) => setSheet({ open: true, person })}
+                onAdd={() => setSheet({ open: true, person: null, q: info.id })}
+              />
+            </Animated.View>
+          ))}
+        </View>
+      ))}
+      <PersonSheet visible={sheet.open} person={sheet.person} defaultQuadrant={sheet.q} onClose={() => setSheet({ open: false })} />
+    </View>
+  );
+}
+
+function CircleCard({
+  q,
+  people,
+  onPerson,
+  onAdd,
+}: {
+  q: CircleQuadrant;
+  people: Person[];
+  onPerson: (p: Person) => void;
+  onAdd: () => void;
+}) {
+  const t = useTheme();
+  const { color, soft } = useCircleColors(q);
+  const info = circleOf(q);
+  return (
+    <View style={[styles.circleCard, { backgroundColor: t.surface, borderColor: t.line }]}>
+      <View style={[styles.circleTint, { backgroundColor: soft }]} />
+      <View style={styles.circleHead}>
+        <View style={styles.circleTitle}>
+          <CircleChip q={q} size={22} />
+          <Text variant="heading" style={{ color, fontSize: 15.5, lineHeight: 20, flex: 1 }} numberOfLines={1} adjustsFontSizeToFit>
+            {info.title}
+          </Text>
+        </View>
+        <View style={styles.circleMode}>
+          <Icon name={info.mode === 'call' ? 'phone' : 'chat'} color={t.textSecondary} size={13} />
+          <Text variant="small" style={{ fontSize: 11.5, lineHeight: 15 }}>
+            {info.mode === 'call' ? 'Call' : 'Message'}
+          </Text>
+        </View>
+      </View>
+      <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
+        {people.map((person) => (
+          <Pressable key={person.id} onPress={() => (tap(), onPerson(person))} style={styles.personRow}>
+            <Avatar person={person} size={30} />
+            <Text variant="body" numberOfLines={1} style={{ flex: 1, fontSize: 14.5 }}>
+              {person.name}
+            </Text>
+          </Pressable>
+        ))}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Add to ${info.title}`}
+          onPress={() => (tap(), onAdd())}
+          style={[styles.addRow, { borderColor: t.line }]}>
+          <Icon name="plus" color={t.textMuted} size={16} />
+          <Text variant="small" color="textMuted">
+            {people.length ? 'Add' : 'Add someone'}
+          </Text>
+        </Pressable>
+      </ScrollView>
+    </View>
+  );
+}
+
 function Step({ icon, text }: { icon: 'sun' | 'bell' | 'lock' | 'heart'; text: string }) {
   const t = useTheme();
   return (
@@ -168,6 +267,25 @@ function Step({ icon, text }: { icon: 'sun' | 'bell' | 'lock' | 'heart'; text: s
 }
 
 const styles = StyleSheet.create({
+  axisRow: { flexDirection: 'row', gap: 12 },
+  circleRow: { flexDirection: 'row', gap: 12, height: 206 },
+  circleCard: { flex: 1, borderRadius: 22, borderWidth: 1, padding: 12, overflow: 'hidden' },
+  circleTint: { position: 'absolute', top: 0, left: 0, right: 0, height: 60 },
+  circleHead: { gap: 2, marginBottom: 8 },
+  circleTitle: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  circleMode: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingLeft: 29 },
+  personRow: { flexDirection: 'row', alignItems: 'center', gap: 9, paddingVertical: 5 },
+  addRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    marginTop: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+  },
   bigAvatar: { width: 92, height: 92, borderRadius: 46, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
   pill: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 999 },
   dot: { width: 8, height: 8, borderRadius: 4 },

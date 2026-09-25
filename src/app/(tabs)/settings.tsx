@@ -108,7 +108,7 @@ export default function Settings() {
       </Card>
 
       <Card>
-        <Row icon="shield" title="Your data stays here" detail="Moods are stored only on this phone. No account, no ads, no tracking." />
+        <Row icon="shield" title="Your data stays here" detail="Moods, tasks and your circle are stored only on this phone. No account, no ads, no tracking." />
         <Divider />
         <Row icon="phone" title="Talk to someone now" detail="Tele-MANAS 14416 · free, 24 hours" onPress={() => Linking.openURL('tel:14416')} />
         <Divider />

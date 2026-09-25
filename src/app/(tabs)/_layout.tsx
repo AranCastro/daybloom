@@ -8,7 +8,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="today" options={{ title: 'Today' }} />
       <Tabs.Screen name="matrix" options={{ title: 'Matrix' }} />
       <Tabs.Screen name="journey" options={{ title: 'Journey' }} />
-      <Tabs.Screen name="circle" options={{ title: 'Buddy' }} />
+      <Tabs.Screen name="circle" options={{ title: 'People' }} />
       <Tabs.Screen name="settings" options={{ title: 'Settings' }} />
     </Tabs>
   );

@@ -24,6 +24,9 @@
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "android.permission.POST_NOTIFICATIONS"
+      ],
+      "blockedPermissions": [
+        "android.permission.WRITE_CONTACTS"
       ]
     },
     "web": {
@@ -53,7 +56,13 @@
           "color": "#2F4A3F"
         }
       ],
-      "expo-sqlite"
+      "expo-sqlite",
+      [
+        "expo-contacts",
+        {
+          "contactsPermission": "Allow Nudge to read the contact you pick, so you can call or message them in one tap."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

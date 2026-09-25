@@ -20,7 +20,8 @@ export type IconName =
   | 'grid'
   | 'plus'
   | 'trash'
-  | 'flag';
+  | 'flag'
+  | 'chat';
 
 type Props = { name: IconName; size?: number; color: string; strokeWidth?: number };
 
@@ -97,6 +98,9 @@ export function Icon({ name, size = 22, color, strokeWidth = 1.8 }: Props) {
       {name === 'plus' && <Path d="M12 5v14M5 12h14" {...p} />}
       {name === 'trash' && (
         <Path d="M4.5 7h15M9.5 7V5a1 1 0 011-1h3a1 1 0 011 1v2M6.5 7l.9 11.2A2 2 0 009.4 20h5.2a2 2 0 002-1.8L17.5 7M10 11v5M14 11v5" {...p} />
+      )}
+      {name === 'chat' && (
+        <Path d="M5 5.5h14A1.5 1.5 0 0120.5 7v8.5A1.5 1.5 0 0119 17h-7.5L7 20.5V17H5a1.5 1.5 0 01-1.5-1.5V7A1.5 1.5 0 015 5.5z" {...p} />
       )}
       {name === 'flag' && <Path d="M5.5 20.5V4.5M5.5 4.5h11l-2.5 4 2.5 4h-11" {...p} />}
       {name === 'shield' && (

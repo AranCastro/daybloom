@@ -7,7 +7,11 @@ Two tools in one calm app:
 - **Eisenhower Matrix.** Sort tasks into Do first, Schedule, Delegate and Later, with due-date badges.
   Today's screen shows a short Focus list (due or late first, then Do first), reduced to one task on a low day.
 
-Moods and tasks never leave the phone.
+- **Circle matrix.** Sort trusted people by closeness (close / wider) and how to reach them (call / message):
+  Call anytime, Quick call, Message first, Light chat. On a Low or Heavy day, Today suggests one person to
+  call and one to message (least recently reached first), with one-tap Call, SMS and WhatsApp.
+
+Moods, tasks and people never leave the phone.
 
 Built with Expo SDK 57 (React Native 0.86, Expo Router, TypeScript).
 
@@ -24,7 +28,11 @@ Built with Expo SDK 57 (React Native 0.86, Expo Router, TypeScript).
 
 3. Install **Expo Go** from the Play Store and scan the QR code shown in the terminal.
 
-Everything in this app works in Expo Go (local notifications, haptics, SQLite storage, SVG, gradients).
+Everything in this app works in Expo Go (local notifications, haptics, SQLite storage, SVG, gradients,
+contact picker).
+
+WhatsApp links need an international number. A bare 10-digit number is treated as Indian (+91); numbers
+saved with a country code (for example +44 …) are used as they are (`src/lib/reach.ts`).
 
 ## Build for the Play Store
 
@@ -46,6 +54,8 @@ Before the first production build:
 - **Privacy policy URL** for the Play listing: `https://arancastro.github.io/privacy/`.
 - **Data safety form**: the app collects no personal data on a server. The only network call is
   the one-line nudge to ntfy.sh, which contains the user's first name.
+- **Contacts permission** (`READ_CONTACTS`) is declared for the contact picker only; `WRITE_CONTACTS`
+  is blocked in `app.json`. Declare "Contacts: read, stored on device, not shared" in the form.
 
 ## How the nudge is delivered
 
@@ -71,7 +81,7 @@ src/app/                  screens (Expo Router)
   (tabs)/matrix.tsx       Eisenhower matrix (2 × 2 quadrant cards, add button)
   quadrant/[q].tsx        one quadrant in full, with completed tasks
   (tabs)/journey.tsx      month calendar and mood mix
-  (tabs)/circle.tsx       buddy status, invite, test nudge
+  (tabs)/circle.tsx       People: circle matrix, nudge buddy, invite, test nudge
   (tabs)/settings.tsx     name, reminder, threshold, privacy, erase
 src/components/           design system: text, buttons, cards, icons, mood orb, tab bar
 src/lib/                  state store (moods, tasks), nudge rule, quadrants, ntfy client, reminders, dates
