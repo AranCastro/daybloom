@@ -21,7 +21,7 @@ export function snapshot(s: AppState, now: Date = new Date()) {
 
   const bloomsToday = s.garden.filter((b) => dayKey(new Date(b.at)) === today).length;
   const latest: FlowerKind | null = s.garden[0] ? flowerOf(s.garden[0].flower) : null;
-  const total = s.garden.length;
+  const total = s.bloomCount ?? s.garden.length;
   const toGolden = GOLDEN_EVERY - (total % GOLDEN_EVERY);
 
   return {
@@ -85,7 +85,7 @@ function focusList(tasks: Task[], today: string, low: boolean) {
   const dueNow = tasks
     .filter((t) => !t.done && t.due && t.due <= today)
     .sort((a, b) => (a.due ?? '').localeCompare(b.due ?? '') || a.quadrant - b.quadrant);
-  const doFirst = tasks.filter((t) => t.quadrant === 1 && !t.done && !dueNow.includes(t)).sort((a, b) => a.createdAt - b.createdAt);
+  const doFirst = sortOpen(tasks.filter((t) => t.quadrant === 1 && !t.done && !dueNow.includes(t)));
   const all = [...dueNow, ...doFirst];
   const limit = low ? 1 : 4;
   const doneToday = tasks.filter((t) => t.done && t.doneAt && dayKey(new Date(t.doneAt)) === today).length;

@@ -30,6 +30,7 @@ export default function Circle() {
   const buddy = useAppState((s) => s.buddy);
   const nudges = useAppState((s) => s.nudges);
   const streak = useAppState((s) => s.streak);
+  const myName = useAppState((s) => s.name);
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
   const [note, setNote] = useState('');
@@ -121,9 +122,9 @@ export default function Circle() {
 
       <Card>
         <Text variant="label">How the nudge works</Text>
-        <Step icon="sun" text="You tap how each day feels. Your answers never leave this phone." />
-        <Step icon="bell" text={`After ${streak} low days in a row, ${buddy?.name ?? 'your buddy'} gets one line: “Call ${getState().name || 'your friend'} today.”`} />
-        <Step icon="lock" text="They are never told why, and never see your moods." />
+        <Step icon="sun" text="You tap how each day feels. Your answers stay on this phone (and in backups you choose to make)." />
+        <Step icon="bell" text={`After ${streak} low days in a row, ${buddy?.name ?? 'your buddy'} gets one line: “Call ${myName || 'your friend'} today.”`} />
+        <Step icon="lock" text="They never see your answers. They only know a nudge means a few hard days." />
         <Step icon="heart" text="One nudge per rough patch. A better day resets it." />
       </Card>
 
@@ -137,7 +138,7 @@ export default function Circle() {
                 <Text variant="body">{n.kind === 'test' ? 'Test nudge' : 'Nudge sent'}</Text>
                 <Text variant="small">
                   {prettyDate(new Date(n.at))}
-                  {n.status === 'queued' ? ' · waiting for internet' : ''}
+                  {n.status === 'queued' ? ' · waiting for internet' : n.status === 'expired' ? ' · not sent (no internet in time)' : ''}
                 </Text>
               </View>
             </View>

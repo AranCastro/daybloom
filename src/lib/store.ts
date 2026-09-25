@@ -25,8 +25,12 @@ export type Buddy = {
 export type NudgeLog = {
   at: number;
   kind: 'auto' | 'test';
-  status: 'sent' | 'queued';
+  /** queued: waiting for the internet; expired: too old to send ("call me today" would be wrong). */
+  status: 'sent' | 'queued' | 'expired';
 };
+
+/** A nudge that could not be sent within this time is dropped rather than sent late. */
+const NUDGE_TTL = 36 * 60 * 60 * 1000;
 
 /** Eisenhower quadrant: 1 do first, 2 schedule, 3 delegate, 4 drop. */
 export type Quadrant = 1 | 2 | 3 | 4;
@@ -82,8 +86,14 @@ export type AppState = {
   /** YYYY-MM-DD -> mood value (1..5). One entry per day, last tap wins. */
   checkins: Record<string, MoodValue>;
   nudges: NudgeLog[];
-  /** False after a nudge fires; re-armed by the next day that is not low. */
+  /** False after a nudge fires; re-armed by a later day that is Okay or better. */
   armed: boolean;
+  /** Day (YYYY-MM-DD) of the last automatic nudge, so changing an answer that day cannot re-arm it. */
+  lastNudgeDay?: string;
+  /** Every flower ever grown (the garden list keeps the newest 2,000); drives the Golden Lotus. */
+  bloomCount: number;
+  /** Tasks finished per day that were later cleared, so the calendar keeps their shading. */
+  clearedWork: Record<string, number>;
   tasks: Task[];
   people: Person[];
   /** Best scores and play counts per game id. */
@@ -153,6 +163,8 @@ const initial: AppState = {
   widgetPrefs: { Matrix: DEFAULT_WIDGET_PREFS, Circle: DEFAULT_WIDGET_PREFS },
   settings: DEFAULT_SETTINGS,
   backup: {},
+  bloomCount: 0,
+  clearedWork: {},
 };
 
 /** Fills in anything a saved (or restored) state is missing, so older data keeps working. */
@@ -161,6 +173,17 @@ function mergeSaved(saved: Partial<AppState>): AppState {
   merged.widgetPrefs = { ...initial.widgetPrefs, ...saved.widgetPrefs };
   merged.settings = { ...DEFAULT_SETTINGS, ...saved.settings };
   merged.backup = { ...initial.backup, ...saved.backup };
+  // Nested objects are merged too, so fields added in later versions get their defaults.
+  merged.reminder = { ...initial.reminder, ...saved.reminder };
+  merged.games = { best: { ...saved.games?.best }, plays: { ...saved.games?.plays } };
+  merged.focus = { ...initial.focus, ...saved.focus };
+  if (saved.bloomCount === undefined) merged.bloomCount = merged.garden.length;
+  merged.clearedWork = { ...saved.clearedWork };
+  // Older data has no lastNudgeDay: take it from the newest automatic nudge.
+  if (!merged.lastNudgeDay) {
+    const last = (merged.nudges ?? []).find((n) => n.kind === 'auto');
+    if (last) merged.lastNudgeDay = dayKey(new Date(last.at));
+  }
   // Gardens began with focus sessions only: carry those flowers over once.
   if (!saved.garden && saved.focus?.sessions?.length) {
     merged.garden = saved.focus.sessions.map((f, i) => ({ id: `m${i}-${f.at}`, at: f.at, flower: f.flower, source: 'focus' as const, ref: f.taskId }));
@@ -255,26 +278,50 @@ export function resetAll() {
 /**
  * Records today's mood and, when the low-streak rule is met, nudges the buddy.
  * Returns true when a nudge was triggered by this check-in.
+ *
+ * The nudge is disarmed and logged before the network request, so a second answer while it is
+ * being sent (or a widget tap) cannot send another. Only a later day that is Okay or better
+ * re-arms it; changing today's answer back and forth does not.
  */
 export async function recordMood(mood: MoodValue): Promise<boolean> {
   const today = dayKey();
   const firstToday = state.checkins[today] === undefined;
   const checkins = { ...state.checkins, [today]: mood };
-  const armed = mood > 2 ? true : state.armed;
+  const rearm = mood > 2 && (!state.lastNudgeDay || today > state.lastNudgeDay);
+  const armed = rearm ? true : state.armed;
   update({ checkins, armed });
   if (firstToday) bloom('checkin', { note: 'Daily check-in' });
 
   const { buddy, streak } = state;
   if (!buddy || !armed || !isLowStreak(checkins, streak, today)) return false;
 
-  const ok = await sendNudge(buddy.topic, state.name || 'Your friend');
-  const entry: NudgeLog = { at: Date.now(), kind: 'auto', status: ok ? 'sent' : 'queued' };
-  update((s) => ({ armed: false, nudges: [entry, ...s.nudges].slice(0, 50) }));
+  const entry: NudgeLog = { at: Date.now(), kind: 'auto', status: 'queued' };
+  update((s) => ({ armed: false, lastNudgeDay: today, nudges: [entry, ...s.nudges].slice(0, 50) }));
+  await flushQueued();
   return true;
 }
 
-/** Retries a nudge that could not be delivered earlier (for example, offline). */
-export async function flushQueued() {
+let flushing: Promise<void> | null = null;
+
+/**
+ * Sends a nudge that is waiting for the internet (one at a time). Called after a check-in, when the
+ * app opens or returns, and from the home-screen widget's background task.
+ */
+export function flushQueued(): Promise<void> {
+  if (!flushing) {
+    flushing = doFlush().finally(() => {
+      flushing = null;
+    });
+  }
+  return flushing;
+}
+
+async function doFlush() {
+  const now = Date.now();
+  // Too late to ask for a call "today": drop it instead of sending it days later.
+  if (state.nudges.some((n) => n.status === 'queued' && now - n.at > NUDGE_TTL)) {
+    update((s) => ({ nudges: s.nudges.map((n): NudgeLog => (n.status === 'queued' && now - n.at > NUDGE_TTL ? { ...n, status: 'expired' } : n)) }));
+  }
   const { buddy, nudges, name } = state;
   if (!buddy || !nudges.some((n) => n.status === 'queued')) return;
   const ok = await sendNudge(buddy.topic, name || 'Your friend');
@@ -324,15 +371,29 @@ export function toggleTask(id: string) {
   }));
   // A finished task grows a flower; un-finishing it takes that flower back.
   if (!task.done) bloom('task', { ref: id, note: task.title, rareChance: task.quadrant === 1 ? 0.15 : 0.1 });
-  else update((s) => ({ garden: s.garden.filter((b) => !(b.source === 'task' && b.ref === id)) }));
+  else
+    update((s) => {
+      const garden = s.garden.filter((b) => !(b.source === 'task' && b.ref === id));
+      return { garden, bloomCount: Math.max(0, s.bloomCount - (s.garden.length - garden.length)) };
+    });
 }
 
 export function deleteTask(id: string) {
   update((s) => ({ tasks: s.tasks.filter((t) => t.id !== id) }));
 }
 
-export function clearCompleted() {
-  update((s) => ({ tasks: s.tasks.filter((t) => !t.done) }));
+/** Removes the finished tasks of one quadrant. Their days keep their calendar shading. */
+export function clearCompleted(quadrant: Quadrant) {
+  update((s) => {
+    const clearedWork = { ...s.clearedWork };
+    for (const t of s.tasks) {
+      if (t.quadrant === quadrant && t.done && t.doneAt) {
+        const k = dayKey(new Date(t.doneAt));
+        clearedWork[k] = (clearedWork[k] ?? 0) + 1;
+      }
+    }
+    return { clearedWork, tasks: s.tasks.filter((t) => !(t.quadrant === quadrant && t.done)) };
+  });
 }
 
 /** Open tasks in a quadrant: arranged ones first (by hand), then dated (soonest due), then by creation. */
@@ -434,9 +495,9 @@ export function bloomedToday(source: BloomSource, ref?: string): boolean {
 
 /** Grows one flower. `silent` skips the toast (the focus screen shows its own reveal). */
 export function bloom(source: BloomSource, opts: { ref?: string; note?: string; rareChance?: number; silent?: boolean } = {}): FlowerKind {
-  const kind = pickFlower(state.garden.length + 1, state.garden[0]?.flower, opts.rareChance ?? 0.1);
+  const kind = pickFlower(state.bloomCount + 1, state.garden[0]?.flower, opts.rareChance ?? 0.1);
   const b: Bloom = { id: newId(), at: Date.now(), flower: kind.id, source, ref: opts.ref, note: opts.note };
-  update((s) => ({ garden: [b, ...s.garden].slice(0, 2000) }));
+  update((s) => ({ garden: [b, ...s.garden].slice(0, 2000), bloomCount: s.bloomCount + 1 }));
   if (!opts.silent) bloomListeners.forEach((l) => l(b, kind));
   return kind;
 }

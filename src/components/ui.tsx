@@ -196,12 +196,16 @@ export function Choice<T extends string | number>({
 }) {
   const t = useTheme();
   return (
-    <View style={[styles.choice, { backgroundColor: t.surfaceAlt }]}>
+    <View accessibilityRole="radiogroup" style={[styles.choice, { backgroundColor: t.surfaceAlt }]}>
       {options.map((o) => {
         const on = o.value === value;
         return (
           <Pressable
             key={String(o.value)}
+            accessibilityRole="radio"
+            accessibilityLabel={o.label}
+            accessibilityState={{ checked: on }}
+            aria-checked={on}
             onPress={() => {
               tap();
               onChange(o.value);

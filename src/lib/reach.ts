@@ -1,6 +1,8 @@
 /** One-tap ways to reach a person: phone call, SMS and WhatsApp. */
 import { Linking, Platform } from 'react-native';
 
+import { callingCode } from '@/lib/region';
+
 /** Keeps digits and a leading "+". */
 export function cleanNumber(phone: string): string {
   const trimmed = phone.trim();
@@ -10,13 +12,14 @@ export function cleanNumber(phone: string): string {
 
 /**
  * International form for WhatsApp links (no "+").
- * A bare 10-digit number is assumed to be Indian (+91); a leading 0 trunk prefix is dropped.
+ * A bare 10-digit number gets the country code of the phone's region (India +91, US/Canada +1);
+ * elsewhere it is used as saved, so save such numbers with their country code.
  */
-export function whatsappNumber(phone: string): string {
+export function whatsappNumber(phone: string, code: string | null = callingCode()): string {
   const n = cleanNumber(phone);
   if (n.startsWith('+')) return n.slice(1);
   const local = n.replace(/^0+/, '');
-  return local.length === 10 ? `91${local}` : local;
+  return local.length === 10 && code ? `${code}${local}` : local;
 }
 
 export async function call(phone: string): Promise<boolean> {

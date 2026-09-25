@@ -10,15 +10,17 @@ import { Text } from '@/components/text';
 import { Card, Screen, tap } from '@/components/ui';
 import { Fonts } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useToday } from '@/hooks/use-today';
 import { BADGES, REST_DAY_AFTER, streakInfo } from '@/lib/badges';
-import { addDays, dayKey, shortDate, weekdayShort } from '@/lib/dates';
+import { addDays, dayKey, fromKey, shortDate, weekdayShort } from '@/lib/dates';
 import { awardBadges, useAppState } from '@/lib/store';
 
 export default function BadgesScreen() {
   const t = useTheme();
   const checkins = useAppState((s) => s.checkins);
   const earned = useAppState((s) => s.badges);
-  const s = streakInfo(checkins);
+  const today = useToday();
+  const s = streakInfo(checkins, today);
 
   // Catch up on anything earned before badges existed (no celebration here).
   useEffect(() => {
@@ -26,7 +28,7 @@ export default function BadgesScreen() {
   }, []);
 
   const got = BADGES.filter((b) => earned[b.id]).length;
-  const days = Array.from({ length: 14 }, (_, i) => addDays(new Date(), i - 13));
+  const days = Array.from({ length: 14 }, (_, i) => addDays(fromKey(today), i - 13));
 
   return (
     <Screen>
@@ -60,7 +62,7 @@ export default function BadgesScreen() {
           {days.map((d) => {
             const k = dayKey(d);
             const on = checkins[k] !== undefined;
-            const isToday = k === dayKey();
+            const isToday = k === today;
             return (
               <View key={k} style={styles.day}>
                 <View

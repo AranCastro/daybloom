@@ -8,7 +8,8 @@ import { Text } from '@/components/text';
 import { Card, Screen, tap } from '@/components/ui';
 import { TabBarInset } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { dayKey, shortDate } from '@/lib/dates';
+import { useToday } from '@/hooks/use-today';
+import { dayKey, shortDate, fromKey } from '@/lib/dates';
 import { FLOWERS, flowerOf, GOLDEN_EVERY, RARITY_LABEL } from '@/lib/flowers';
 import { Flower } from '@/components/flower';
 import { GardenBed, SOURCES } from '@/components/garden';
@@ -37,14 +38,17 @@ export default function Journey() {
   const t = useTheme();
   const checkins = useAppState((s) => s.checkins);
   const garden = useAppState((s) => s.garden);
-  const todayBlooms = garden.filter((b) => dayKey(new Date(b.at)) === dayKey());
+  const bloomCount = useAppState((s) => s.bloomCount);
+  const today = useToday();
+  const weekStart = useAppState((s) => s.settings.weekStart);
+  const todayBlooms = garden.filter((b) => dayKey(new Date(b.at)) === today);
   const kinds = new Set(garden.map((b) => b.flower));
   const [offset, setOffset] = useState(0);
 
-  const now = new Date();
+  const now = fromKey(today);
   const first = new Date(now.getFullYear(), now.getMonth() + offset, 1);
   const daysInMonth = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate();
-  const lead = (first.getDay() + 6) % 7; // Monday-first grid
+  const lead = (first.getDay() - weekStart + 7) % 7; // first column follows Settings (Sunday or Monday)
   const cells: (Date | null)[] = [
     ...Array.from({ length: lead }, () => null),
     ...Array.from({ length: daysInMonth }, (_, i) => new Date(first.getFullYear(), first.getMonth(), i + 1)),
@@ -54,14 +58,13 @@ export default function Journey() {
   const monthKeys = cells.filter(Boolean).map((d) => dayKey(d as Date));
   const logged = monthKeys.filter((k) => checkins[k] !== undefined);
   const counts = MOODS.map((m) => ({ mood: m, n: logged.filter((k) => checkins[k] === m.value).length }));
-  const streak = streakInfo(checkins).current;
+  const streak = streakInfo(checkins, today).current;
   const earned = useAppState((s) => s.badges);
   const recent = Object.entries(earned)
     .sort((a, b) => b[1] - a[1])
     .map(([id]) => badgeOf(id))
     .filter((b): b is NonNullable<typeof b> => !!b)
     .slice(0, 5);
-  const today = dayKey();
 
   return (
     <Screen bottomInset={TabBarInset + 24}>
@@ -75,10 +78,10 @@ export default function Journey() {
       </Animated.View>
 
       <View style={styles.gardenStats}>
-        <MiniStat label="Blooms" value={`${garden.length}`} />
+        <MiniStat label="Blooms" value={`${bloomCount}`} />
         <MiniStat label="Today" value={`${todayBlooms.length}`} />
         <MiniStat label="Kinds found" value={`${kinds.size}/${FLOWERS.length}`} />
-        <MiniStat label="Next golden" value={`${GOLDEN_EVERY - (garden.length % GOLDEN_EVERY)}`} />
+        <MiniStat label="Next golden" value={`${GOLDEN_EVERY - (bloomCount % GOLDEN_EVERY)}`} />
       </View>
 
       <Card>
@@ -203,7 +206,7 @@ export default function Journey() {
           </Pressable>
         </View>
         <View style={styles.grid}>
-          {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => (
+          {(weekStart === 1 ? ['M', 'T', 'W', 'T', 'F', 'S', 'S'] : ['S', 'M', 'T', 'W', 'T', 'F', 'S']).map((d, i) => (
             <View key={i} style={styles.cell}>
               <Text variant="small" color="textMuted" style={{ fontSize: 12 }}>
                 {d}

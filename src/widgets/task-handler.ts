@@ -9,7 +9,7 @@ import type { WidgetTaskHandlerProps } from 'react-native-android-widget';
 
 import { flowerOf } from '@/lib/flowers';
 import { moodOf, MoodValue } from '@/lib/moods';
-import { awardBadges, getState, recordMood, reloadState, toggleTask } from '@/lib/store';
+import { awardBadges, flushQueued, getState, recordMood, reloadState, toggleTask } from '@/lib/store';
 import { renderFor, setFlash } from '@/widgets/catalogue';
 import { refreshWidgets } from '@/widgets/sync';
 
@@ -47,6 +47,10 @@ export async function widgetTaskHandler({ widgetInfo, widgetAction, clickAction,
       if (task) toggleTask(id);
     }
   }
+
+  // Each widget update is also a chance to send a nudge that was waiting for the internet.
+  if (widgetAction !== 'WIDGET_CLICK') reloadState();
+  await flushQueued();
 
   const tree = renderFor(name, getState(), widgetInfo.width, widgetInfo.height);
   if (tree) renderWidget(tree);

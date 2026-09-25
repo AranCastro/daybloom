@@ -10,7 +10,8 @@ import { Text } from '@/components/text';
 import { Button, Card, Divider, Screen, tap } from '@/components/ui';
 import { Fonts } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { dayKey } from '@/lib/dates';
+import { useToday } from '@/hooks/use-today';
+import { confirmThen } from '@/lib/confirm';
 import { quadrantOf } from '@/lib/quadrants';
 import { clearCompleted, moveTask, openTasks, Quadrant, Task, useAppState } from '@/lib/store';
 
@@ -23,7 +24,7 @@ export default function QuadrantScreen() {
   const tasks = useAppState((s) => s.tasks);
   const [sheet, setSheet] = useState<{ open: boolean; task?: Task | null }>({ open: false });
   const [arranging, setArranging] = useState(false);
-  const today = dayKey();
+  const today = useToday();
 
   const open = openTasks(tasks, q);
   const done = tasks.filter((x) => x.quadrant === q && x.done).sort((a, b) => (b.doneAt ?? 0) - (a.doneAt ?? 0));
@@ -83,9 +84,9 @@ export default function QuadrantScreen() {
         <Card>
           <View style={styles.doneHead}>
             <Text variant="label">Completed · {done.length}</Text>
-            <Pressable onPress={() => (tap(), clearCompleted())} hitSlop={8}>
+            <Pressable onPress={() => (tap(), confirmClear(q, done.length))} hitSlop={8} accessibilityRole="button">
               <Text variant="small" color="accent">
-                Clear all completed
+                Clear completed
               </Text>
             </Pressable>
           </View>
@@ -128,6 +129,15 @@ function ArrangeRow({ task, today, first, last, color }: { task: Task; today: st
       {arrow('up', first)}
       {arrow('down', last)}
     </View>
+  );
+}
+
+function confirmClear(q: Quadrant, n: number) {
+  confirmThen(
+    `Clear ${n} completed ${n === 1 ? 'task' : 'tasks'}?`,
+    `Only tasks in ${quadrantOf(q).action} are removed. Your flowers and calendar stay.`,
+    'Clear',
+    () => clearCompleted(q),
   );
 }
 

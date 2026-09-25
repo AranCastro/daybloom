@@ -12,8 +12,9 @@ import { Text } from '@/components/text';
 import { Card, Screen, tap } from '@/components/ui';
 import { TabBarInset } from '@/constants/theme';
 import { useAppActive } from '@/hooks/use-app-active';
+import { useClock } from '@/hooks/use-today';
 import { useTheme } from '@/hooks/use-theme';
-import { addDays, dayKey, greeting, prettyDate, weekdayShort } from '@/lib/dates';
+import { addDays, dayKey, fromKey, greetingFor, prettyDate, weekdayShort } from '@/lib/dates';
 import { isLow, MOODS, MoodValue, moodOf } from '@/lib/moods';
 import { circleOf } from '@/lib/circle';
 import { BadgeCelebration } from '@/components/badge';
@@ -23,6 +24,7 @@ import { flowerOf } from '@/lib/flowers';
 import { remaining, sessionsOn } from '@/lib/focus';
 import { gameForMood } from '@/lib/games';
 import { awardBadges, openTasks, peopleIn, Person, recordMood, Task, useAppState, hapticsOn } from '@/lib/store';
+import { helpline } from '@/lib/region';
 import { Badge, streakInfo } from '@/lib/badges';
 
 export default function Today() {
@@ -33,11 +35,13 @@ export default function Today() {
   const nudges = useAppState((s) => s.nudges);
   const [editing, setEditing] = useState(false);
   const [celebrate, setCelebrate] = useState<Badge[]>([]);
-  const streak = streakInfo(checkins);
+  const { today, hour } = useClock();
+  const streak = streakInfo(checkins, today);
 
-  const today = dayKey();
   const todayMood = moodOf(checkins[today]);
-  const nudgedToday = nudges.some((n) => n.kind === 'auto' && dayKey(new Date(n.at)) === today);
+  const todaysNudge = nudges.find((n) => n.kind === 'auto' && dayKey(new Date(n.at)) === today && n.status !== 'expired');
+  const nudgedToday = !!todaysNudge;
+  const waiting = todaysNudge?.status === 'queued';
   const showPicker = !todayMood || editing;
 
   async function choose(v: MoodValue) {
@@ -53,7 +57,7 @@ export default function Today() {
       <BadgeCelebration badges={celebrate} onClose={() => setCelebrate([])} />
       <Animated.View entering={FadeInDown.duration(500)} style={styles.header}>
         <View style={[styles.inline, { justifyContent: 'space-between' }]}>
-          <Text variant="label">{prettyDate(new Date())}</Text>
+          <Text variant="label">{prettyDate(fromKey(today))}</Text>
           <View style={styles.inline}>
           <Pressable
             hitSlop={8}
@@ -77,12 +81,12 @@ export default function Today() {
           </View>
         </View>
         <Text variant="title">
-          {greeting()}
+          {greetingFor(hour)}
           {name ? `, ${name}` : ''}
         </Text>
       </Animated.View>
 
-      <TodayBlooms />
+      <TodayBlooms today={today} />
       <WeeklyBackupCard />
 
       {showPicker ? (
@@ -151,23 +155,27 @@ export default function Today() {
             <View style={styles.inline}>
               <Icon name="heart" color={t.accent} />
               <Text variant="bodyStrong" style={{ flex: 1 }}>
-                We asked {buddy.name} to call you today
+                {waiting ? `Waiting for the internet to reach ${buddy.name}` : `We asked ${buddy.name} to call you today`}
               </Text>
             </View>
-            <Text variant="small">They were only told to say hello. Nothing about your answers was shared.</Text>
+            <Text variant="small">
+              {waiting
+                ? 'The note will go as soon as your phone is online. Nothing about your answers is shared.'
+                : 'They were only asked to call. Nothing about your answers was shared.'}
+            </Text>
           </Card>
         </Animated.View>
       )}
 
       {isLow(checkins[today]) && !editing && <ReachOutCard />}
 
-      <FocusCard lowDay={isLow(checkins[today]) && !editing} />
+      <FocusCard lowDay={isLow(checkins[today]) && !editing} today={today} />
 
-      <FocusTimerCard />
+      <FocusTimerCard today={today} />
 
       {todayMood && !editing && <GameLink mood={todayMood.value} />}
 
-      <WeekStrip checkins={checkins} />
+      <WeekStrip checkins={checkins} today={today} />
 
       <Card>
         <Pressable onPress={() => router.navigate('/circle')} style={styles.inline}>
@@ -194,10 +202,10 @@ export default function Today() {
 }
 
 /** Today's flowers from every activity, one tap from the garden. */
-function TodayBlooms() {
+function TodayBlooms({ today: day }: { today: string }) {
   const t = useTheme();
   const garden = useAppState((s) => s.garden);
-  const today = garden.filter((b) => dayKey(new Date(b.at)) === dayKey());
+  const today = garden.filter((b) => dayKey(new Date(b.at)) === day);
   return (
     <Pressable
       accessibilityRole="button"
@@ -225,11 +233,11 @@ function TodayBlooms() {
 }
 
 /** Pomodoro entry point with today's flowers. */
-function FocusTimerCard() {
+function FocusTimerCard({ today }: { today: string }) {
   const t = useTheme();
   const active = useAppState((s) => s.focus.active);
   const sessions = useAppState((s) => s.focus.sessions);
-  const todays = sessionsOn(sessions, dayKey());
+  const todays = sessionsOn(sessions, today);
   const [now, setNow] = useState(() => Date.now());
   const appActive = useAppActive();
   const focused = useIsFocused();
@@ -350,10 +358,9 @@ function ReachOutCard() {
 }
 
 /** Today's short list from the matrix: anything due today or late, then "Do first". Lighter on low days. */
-function FocusCard({ lowDay }: { lowDay: boolean }) {
+function FocusCard({ lowDay, today }: { lowDay: boolean; today: string }) {
   const tasks = useAppState((s) => s.tasks);
   const [editing, setEditing] = useState<Task | null>(null);
-  const today = dayKey();
 
   // Anything due today or late comes first (any quadrant), then the rest of "Do first".
   const dueNow = tasks
@@ -393,9 +400,9 @@ function FocusCard({ lowDay }: { lowDay: boolean }) {
   );
 }
 
-function WeekStrip({ checkins }: { checkins: Record<string, number> }) {
+function WeekStrip({ checkins, today: key }: { checkins: Record<string, number>; today: string }) {
   const t = useTheme();
-  const today = new Date();
+  const today = fromKey(key);
   const days = Array.from({ length: 7 }, (_, i) => addDays(today, i - 6));
   return (
     <Card>
@@ -405,7 +412,11 @@ function WeekStrip({ checkins }: { checkins: Record<string, number> }) {
           const m = moodOf(checkins[dayKey(d)]);
           const isToday = dayKey(d) === dayKey(today);
           return (
-            <View key={dayKey(d)} style={styles.weekDay}>
+            <View
+              key={dayKey(d)}
+              style={styles.weekDay}
+              accessible
+              accessibilityLabel={`${prettyDate(d)}: ${m ? m.label : 'no check-in'}`}>
               {m ? (
                 <MoodOrb mood={m} size={30} face={false} />
               ) : (
@@ -424,22 +435,25 @@ function WeekStrip({ checkins }: { checkins: Record<string, number> }) {
 
 function SupportCard() {
   const t = useTheme();
+  const h = helpline();
+  const target = h.number ? `tel:${h.number}` : h.link!;
   return (
     <Animated.View entering={FadeInDown.delay(200)}>
       <Card style={{ borderColor: t.accent }}>
         <Text variant="heading">If today feels too heavy</Text>
-        <Text variant="small">
-          You can talk to a trained counsellor now, free and confidential, any time of day. Tele-MANAS is run by the
-          Government of India.
-        </Text>
-        <Pressable onPress={() => Linking.openURL('tel:14416')} style={styles.inline}>
+        <Text variant="small">You can talk to a trained counsellor now. {h.detail}</Text>
+        <Pressable
+          onPress={() => Linking.openURL(target).catch(() => {})}
+          accessibilityRole="button"
+          accessibilityLabel={h.number ? `Call ${h.name}, ${h.number}` : `Open ${h.name}`}
+          style={styles.inline}>
           <Icon name="phone" color={t.accent} />
           <Text variant="heading" color="accent">
-            Call 14416
+            {h.number ? `Call ${h.number}` : h.name}
           </Text>
         </Pressable>
         <Text variant="small" color="textMuted">
-          In an emergency, call 112.
+          In an emergency, call {h.emergency}.
         </Text>
       </Card>
     </Animated.View>

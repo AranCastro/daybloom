@@ -19,6 +19,8 @@ import { Text } from '@/components/text';
 import { Button, Input, tap } from '@/components/ui';
 import { Fonts, Radius } from '@/constants/theme';
 import { useIsDark, useTheme } from '@/hooks/use-theme';
+import { useToday } from '@/hooks/use-today';
+import { confirmThen } from '@/lib/confirm';
 import { addDays, dayKey, fromKey, prettyDate } from '@/lib/dates';
 import { dueBadge, QUADRANTS, quadrantOf } from '@/lib/quadrants';
 import { addTask, deleteTask, editTask, moveTask, openTasks, Quadrant, Task, toggleTask, useAppState, hapticsOn } from '@/lib/store';
@@ -29,25 +31,36 @@ export function useQuadrantColors(q: Quadrant) {
   return { color: dark ? info.color.dark : info.color.light, soft: dark ? info.soft.dark : info.soft.light };
 }
 
+/** White or near-black, whichever reads better on the given colour (WCAG relative luminance). */
+function inkOn(hex: string): string {
+  const n = parseInt(hex.slice(1, 7), 16);
+  const lin = (c: number) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+  const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((c) => lin(c / 255));
+  const L = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  return (L + 0.05) / 0.05 > 1.05 / (L + 0.05) ? '#1D1B18' : '#FFFFFF';
+}
+
 export function QuadrantChip({ q, size = 26 }: { q: Quadrant; size?: number }) {
   const { color } = useQuadrantColors(q);
   const info = quadrantOf(q);
   return (
     <View style={[styles.chip, { backgroundColor: color, width: size, height: size, borderRadius: size / 2 }]}>
-      <Text style={{ color: '#fff', fontFamily: Fonts.display, fontSize: size * 0.46, lineHeight: size * 0.62 }}>
+      <Text style={{ color: inkOn(color), fontFamily: Fonts.display, fontSize: size * 0.46, lineHeight: size * 0.62 }}>
         {info.numeral}
       </Text>
     </View>
   );
 }
 
-export function Checkbox({ checked, color, onPress, size = 22 }: { checked: boolean; color: string; onPress: () => void; size?: number }) {
+export function Checkbox({ checked, color, onPress, size = 22, label }: { checked: boolean; color: string; onPress: () => void; size?: number; label?: string }) {
   const s = useSharedValue(1);
   const anim = useAnimatedStyle(() => ({ transform: [{ scale: s.value }] }));
   return (
     <Pressable
       hitSlop={10}
       accessibilityRole="checkbox"
+      accessibilityLabel={label}
+      accessibilityState={{ checked }}
       aria-checked={checked}
       onPress={() => {
         s.set(withSequence(withSpring(0.8, { stiffness: 600, damping: 20 }), withSpring(1, { damping: 10 })));
@@ -88,7 +101,7 @@ export function TaskRow({ task, today, onOpen, compact }: { task: Task; today: s
   const { color } = useQuadrantColors(task.quadrant);
   return (
     <Animated.View entering={FadeIn.duration(250)} style={[styles.row, compact && { paddingVertical: 5 }]}>
-      <Checkbox checked={task.done} color={color} onPress={() => toggleTask(task.id)} size={compact ? 20 : 22} />
+      <Checkbox checked={task.done} color={color} onPress={() => toggleTask(task.id)} size={compact ? 20 : 22} label={task.title} />
       <Pressable style={{ flex: 1 }} onPress={() => (tap(), onOpen(task))}>
         <Text
           variant="body"
@@ -136,7 +149,7 @@ export function TaskSheet(props: SheetProps) {
 
 function SheetBody({ onClose, task, defaultQuadrant = 1, defaultDue }: SheetProps) {
   const t = useTheme();
-  const today = dayKey();
+  const today = useToday();
   const [title, setTitle] = useState(task?.title ?? '');
   const [q, setQ] = useState<Quadrant>(task?.quadrant ?? defaultQuadrant);
   const [due, setDue] = useState<string | undefined>(task ? task.due : defaultDue);
@@ -245,10 +258,12 @@ function SheetBody({ onClose, task, defaultQuadrant = 1, defaultDue }: SheetProp
           )}
           {task && (
             <Pressable
-              onPress={() => {
-                deleteTask(task.id);
-                onClose();
-              }}
+              onPress={() =>
+                confirmThen('Delete this task?', task.title, 'Delete', () => {
+                  deleteTask(task.id);
+                  onClose();
+                })
+              }
               style={styles.delete}>
               <Icon name="trash" color={t.textMuted} size={18} />
               <Text variant="small" color="textMuted">

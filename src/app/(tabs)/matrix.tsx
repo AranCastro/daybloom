@@ -10,6 +10,7 @@ import { Text } from '@/components/text';
 import { Screen, tap } from '@/components/ui';
 import { TabBarInset } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useToday } from '@/hooks/use-today';
 import { dayKey } from '@/lib/dates';
 import { QUADRANTS, quadrantOf } from '@/lib/quadrants';
 import { openTasks, Quadrant, Task, useAppState } from '@/lib/store';
@@ -24,7 +25,7 @@ export default function Matrix() {
   const t = useTheme();
   const tasks = useAppState((s) => s.tasks);
   const [sheet, setSheet] = useState<{ open: boolean; task?: Task | null }>({ open: false });
-  const today = dayKey();
+  const today = useToday();
 
   const open = tasks.filter((x) => !x.done);
   const dueToday = open.filter((x) => x.due && x.due <= today).length;

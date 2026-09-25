@@ -7,6 +7,7 @@ import { Text } from '@/components/text';
 import { tap } from '@/components/ui';
 import { Fonts } from '@/constants/theme';
 import { useIsDark, useTheme } from '@/hooks/use-theme';
+import { useToday } from '@/hooks/use-today';
 import { dayKey, fromKey } from '@/lib/dates';
 import { HEAT, HeatLevel } from '@/lib/productivity';
 import { useAppState } from '@/lib/store';
@@ -31,7 +32,7 @@ type Props = {
 export function MonthCalendar({ selected, onSelect, marks = {}, onMonth, compact, heat }: Props) {
   const t = useTheme();
   const shades = HEAT[useIsDark() ? 'dark' : 'light'];
-  const today = dayKey();
+  const today = useToday();
   const start = selected ? fromKey(selected) : new Date();
   const [month, setMonth] = useState(() => new Date(start.getFullYear(), start.getMonth(), 1));
 

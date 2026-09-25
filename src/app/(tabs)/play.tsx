@@ -7,14 +7,15 @@ import { Text } from '@/components/text';
 import { Button, Card, Screen, tap } from '@/components/ui';
 import { Fonts, TabBarInset } from '@/constants/theme';
 import { useIsDark, useTheme } from '@/hooks/use-theme';
-import { dayKey } from '@/lib/dates';
+import { useToday } from '@/hooks/use-today';
 import { GameId, GameInfo, gameForMood, GAMES } from '@/lib/games';
 import { moodOf } from '@/lib/moods';
 import { useAppState } from '@/lib/store';
 
 export default function Play() {
   const t = useTheme();
-  const mood = useAppState((s) => s.checkins[dayKey()]);
+  const todayKey = useToday();
+  const mood = useAppState((s) => s.checkins[todayKey]);
   const pick = gameForMood(mood);
   const today = moodOf(mood);
 

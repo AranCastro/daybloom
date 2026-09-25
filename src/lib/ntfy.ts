@@ -32,15 +32,21 @@ export function subscribeLink(topic: string): string {
 type Publish = { topic: string; title: string; message: string; tags?: string[]; priority?: 1 | 2 | 3 | 4 | 5 };
 
 async function publish(body: Publish): Promise<boolean> {
+  // A stalled request must not hold a nudge forever: give up after 10 s and retry later.
+  const abort = new AbortController();
+  const timer = setTimeout(() => abort.abort(), 10_000);
   try {
     const res = await fetch(NTFY_BASE, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
+      signal: abort.signal,
     });
     return res.ok;
   } catch {
     return false;
+  } finally {
+    clearTimeout(timer);
   }
 }
 
