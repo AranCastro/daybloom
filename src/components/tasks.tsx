@@ -1,5 +1,6 @@
 /** Building blocks for the Eisenhower matrix: checkbox, task row, due badge, quadrant chip and the task sheet. */
 import * as Haptics from 'expo-haptics';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import {
   KeyboardAvoidingView,
@@ -197,6 +198,17 @@ function SheetBody({ onClose, task, defaultQuadrant = 1 }: SheetProps) {
           </View>
 
           <Button title={task ? 'Save changes' : 'Add task'} icon={task ? 'check' : 'plus'} onPress={save} disabled={!title.trim()} />
+          {task && !task.done && (
+            <Button
+              title="Focus on this task"
+              icon="clock"
+              kind="secondary"
+              onPress={() => {
+                onClose();
+                router.push({ pathname: '/focus', params: { task: task.id } });
+              }}
+            />
+          )}
           {task && (
             <Pressable
               onPress={() => {

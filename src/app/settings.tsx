@@ -8,7 +8,7 @@ import { Text } from '@/components/text';
 import { Card, Choice, Divider, Input, Row, Screen, tap } from '@/components/ui';
 import { useTheme } from '@/hooks/use-theme';
 import { prettyTime } from '@/lib/dates';
-import { cancelReminders, scheduleDailyReminder } from '@/lib/reminders';
+import { cancelFocusAlarm, cancelReminders, scheduleDailyReminder } from '@/lib/reminders';
 import { AppState, getState, resetAll, update, useAppState } from '@/lib/store';
 
 const TIMES = [
@@ -41,6 +41,7 @@ export default function Settings() {
   function wipe() {
     const go = () => {
       cancelReminders();
+      cancelFocusAlarm();
       resetAll();
       router.replace('/onboarding');
     };

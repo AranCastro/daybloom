@@ -18,7 +18,14 @@ Two tools in one calm app:
   - Colour Clash (Good or Bright): 30 s word-colour challenge with streak multipliers and shuffling keys.
   Answers and pops register on touch-down, so quick taps are never lost. Best scores are kept.
 
-Moods, tasks, people and scores never leave the phone.
+- **Focus timer (Pomodoro).** Gentle 15/3, Classic 25/5 or Deep 50/10 (Gentle is suggested on a low day),
+  optionally linked to a task. The timer is stored as an end time, so it stays right when the app is
+  closed; an alarm notification fires at the end and the screen stays awake while it runs.
+  **Reward:** every finished session grows a flower in the Focus Garden (7 common, 4 rare at 15%,
+  Golden Lotus every 10th session), with a collection to complete, day streak and hours. Stopping early
+  grows nothing.
+
+Moods, tasks, people, scores and focus sessions never leave the phone.
 
 Built with Expo SDK 57 (React Native 0.86, Expo Router, TypeScript).
 
@@ -92,6 +99,7 @@ src/app/                  screens (Expo Router)
   game/[id].tsx           full-screen game (breathe, bubbles, memory, colours)
   (tabs)/circle.tsx       People: circle matrix, nudge buddy, invite, test nudge
   settings.tsx            name, reminder, threshold, privacy, erase (gear on Today)
+  focus.tsx               Pomodoro timer, flower reward and Focus Garden
 src/components/           design system: text, buttons, cards, icons, mood orb, tab bar
 src/components/games/     the four games and their shared frame
 src/lib/                  state store (moods, tasks), nudge rule, quadrants, ntfy client, reminders, dates

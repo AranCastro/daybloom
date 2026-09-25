@@ -1,6 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Linking, Platform, Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown, ZoomIn } from 'react-native-reanimated';
 
@@ -15,6 +15,9 @@ import { useTheme } from '@/hooks/use-theme';
 import { addDays, dayKey, greeting, prettyDate, weekdayShort } from '@/lib/dates';
 import { isLow, MOODS, MoodValue, moodOf } from '@/lib/moods';
 import { circleOf } from '@/lib/circle';
+import { Flower } from '@/components/flower';
+import { flowerOf } from '@/lib/flowers';
+import { remaining, sessionsOn } from '@/lib/focus';
 import { gameForMood } from '@/lib/games';
 import { openTasks, peopleIn, Person, recordMood, Task, useAppState } from '@/lib/store';
 
@@ -135,6 +138,8 @@ export default function Today() {
 
       <FocusCard lowDay={isLow(checkins[today]) && !editing} />
 
+      <FocusTimerCard />
+
       {todayMood && !editing && <GameLink mood={todayMood.value} />}
 
       <WeekStrip checkins={checkins} />
@@ -160,6 +165,58 @@ export default function Today() {
         </Pressable>
       </Card>
     </Screen>
+  );
+}
+
+/** Pomodoro entry point with today's flowers. */
+function FocusTimerCard() {
+  const t = useTheme();
+  const active = useAppState((s) => s.focus.active);
+  const sessions = useAppState((s) => s.focus.sessions);
+  const todays = sessionsOn(sessions, dayKey());
+  const [now, setNow] = useState(() => Date.now());
+  const ticking = !!active && active.endAt !== null;
+  // Re-render once a second while a timer runs, so the card flips to "Collect" on time.
+  useEffect(() => {
+    if (!ticking) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [ticking]);
+  const ready = active?.kind === 'focus' && active.endAt !== null && remaining(active, now) === 0;
+
+  const line = ready
+    ? 'Session complete. Your flower is ready to collect.'
+    : active
+      ? active.endAt === null
+        ? 'Paused. Pick up where you left off.'
+        : active.kind === 'break'
+          ? 'On a break.'
+          : 'Focus session in progress.'
+      : todays.length
+        ? `${todays.length} ${todays.length === 1 ? 'flower' : 'flowers'} grown today.`
+        : 'One focus session grows one flower.';
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={() => (tap(), router.push('/focus'))}
+      style={({ pressed }) => [styles.gameLink, { backgroundColor: ready ? t.accentSoft : t.surface, borderColor: t.line, opacity: pressed ? 0.85 : 1 }]}>
+      <View style={[styles.gameIcon, { backgroundColor: t.surfaceAlt }]}>
+        <Icon name="clock" color={t.text} size={20} />
+      </View>
+      <View style={{ flex: 1, gap: 2 }}>
+        <Text variant="bodyStrong">{ready ? 'Collect your flower' : active ? 'Focus timer' : 'Start a focus session'}</Text>
+        <Text variant="small">{line}</Text>
+        {todays.length > 0 && (
+          <View style={{ flexDirection: 'row', marginTop: 2 }}>
+            {todays.slice(0, 8).map((s) => (
+              <Flower key={s.at} kind={flowerOf(s.flower)} size={22} />
+            ))}
+          </View>
+        )}
+      </View>
+      <Icon name="arrow" color={t.textMuted} size={20} />
+    </Pressable>
   );
 }
 

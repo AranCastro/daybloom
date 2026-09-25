@@ -7,6 +7,7 @@ import { useSyncExternalStore } from 'react';
 
 import { dayKey } from '@/lib/dates';
 import { readItem, removeItem, writeItem } from '@/lib/kv';
+import type { ActiveTimer, FocusSession } from '@/lib/focus';
 import { MoodValue } from '@/lib/moods';
 import { buddyHasJoined, sendNudge, sendTest } from '@/lib/ntfy';
 import { isLowStreak } from '@/lib/nudge-rule';
@@ -67,6 +68,8 @@ export type AppState = {
   people: Person[];
   /** Best scores and play counts per game id. */
   games: { best: Record<string, number>; plays: Record<string, number> };
+  /** Pomodoro: completed sessions (newest first) and the running timer. */
+  focus: { sessions: FocusSession[]; active: ActiveTimer | null };
 };
 
 const KEY = 'nudge.state.v1';
@@ -84,6 +87,7 @@ const initial: AppState = {
   tasks: [],
   people: [],
   games: { best: {}, plays: {} },
+  focus: { sessions: [], active: null },
 };
 
 function load(): AppState {
