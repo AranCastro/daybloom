@@ -1,7 +1,13 @@
 # Nudge a Friend — mobile app
 
-Tap your mood once a day. After a set number of low days in a row (default three), one trusted friend
-receives a single line: "Call Aran today." They are never told why, and moods never leave the phone.
+Two tools in one calm app:
+
+- **Nudge a Friend.** Tap your mood once a day. After a set number of low days in a row (default three),
+  one trusted friend receives a single line: "Call Aran today." They are never told why.
+- **Eisenhower Matrix.** Sort tasks into Do first, Schedule, Delegate and Later, with due-date badges.
+  Today's screen shows a short Focus list (due or late first, then Do first), reduced to one task on a low day.
+
+Moods and tasks never leave the phone.
 
 Built with Expo SDK 57 (React Native 0.86, Expo Router, TypeScript).
 
@@ -61,12 +67,14 @@ After one nudge the rule is disarmed until a day that is Okay or better.
 ```
 src/app/                  screens (Expo Router)
   onboarding.tsx          five-step first run
-  (tabs)/today.tsx        mood check-in, week strip, support card
+  (tabs)/today.tsx        mood check-in, focus list, week strip, support card
+  (tabs)/matrix.tsx       Eisenhower matrix (2 × 2 quadrant cards, add button)
+  quadrant/[q].tsx        one quadrant in full, with completed tasks
   (tabs)/journey.tsx      month calendar and mood mix
   (tabs)/circle.tsx       buddy status, invite, test nudge
   (tabs)/settings.tsx     name, reminder, threshold, privacy, erase
 src/components/           design system: text, buttons, cards, icons, mood orb, tab bar
-src/lib/                  state store, nudge rule, ntfy client, reminders, dates
+src/lib/                  state store (moods, tasks), nudge rule, quadrants, ntfy client, reminders, dates
 assets/images/            app icon, adaptive icon, splash
 ```
 

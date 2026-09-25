@@ -47,6 +47,7 @@ export default function RootLayout() {
         <Stack.Screen name="index" />
         <Stack.Screen name="onboarding" options={{ gestureEnabled: false }} />
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="quadrant/[q]" options={{ animation: 'slide_from_right' }} />
       </Stack>
     </>
   );

@@ -16,7 +16,11 @@ export type IconName =
   | 'arrow'
   | 'back'
   | 'spark'
-  | 'shield';
+  | 'shield'
+  | 'grid'
+  | 'plus'
+  | 'trash'
+  | 'flag';
 
 type Props = { name: IconName; size?: number; color: string; strokeWidth?: number };
 
@@ -84,6 +88,17 @@ export function Icon({ name, size = 22, color, strokeWidth = 1.8 }: Props) {
       {name === 'spark' && (
         <Path d="M12 3.5l1.8 5.2 5.2 1.8-5.2 1.8L12 17.5l-1.8-5.2L5 10.5l5.2-1.8L12 3.5zM18.5 16l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7.7-1.8z" {...p} />
       )}
+      {name === 'grid' && (
+        <>
+          <Path d="M5 4h5a1 1 0 011 1v5a1 1 0 01-1 1H5a1 1 0 01-1-1V5a1 1 0 011-1zM14 4h5a1 1 0 011 1v5a1 1 0 01-1 1h-5a1 1 0 01-1-1V5a1 1 0 011-1z" {...p} />
+          <Path d="M5 13h5a1 1 0 011 1v5a1 1 0 01-1 1H5a1 1 0 01-1-1v-5a1 1 0 011-1zM14 13h5a1 1 0 011 1v5a1 1 0 01-1 1h-5a1 1 0 01-1-1v-5a1 1 0 011-1z" {...p} />
+        </>
+      )}
+      {name === 'plus' && <Path d="M12 5v14M5 12h14" {...p} />}
+      {name === 'trash' && (
+        <Path d="M4.5 7h15M9.5 7V5a1 1 0 011-1h3a1 1 0 011 1v2M6.5 7l.9 11.2A2 2 0 009.4 20h5.2a2 2 0 002-1.8L17.5 7M10 11v5M14 11v5" {...p} />
+      )}
+      {name === 'flag' && <Path d="M5.5 20.5V4.5M5.5 4.5h11l-2.5 4 2.5 4h-11" {...p} />}
       {name === 'shield' && (
         <>
           <Path d="M12 3.5l7 2.8v5.4c0 4.3-3 7.6-7 8.8-4-1.2-7-4.5-7-8.8V6.3l7-2.8z" {...p} />

@@ -6,13 +6,14 @@ import Animated, { FadeIn, FadeInDown, ZoomIn } from 'react-native-reanimated';
 
 import { Icon } from '@/components/icons';
 import { MoodOrb } from '@/components/mood-orb';
+import { TaskRow, TaskSheet } from '@/components/tasks';
 import { Text } from '@/components/text';
 import { Card, Screen, tap } from '@/components/ui';
 import { TabBarInset } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { addDays, dayKey, greeting, prettyDate, weekdayShort } from '@/lib/dates';
-import { MOODS, MoodValue, moodOf } from '@/lib/moods';
-import { recordMood, useAppState } from '@/lib/store';
+import { isLow, MOODS, MoodValue, moodOf } from '@/lib/moods';
+import { openTasks, recordMood, Task, useAppState } from '@/lib/store';
 
 export default function Today() {
   const t = useTheme();
@@ -117,6 +118,8 @@ export default function Today() {
         </Animated.View>
       )}
 
+      <FocusCard lowDay={isLow(checkins[today]) && !editing} />
+
       <WeekStrip checkins={checkins} />
 
       <Card>
@@ -140,6 +143,50 @@ export default function Today() {
         </Pressable>
       </Card>
     </Screen>
+  );
+}
+
+/** Today's short list from the matrix: anything due today or late, then "Do first". Lighter on low days. */
+function FocusCard({ lowDay }: { lowDay: boolean }) {
+  const tasks = useAppState((s) => s.tasks);
+  const [editing, setEditing] = useState<Task | null>(null);
+  const today = dayKey();
+
+  // Anything due today or late comes first (any quadrant), then the rest of "Do first".
+  const dueNow = tasks
+    .filter((x) => !x.done && x.due && x.due <= today)
+    .sort((a, b) => (a.due ?? '').localeCompare(b.due ?? '') || a.quadrant - b.quadrant);
+  const focus = [...dueNow, ...openTasks(tasks, 1).filter((x) => !dueNow.includes(x))];
+  const limit = lowDay ? 1 : 3;
+  const shown = focus.slice(0, limit);
+
+  return (
+    <Card>
+      <View style={[styles.inline, { justifyContent: 'space-between' }]}>
+        <Text variant="label">Focus today</Text>
+        <Pressable hitSlop={10} onPress={() => (tap(), router.navigate('/matrix'))}>
+          <Text variant="small" color="accent">
+            Open matrix
+          </Text>
+        </Pressable>
+      </View>
+      {lowDay && focus.length > 0 && (
+        <Text variant="quote" color="textSecondary" style={{ fontSize: 16, lineHeight: 22 }}>
+          A low day. One thing is enough.
+        </Text>
+      )}
+      {shown.length === 0 ? (
+        <Text variant="small">Nothing urgent. A good day to schedule something that matters.</Text>
+      ) : (
+        shown.map((task) => <TaskRow key={task.id} task={task} today={today} onOpen={setEditing} />)
+      )}
+      {focus.length > limit && (
+        <Text variant="small" color="textMuted">
+          +{focus.length - limit} more in your matrix
+        </Text>
+      )}
+      <TaskSheet visible={!!editing} task={editing} onClose={() => setEditing(null)} />
+    </Card>
   );
 }
 

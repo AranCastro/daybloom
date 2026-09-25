@@ -1,7 +1,7 @@
 /**
  * App state: a tiny external store persisted to on-device storage.
- * Everything stays on the phone. The only thing that ever leaves it is the
- * one-line nudge sent to the buddy's ntfy topic.
+ * Everything (moods, tasks, settings) stays on the phone. The only thing that
+ * ever leaves it is the one-line nudge sent to the buddy's ntfy topic.
  */
 import { useSyncExternalStore } from 'react';
 
@@ -23,6 +23,20 @@ export type NudgeLog = {
   status: 'sent' | 'queued';
 };
 
+/** Eisenhower quadrant: 1 do first, 2 schedule, 3 delegate, 4 drop. */
+export type Quadrant = 1 | 2 | 3 | 4;
+
+export type Task = {
+  id: string;
+  title: string;
+  quadrant: Quadrant;
+  /** YYYY-MM-DD, optional. */
+  due?: string;
+  done: boolean;
+  doneAt?: number;
+  createdAt: number;
+};
+
 export type AppState = {
   version: 1;
   onboarded: boolean;
@@ -36,6 +50,7 @@ export type AppState = {
   nudges: NudgeLog[];
   /** False after a nudge fires; re-armed by the next day that is not low. */
   armed: boolean;
+  tasks: Task[];
 };
 
 const KEY = 'nudge.state.v1';
@@ -50,6 +65,7 @@ const initial: AppState = {
   checkins: {},
   nudges: [],
   armed: true,
+  tasks: [],
 };
 
 function load(): AppState {
@@ -138,4 +154,45 @@ export async function refreshBuddyJoined() {
   if (await buddyHasJoined(buddy.topic)) {
     update((s) => ({ buddy: s.buddy ? { ...s.buddy, joined: true } : null }));
   }
+}
+
+// ── Tasks (Eisenhower matrix) ────────────────────────────────────────────────
+
+function newId(): string {
+  return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
+}
+
+export function addTask(title: string, quadrant: Quadrant, due?: string) {
+  const task: Task = { id: newId(), title: title.trim(), quadrant, due, done: false, createdAt: Date.now() };
+  update((s) => ({ tasks: [...s.tasks, task] }));
+}
+
+export function editTask(id: string, patch: Partial<Pick<Task, 'title' | 'quadrant' | 'due'>>) {
+  update((s) => ({ tasks: s.tasks.map((t) => (t.id === id ? { ...t, ...patch } : t)) }));
+}
+
+export function toggleTask(id: string) {
+  update((s) => ({
+    tasks: s.tasks.map((t) => (t.id === id ? { ...t, done: !t.done, doneAt: t.done ? undefined : Date.now() } : t)),
+  }));
+}
+
+export function deleteTask(id: string) {
+  update((s) => ({ tasks: s.tasks.filter((t) => t.id !== id) }));
+}
+
+export function clearCompleted() {
+  update((s) => ({ tasks: s.tasks.filter((t) => !t.done) }));
+}
+
+/** Open tasks in a quadrant: dated tasks first (soonest due), then undated by creation. */
+export function openTasks(tasks: Task[], quadrant: Quadrant): Task[] {
+  return tasks
+    .filter((t) => t.quadrant === quadrant && !t.done)
+    .sort((a, b) => {
+      if (a.due && b.due) return a.due.localeCompare(b.due);
+      if (a.due) return -1;
+      if (b.due) return 1;
+      return a.createdAt - b.createdAt;
+    });
 }

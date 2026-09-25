@@ -11,6 +11,7 @@ import { useTheme } from '@/hooks/use-theme';
 
 const ICONS: Record<string, IconName> = {
   today: 'sun',
+  matrix: 'grid',
   journey: 'calendar',
   circle: 'people',
   settings: 'settings',
@@ -73,7 +74,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 7,
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     borderRadius: Radius.pill,
     minWidth: 50,
     justifyContent: 'center',
