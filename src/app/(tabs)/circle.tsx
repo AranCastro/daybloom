@@ -1,57 +1,25 @@
 import { useState } from 'react';
-import { Alert, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
+import { BuddyCard, useBuddy } from '@/components/buddy';
 import { Icon } from '@/components/icons';
 import { Text } from '@/components/text';
-import { Button, Card, Divider, Input, Screen, tap } from '@/components/ui';
+import { Card, Divider, Screen, tap } from '@/components/ui';
 import { TabBarInset } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useCircleNames } from '@/lib/labels';
 import { prettyDate } from '@/lib/dates';
-import { shareInvite } from '@/lib/invite';
-import { newTopic } from '@/lib/ntfy';
 import { Avatar, CircleChip, PersonSheet, useCircleColors } from '@/components/people';
 import { CIRCLE, circleOf } from '@/lib/circle';
-import { CircleQuadrant, getState, Person, peopleIn, testNudge, update, useAppState } from '@/lib/store';
-
-function confirm(title: string, message: string, onYes: () => void) {
-  if (Platform.OS === 'web') {
-    if (globalThis.confirm?.(`${title}\n\n${message}`)) onYes();
-    return;
-  }
-  Alert.alert(title, message, [
-    { text: 'Cancel', style: 'cancel' },
-    { text: 'Yes', style: 'destructive', onPress: onYes },
-  ]);
-}
+import { CircleQuadrant, Person, peopleIn, useAppState } from '@/lib/store';
 
 export default function Circle() {
-  const t = useTheme();
-  const buddy = useAppState((s) => s.buddy);
   const nudges = useAppState((s) => s.nudges);
   const streak = useAppState((s) => s.streak);
-  const myName = useAppState((s) => s.name);
-  const [draft, setDraft] = useState('');
-  const [sending, setSending] = useState(false);
-  const [note, setNote] = useState('');
-
-  async function createBuddy() {
-    const name = draft.trim();
-    if (!name) return;
-    const topic = newTopic();
-    update({ buddy: { name, topic, joined: false } });
-    setDraft('');
-    const r = await shareInvite(name, getState().name, topic);
-    if (r === 'copied') setNote('Invite copied. Paste it into WhatsApp or SMS.');
-  }
-
-  async function test() {
-    setSending(true);
-    const ok = await testNudge();
-    setSending(false);
-    setNote(ok ? `Test sent. Ask ${buddy?.name} if it arrived.` : 'Could not send. Check your internet and try again.');
-  }
+  const cName = useCircleNames();
+  const { buddy } = useBuddy();
+  const autos = nudges.filter((n) => n.kind === 'auto');
 
   return (
     <Screen bottomInset={TabBarInset + 24}>
@@ -64,102 +32,39 @@ export default function Circle() {
       <CircleMatrix />
 
       <View style={{ gap: 4, marginTop: 12 }}>
-        <Text variant="label">Your nudge buddy</Text>
-        <Text variant="heading">One person who would want to know.</Text>
+        <Text variant="label">Your buddy</Text>
+        <Text variant="heading">One person to reach on hard days.</Text>
       </View>
 
-      {!buddy ? (
-        <Card>
-          <Text variant="heading">Who should we nudge?</Text>
-          <Text variant="small">
-            Pick someone who would pick up the phone for you: a sibling, a close friend, a parent. They will only ever
-            be asked to call.
-          </Text>
-          <Input value={draft} onChangeText={setDraft} placeholder="Their first name" autoCapitalize="words" />
-          <Button title="Create and share invite" icon="share" onPress={createBuddy} disabled={!draft.trim()} />
-        </Card>
-      ) : (
-        <Card style={{ alignItems: 'center', paddingVertical: 28 }}>
-          <View style={[styles.bigAvatar, { backgroundColor: t.brand }]}>
-            <Text variant="hero" style={{ color: t.brandText }}>
-              {buddy.name.slice(0, 1).toUpperCase()}
-            </Text>
-          </View>
-          <Text variant="title">{buddy.name}</Text>
-          <View style={[styles.pill, { backgroundColor: buddy.joined ? t.glowB : t.accentSoft }]}>
-            <View style={[styles.dot, { backgroundColor: buddy.joined ? '#5AA36B' : t.accent }]} />
-            <Text variant="small" color="text">
-              {buddy.joined ? 'Connected' : 'Waiting for them to join'}
-            </Text>
-          </View>
-          <View style={{ alignSelf: 'stretch', gap: 10, marginTop: 14 }}>
-            <Button title="Send a test nudge" icon="send" onPress={test} loading={sending} />
-            <Button
-              title="Share invite again"
-              icon="share"
-              kind="secondary"
-              onPress={async () => {
-                const r = await shareInvite(buddy.name, getState().name, buddy.topic);
-                if (r === 'copied') setNote('Invite copied. Paste it into WhatsApp or SMS.');
-              }}
-            />
-          </View>
-          {!!note && (
-            <Text variant="small" center style={{ marginTop: 6 }}>
-              {note}
-            </Text>
-          )}
-          {!buddy.joined && (
-            <Pressable
-              onPress={() => update((s) => ({ buddy: s.buddy ? { ...s.buddy, joined: true } : null }))}
-              style={{ padding: 8 }}>
-              <Text variant="small" color="accent">
-                They got the test? Mark as connected
-              </Text>
-            </Pressable>
-          )}
-        </Card>
-      )}
+      <BuddyCard />
 
       <Card>
         <Text variant="label">How the nudge works</Text>
         <Step icon="sun" text="You tap how each day feels. Your answers stay on this phone (and in backups you choose to make)." />
-        <Step icon="bell" text={`After ${streak} low days in a row, ${buddy?.name ?? 'your buddy'} gets one line: “Call ${myName || 'your friend'} today.”`} />
-        <Step icon="lock" text="They never see your answers. They only know a nudge means a few hard days." />
-        <Step icon="heart" text="One nudge per rough patch. A better day resets it." />
+        <Step
+          icon="bell"
+          text={`After ${streak} low days in a row, Daybloom offers to message ${buddy?.name.split(' ')[0] ?? 'your buddy'}: one tap opens SMS or WhatsApp with the message written.`}
+        />
+        <Step icon="lock" text="You press Send. Nothing is sent without you, and the message never mentions your mood." />
+        <Step icon="heart" text={`One offer per rough patch. A better day resets it. No setup or app is needed for your buddy; they are the first person in ${cName(1)} unless you choose someone.`} />
       </Card>
 
-      {nudges.length > 0 && (
+      {autos.length > 0 && (
         <Card>
           <Text variant="label">Nudge history</Text>
-          {nudges.slice(0, 8).map((n, i) => (
+          {autos.slice(0, 8).map((n, i) => (
             <View key={n.at}>
               {i > 0 && <Divider />}
               <View style={styles.history}>
-                <Text variant="body">{n.kind === 'test' ? 'Test nudge' : 'Nudge sent'}</Text>
+                <Text variant="body">{n.to ? `Offered to message ${n.to}` : 'Nudge'}</Text>
                 <Text variant="small">
                   {prettyDate(new Date(n.at))}
-                  {n.status === 'queued' ? ' · waiting for internet' : n.status === 'expired' ? ' · not sent (no internet in time)' : ''}
+                  {n.status === 'opened' ? ' · message opened' : n.status === 'dismissed' ? ' · not now' : n.status === 'ready' ? ' · waiting for you' : ''}
                 </Text>
               </View>
             </View>
           ))}
         </Card>
-      )}
-
-      {buddy && (
-        <Pressable
-          style={{ alignSelf: 'center', padding: 10 }}
-          onPress={() =>
-            confirm('Change buddy?', `${buddy.name} will no longer receive nudges.`, () => {
-              update({ buddy: null });
-              setNote('');
-            })
-          }>
-          <Text variant="small" color="textMuted">
-            Change buddy
-          </Text>
-        </Pressable>
       )}
     </Screen>
   );

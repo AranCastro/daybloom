@@ -1,5 +1,5 @@
 /**
- * First-run flow: welcome → how it works → your name → your buddy → reminder.
+ * First-run flow: welcome → how it works → your name → your buddy (optional) → reminder.
  * Each step is a full screen with a single decision.
  */
 import { router } from 'expo-router';
@@ -13,11 +13,10 @@ import { Text } from '@/components/text';
 import { Button, Choice, Input, Screen, tap } from '@/components/ui';
 import { useTheme } from '@/hooks/use-theme';
 import { prettyTime } from '@/lib/dates';
-import { shareInvite } from '@/lib/invite';
 import { MOODS } from '@/lib/moods';
-import { newTopic } from '@/lib/ntfy';
 import { scheduleDailyReminder } from '@/lib/reminders';
-import { getState, update } from '@/lib/store';
+import { addPerson, getState, setBuddy, update } from '@/lib/store';
+import { canPickContacts, pickContact } from '@/lib/pick-contact';
 
 const STEPS = 5;
 
@@ -26,20 +25,24 @@ export default function Onboarding() {
   const [step, setStep] = useState(0);
   const [name, setName] = useState(getState().name);
   const [buddyName, setBuddyName] = useState('');
+  const [buddyPhone, setBuddyPhone] = useState('');
   const [hour, setHour] = useState(21);
-  const [shareNote, setShareNote] = useState('');
 
   const next = () => setStep((s) => Math.min(s + 1, STEPS - 1));
   const back = () => (tap(), setStep((s) => Math.max(s - 1, 0)));
 
-  async function invite() {
-    const bn = buddyName.trim();
-    if (!bn) return;
-    const topic = getState().buddy?.topic ?? newTopic();
-    update({ buddy: { name: bn, topic, joined: false } });
-    const r = await shareInvite(bn, name.trim(), topic);
-    if (r === 'copied') setShareNote('Invite copied. Paste it into WhatsApp or SMS.');
+  /** The buddy joins the circle's first section (Call anytime) and becomes the buddy. */
+  function saveBuddy(nameIn: string, phone?: string) {
+    const n = nameIn.trim();
+    if (!n) return;
+    const p = addPerson(n, 1, phone);
+    setBuddy(p.id);
     next();
+  }
+
+  async function fromContacts() {
+    const c = await pickContact();
+    if (c?.name) saveBuddy(c.name, c.phone);
   }
 
   async function finish() {
@@ -83,8 +86,8 @@ export default function Onboarding() {
               <View style={{ gap: 18, marginTop: 8 }}>
                 <HowRow n="1" icon="sun" title="Tap once a day" text="Choose how today feels. No writing, no journaling." />
                 <HowRow n="2" icon="leaf" title="Everything grows your garden" text="Check-ins, tasks, focus sessions, games and reaching out each grow a flower." />
-                <HowRow n="3" icon="people" title="Pick one buddy" text="After a few low days in a row, they get one line: “Call you today.”" />
-                <HowRow n="4" icon="lock" title="Nothing else is shared" text="Your buddy never sees your answers. They only know a nudge means a few hard days." />
+                <HowRow n="3" icon="people" title="One buddy for hard days" text="After a few low days in a row, one tap asks them to call you. No app or setup for them." />
+                <HowRow n="4" icon="lock" title="Nothing is sent without you" text="You press Send, and the message never mentions your mood. Your answers stay on this phone." />
               </View>
               <View style={{ flex: 1 }} />
               <Button title="Sounds good" onPress={next} />
@@ -119,12 +122,15 @@ export default function Onboarding() {
                 <Text variant="label">Your buddy</Text>
                 <Text variant="title">Who would pick up the phone for you?</Text>
                 <Text variant="body" color="textSecondary">
-                  A sibling, a close friend, a parent. You will send them a short invite on WhatsApp or SMS.
+                  A sibling, a close friend, a parent. They need no app and no invite: on hard days, one tap lets you
+                  message them.
                 </Text>
               </View>
-              <Input value={buddyName} onChangeText={setBuddyName} placeholder="Their first name" autoCapitalize="words" />
+              {canPickContacts && <Button title="Choose from contacts" icon="people" onPress={fromContacts} />}
+              <Input value={buddyName} onChangeText={setBuddyName} placeholder="Or type their first name" autoCapitalize="words" />
+              <Input value={buddyPhone} onChangeText={setBuddyPhone} placeholder="Their phone number" keyboardType="phone-pad" />
               <View style={{ flex: 1 }} />
-              <Button title="Send invite" icon="share" disabled={!buddyName.trim()} onPress={invite} />
+              <Button title="Continue" disabled={!buddyName.trim()} onPress={() => saveBuddy(buddyName, buddyPhone)} />
               <Pressable onPress={next} style={styles.skip}>
                 <Text variant="small" color="textMuted">
                   I will choose later
@@ -142,7 +148,6 @@ export default function Onboarding() {
                   Once a day, at the time you choose. You can change it any time.
                 </Text>
               </View>
-              {!!shareNote && <Text variant="small">{shareNote}</Text>}
               <Choice
                 options={[
                   { label: '8 AM', value: 8 },

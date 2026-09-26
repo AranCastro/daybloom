@@ -27,7 +27,7 @@ Choose how today feels, from Bright to Heavy. No writing, no journaling. Your st
 Checking in, finishing a task, a focus session, a short game, reaching out to someone and earning a badge each grow a flower. Collect twelve kinds, including rare finds such as Neelakurinji, and a Golden Lotus every twentieth bloom.
 
 **Nudge a Friend**
-Pick one trusted person. If you have a few low days in a row, they receive one short line: "Call Aran today." They never see your answers; they only know a nudge means a few hard days.
+Pick one trusted person from your contacts, or let the app use the first person in your closest circle. After a few low days in a row, one tap opens SMS or WhatsApp with a short request to call you; you press Send. Your buddy needs no app and never sees your answers.
 
 **Tasks that know what matters**
 Sort tasks into an Eisenhower Matrix: Do first, Schedule, Delegate and Later. Today shows what is due. On a low day, it shows only one task.
@@ -48,7 +48,7 @@ Bronze, silver and gold badges for streaks, for days noted, for coming back afte
 Eight widgets in light and dark: the full Eisenhower Matrix and your people circle, with your choice of theme, opacity and text size; check in with one tap, tick off today's tasks, see your garden and streak, start a focus session, or call someone from your circle, without opening the app.
 
 **Private by design**
-No account, no advertising, no tracking. Your moods, tasks, circle and garden stay on your phone, and in backups you choose to save (for example to your Google Drive). The only thing the app sends is the one-line nudge to the buddy you choose.
+No account, no advertising, no tracking. Your moods, tasks, circle and garden stay on your phone, and in backups you choose to save (for example to your Google Drive). The app sends nothing over the internet; you send the buddy message yourself from SMS or WhatsApp.
 
 Daybloom is not a medical or emergency service. If you are in distress in India, call Tele-MANAS on 14416 (free, 24 hours) or emergency services on 112.
 
@@ -58,10 +58,10 @@ Daybloom is not a medical or emergency service. If you are in distress in India,
 
 | Question | Answer |
 |---|---|
-| Does the app collect or share user data? | Collected: first name (sent to ntfy.sh only as part of the buddy nudge). Contacts: only the single contact the user picks, stored on device. |
-| Is data encrypted in transit? | Yes (HTTPS to ntfy.sh). |
+| Does the app collect or share user data? | No data collected or shared. Contacts: only the contacts the user picks, stored on device. |
+| Is data encrypted in transit? | Not applicable: the app transmits no user data. |
 | Can users request deletion? | Yes: Settings → Erase all data, or uninstall. |
-| Data shared with third parties | First name in the nudge message, delivered via ntfy.sh to the buddy's device. |
+| Data shared with third parties | None. The buddy message is sent by the user through their own SMS or WhatsApp app. |
 | Backups | The app writes a backup file only when the user asks (or weekly, kept in the app's own storage) and hands it to the share menu; it uploads nothing itself. Android's own Google backup (`allowBackup`) may copy app data to the user's Google account. Check Play's current Data safety help on how to declare Android backup before submitting; the privacy policy already describes it. |
 
 ## Other Play Console declarations (before any release, including testing tracks)

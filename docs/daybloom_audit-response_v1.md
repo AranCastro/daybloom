@@ -17,7 +17,7 @@
 | M4 | Fixed, tested | Country code from the phone's region (India, US, Canada); otherwise the number is used as saved. |
 | M5 | Fixed | Helpline by region: Tele-MANAS 14416 and 112 in India (and when no region is known), findahelpline.com and "your local emergency number" elsewhere. |
 | M6 | Fixed | Wording now says the buddy never sees answers and knows a nudge means a few hard days (Circle, onboarding, README, store listing). |
-| M7 | Open (documented) | The privacy policy describes ntfy.sh. Reserved topics or a self-hosted server remain future work. |
+| M7 | Resolved (1.8.0) | ntfy.sh is removed. The app now opens SMS or WhatsApp with the message prefilled and the user presses Send, so no third-party relay is involved. H1 and H4 (queued sends) no longer apply. |
 | M8 | Fixed | `SYSTEM_ALERT_WINDOW`, `READ_EXTERNAL_STORAGE`, `WRITE_EXTERNAL_STORAGE` blocked. |
 | M9 | Fixed (1.5.0) | Backup and restore with a weekly backup. |
 | M10 | Fixed | New `textMuted` (#736D66 light, #88827A dark) and `accentText` (#A94E2B) tokens meet 4.5:1; `Choice` is a radio group with checked state; task checkboxes carry the task title; quadrant numerals pick dark or white ink by contrast; the seven-day strip is labelled. |

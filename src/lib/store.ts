@@ -1,7 +1,7 @@
 /**
  * App state: a tiny external store persisted to on-device storage.
- * Everything (moods, tasks, settings) stays on the phone. The only thing that
- * ever leaves it is the one-line nudge sent to the buddy's ntfy topic.
+ * Everything (moods, tasks, settings) stays on the phone. The buddy nudge is a message the
+ * user sends themselves with one tap (SMS or WhatsApp); the app sends nothing on its own.
  */
 import { useSyncExternalStore } from 'react';
 import { Platform } from 'react-native';
@@ -13,24 +13,19 @@ import { FlowerKind, flowerOf, pickFlower } from '@/lib/flowers';
 import type { ActiveTimer, FocusSession } from '@/lib/focus';
 import { MoodValue } from '@/lib/moods';
 import { sortOpen } from '@/lib/quadrants';
-import { buddyHasJoined, sendNudge, sendTest } from '@/lib/ntfy';
 import { isLowStreak } from '@/lib/nudge-rule';
-
-export type Buddy = {
-  name: string;
-  topic: string;
-  joined: boolean;
-};
 
 export type NudgeLog = {
   at: number;
   kind: 'auto' | 'test';
-  /** queued: waiting for the internet; expired: too old to send ("call me today" would be wrong). */
-  status: 'sent' | 'queued' | 'expired';
+  /**
+   * ready: waiting for the user's one tap; opened: the message was opened in SMS or WhatsApp;
+   * dismissed: "Not now". (sent / queued / expired come from older versions that used ntfy.)
+   */
+  status: 'ready' | 'opened' | 'dismissed' | 'sent' | 'queued' | 'expired';
+  /** Who it was for, as named at the time. */
+  to?: string;
 };
-
-/** A nudge that could not be sent within this time is dropped rather than sent late. */
-const NUDGE_TTL = 36 * 60 * 60 * 1000;
 
 /** Eisenhower quadrant: 1 do first, 2 schedule, 3 delegate, 4 drop. */
 export type Quadrant = 1 | 2 | 3 | 4;
@@ -79,7 +74,8 @@ export type AppState = {
   version: 1;
   onboarded: boolean;
   name: string;
-  buddy: Buddy | null;
+  /** The nudge buddy: a person in the circle, or null for "automatic" (the first person in Call anytime). */
+  buddyId: string | null;
   /** Consecutive low days that trigger a nudge. */
   streak: 2 | 3 | 4;
   reminder: { enabled: boolean; hour: number; minute: number };
@@ -154,7 +150,7 @@ const initial: AppState = {
   version: 1,
   onboarded: false,
   name: '',
-  buddy: null,
+  buddyId: null,
   streak: 3,
   reminder: { enabled: true, hour: 21, minute: 0 },
   checkins: {},
@@ -188,6 +184,13 @@ function mergeSaved(saved: Partial<AppState>): AppState {
   if (saved.bloomCount === undefined) merged.bloomCount = merged.garden.length;
   merged.clearedWork = { ...saved.clearedWork };
   merged.labels = { matrix: { ...saved.labels?.matrix }, circle: { ...saved.labels?.circle } };
+  // Older versions kept a separate ntfy buddy; now the buddy is a person in the circle.
+  const legacy = (saved as { buddy?: { name?: string } | null }).buddy;
+  if (saved.buddyId === undefined) {
+    const match = legacy?.name ? merged.people.find((p) => p.name.trim().toLowerCase() === legacy.name!.trim().toLowerCase()) : undefined;
+    merged.buddyId = match?.id ?? null;
+  }
+  delete (merged as { buddy?: unknown }).buddy;
   // Older data has no lastNudgeDay: take it from the newest automatic nudge.
   if (!merged.lastNudgeDay) {
     const last = (merged.nudges ?? []).find((n) => n.kind === 'auto');
@@ -298,12 +301,34 @@ export function resetAll() {
 }
 
 /**
- * Records today's mood and, when the low-streak rule is met, nudges the buddy.
- * Returns true when a nudge was triggered by this check-in.
- *
- * The nudge is disarmed and logged before the network request, so a second answer while it is
- * being sent (or a widget tap) cannot send another. Only a later day that is Okay or better
- * re-arms it; changing today's answer back and forth does not.
+ * The buddy: the person chosen in the circle, or automatically the first person added to
+ * "Call anytime" (preferring someone with a phone number).
+ */
+export function resolveBuddy(s: Pick<AppState, 'people' | 'buddyId'> = state): Person | null {
+  if (s.buddyId) {
+    const chosen = s.people.find((p) => p.id === s.buddyId);
+    if (chosen) return chosen;
+  }
+  const close = s.people.filter((p) => p.quadrant === 1).sort((a, b) => a.createdAt - b.createdAt);
+  return close.find((p) => p.phone) ?? close[0] ?? null;
+}
+
+export function setBuddy(id: string | null) {
+  update({ buddyId: id });
+}
+
+let nudgeListener: ((name: string) => void) | null = null;
+
+/** The app shell registers a notifier (a local notification) for when a nudge is ready. */
+export function onNudgeReady(fn: (name: string) => void) {
+  nudgeListener = fn;
+}
+
+/**
+ * Records today's mood. When the low-streak rule is met, a nudge becomes "ready": the user is
+ * offered one tap to message their buddy. It is logged and disarmed at once, so changing the
+ * answer the same day cannot offer it again; only a later day that is Okay or better re-arms it.
+ * Returns true when this check-in made a nudge ready.
  */
 export async function recordMood(mood: MoodValue): Promise<boolean> {
   const today = dayKey();
@@ -314,57 +339,37 @@ export async function recordMood(mood: MoodValue): Promise<boolean> {
   update({ checkins, armed });
   if (firstToday) bloom('checkin', { note: 'Daily check-in' });
 
-  const { buddy, streak } = state;
-  if (!buddy || !armed || !isLowStreak(checkins, streak, today)) return false;
+  const buddy = resolveBuddy();
+  if (!buddy || !armed || !isLowStreak(checkins, state.streak, today)) return false;
 
-  const entry: NudgeLog = { at: Date.now(), kind: 'auto', status: 'queued' };
+  const entry: NudgeLog = { at: Date.now(), kind: 'auto', status: 'ready', to: buddy.name };
   update((s) => ({ armed: false, lastNudgeDay: today, nudges: [entry, ...s.nudges].slice(0, 50) }));
-  await flushQueued();
+  nudgeListener?.(buddy.name);
   return true;
 }
 
-let flushing: Promise<void> | null = null;
-
-/**
- * Sends a nudge that is waiting for the internet (one at a time). Called after a check-in, when the
- * app opens or returns, and from the home-screen widget's background task.
- */
-export function flushQueued(): Promise<void> {
-  if (!flushing) {
-    flushing = doFlush().finally(() => {
-      flushing = null;
-    });
-  }
-  return flushing;
+/** Today's ready (or opened) nudge, if any. */
+export function todaysNudge(s: Pick<AppState, 'nudges'> = state): NudgeLog | undefined {
+  const today = dayKey();
+  return s.nudges.find((n) => n.kind === 'auto' && dayKey(new Date(n.at)) === today && (n.status === 'ready' || n.status === 'opened'));
 }
 
-async function doFlush() {
-  const now = Date.now();
-  // Too late to ask for a call "today": drop it instead of sending it days later.
-  if (state.nudges.some((n) => n.status === 'queued' && now - n.at > NUDGE_TTL)) {
-    update((s) => ({ nudges: s.nudges.map((n): NudgeLog => (n.status === 'queued' && now - n.at > NUDGE_TTL ? { ...n, status: 'expired' } : n)) }));
-  }
-  const { buddy, nudges, name } = state;
-  if (!buddy || !nudges.some((n) => n.status === 'queued')) return;
-  const ok = await sendNudge(buddy.topic, name || 'Your friend');
-  if (ok) update((s) => ({ nudges: s.nudges.map((n): NudgeLog => (n.status === 'queued' ? { ...n, status: 'sent' } : n)) }));
+/** Marks today's nudge as opened in SMS / WhatsApp (and counts it as reaching out). */
+export function markNudgeOpened() {
+  const buddy = resolveBuddy();
+  const n = todaysNudge();
+  if (n) update((s) => ({ nudges: s.nudges.map((x): NudgeLog => (x === n ? { ...x, status: 'opened' } : x)) }));
+  if (buddy) markReached(buddy.id);
 }
 
-export async function testNudge(): Promise<boolean> {
-  const { buddy, name } = state;
-  if (!buddy) return false;
-  const ok = await sendTest(buddy.topic, name || 'Your friend');
-  const entry: NudgeLog = { at: Date.now(), kind: 'test', status: 'sent' };
-  if (ok) update((s) => ({ nudges: [entry, ...s.nudges].slice(0, 50) }));
-  return ok;
+export function dismissNudge() {
+  const n = todaysNudge();
+  if (n) update((s) => ({ nudges: s.nudges.map((x): NudgeLog => (x === n ? { ...x, status: 'dismissed' } : x)) }));
 }
 
-export async function refreshBuddyJoined() {
-  const { buddy } = state;
-  if (!buddy || buddy.joined) return;
-  if (await buddyHasJoined(buddy.topic)) {
-    update((s) => ({ buddy: s.buddy ? { ...s.buddy, joined: true } : null }));
-  }
+/** The message the user sends. It says nothing about mood. */
+export function nudgeMessage(buddyName: string, myName: string): string {
+  return `Hi ${buddyName}, could you give me a call today when you have a moment?${myName ? ` – ${myName}` : ''}`;
 }
 
 // ── Tasks (Eisenhower matrix) ────────────────────────────────────────────────
@@ -439,9 +444,10 @@ export function moveTask(id: string, to: 'up' | 'down' | 'top' | 'bottom') {
 
 // ── People (support circle matrix) ───────────────────────────────────────────
 
-export function addPerson(name: string, quadrant: CircleQuadrant, phone?: string) {
+export function addPerson(name: string, quadrant: CircleQuadrant, phone?: string): Person {
   const person: Person = { id: newId(), name: name.trim(), phone: phone?.trim() || undefined, quadrant, createdAt: Date.now() };
   update((s) => ({ people: [...s.people, person] }));
+  return person;
 }
 
 export function editPerson(id: string, patch: Partial<Pick<Person, 'name' | 'phone' | 'quadrant'>>) {
@@ -449,6 +455,7 @@ export function editPerson(id: string, patch: Partial<Pick<Person, 'name' | 'pho
 }
 
 export function deletePerson(id: string) {
+  if (state.buddyId === id) update({ buddyId: null });
   update((s) => ({ people: s.people.filter((p) => p.id !== id) }));
 }
 
