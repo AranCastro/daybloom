@@ -36,10 +36,10 @@ export type WidgetSpec = {
 };
 
 export const WIDGETS: readonly WidgetSpec[] = [
-  { name: 'Matrix', title: 'Eisenhower Matrix', blurb: 'All four quadrants and their tasks. Tick tasks off right on the home screen.', width: 320, height: 330, cells: '4 × 3', render: MatrixWidget, custom: 'Matrix' },
+  { name: 'Matrix', title: 'Eisenhower Matrix', blurb: 'All four quadrants and their tasks. Tap a task to tick it off right on the home screen.', width: 320, height: 330, cells: '4 × 3', render: MatrixWidget, custom: 'Matrix' },
   { name: 'Circle', title: 'People circle', blurb: 'Your circle in four quadrants. Call or WhatsApp anyone in one tap.', width: 320, height: 330, cells: '4 × 3', render: CircleWidget, custom: 'Circle' },
   { name: 'CheckIn', title: 'Mood check-in', blurb: 'Tap a mood right from your home screen. It counts as your daily check-in.', width: 320, height: 84, cells: '4 × 1', render: CheckInWidget },
-  { name: 'Tasks', title: 'Focus today', blurb: 'Your most important tasks. Tick one off without opening the app.', width: 320, height: 176, cells: '4 × 2', render: TasksWidget },
+  { name: 'Tasks', title: 'Focus today', blurb: 'Your most important tasks. Tap a task to tick it off without opening the app.', width: 320, height: 176, cells: '4 × 2', render: TasksWidget },
   { name: 'Garden', title: 'Garden', blurb: 'Your latest flower, total blooms and the next Golden Lotus.', width: 164, height: 164, cells: '2 × 2', render: GardenWidget },
   { name: 'Focus', title: 'Focus timer', blurb: 'Start a 15, 25 or 50 minute session in one tap.', width: 164, height: 164, cells: '2 × 2', render: FocusWidget },
   { name: 'Streak', title: 'Streak', blurb: 'Your check-in streak and whether today is done.', width: 164, height: 76, cells: '2 × 1', render: StreakWidget },

@@ -340,11 +340,18 @@ export function TasksWidget({ s, p, height, flash }: WidgetProps) {
         </FlexWidget>
       ) : (
         items.map((t) => (
-          <FlexWidget key={t.id} style={{ flexDirection: 'row', alignItems: 'center', width: 'match_parent', height: 30 }}>
-            <FlexWidget clickAction="TASK_DONE" clickActionData={{ id: t.id }} accessibilityLabel={`Mark done: ${t.title}`} style={{ paddingRight: 10, paddingVertical: 4 }}>
+          // The whole row is the tap target: tapping a task finishes it.
+          <FlexWidget
+            key={t.id}
+            clickAction="TASK_DONE"
+            clickActionData={{ id: t.id }}
+            accessibilityLabel={`Mark done: ${t.title}`}
+            style={{ flexDirection: 'row', alignItems: 'center', width: 'match_parent', height: 32 }}
+          >
+            <FlexWidget style={{ paddingRight: 10, paddingVertical: 4 }}>
               <SvgWidget svg={tickSvg(p.muted, 22)} style={{ height: 22, width: 22 }} />
             </FlexWidget>
-            <FlexWidget style={{ flex: 1 }} {...open(LINK.matrix)}>
+            <FlexWidget style={{ flex: 1 }}>
               <TextWidget text={t.title} style={{ fontSize: 14, fontFamily: BODY, color: p.ink }} maxLines={1} truncate="END" />
             </FlexWidget>
             {t.due && <TextWidget text={t.due.text} style={{ fontSize: 11, fontFamily: BOLD, color: t.due.late ? p.accent : p.dim, marginLeft: 8 }} />}
@@ -572,18 +579,20 @@ export function MatrixWidget({ s, p, width, height, scale = 1, checkbox = true }
               <Empty text="No tasks" p={p} k={k} uri={uri} />
             ) : (
               tasks.slice(0, show).map((t) => (
-                <FlexWidget key={t.id} style={{ flexDirection: 'row', alignItems: 'center', height: lineH, width: 'match_parent' }}>
+                // With checkboxes on, the whole row ticks the task; with them off, it opens the quadrant.
+                <FlexWidget
+                  key={t.id}
+                  {...(checkbox
+                    ? { clickAction: 'TASK_TOGGLE', clickActionData: { id: t.id }, accessibilityLabel: `${t.done ? 'Mark not done' : 'Mark done'}: ${t.title}` }
+                    : open(uri))}
+                  style={{ flexDirection: 'row', alignItems: 'center', height: lineH, width: 'match_parent' }}
+                >
                   {checkbox && (
-                    <FlexWidget
-                      clickAction="TASK_TOGGLE"
-                      clickActionData={{ id: t.id }}
-                      accessibilityLabel={`${t.done ? 'Mark not done' : 'Mark done'}: ${t.title}`}
-                      style={{ paddingRight: 8, paddingVertical: 3 }}
-                    >
+                    <FlexWidget style={{ paddingRight: 8, paddingVertical: 3 }}>
                       <SvgWidget svg={t.done ? doneSvg(info.color[p.mode], box) : tickSvg(p.muted, box)} style={{ height: box, width: box }} />
                     </FlexWidget>
                   )}
-                  <FlexWidget {...open(uri)} style={{ flex: 1 }}>
+                  <FlexWidget style={{ flex: 1 }}>
                     <TextWidget
                       text={t.title}
                       style={{ fontSize: 13.5 * k, fontFamily: BODY, color: t.done ? p.muted : t.due?.late ? p.accent : p.ink }}
