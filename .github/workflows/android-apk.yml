@@ -6,7 +6,7 @@
 # Signing: when the repository secrets ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD,
 # ANDROID_KEY_ALIAS and ANDROID_KEY_PASSWORD are set, the APK is signed with that private key.
 # Without them it keeps the Expo template's public debug key (test builds only; see README).
-# Play Store builds come from `eas build --profile production`.
+# Play Store bundles come from play-bundle.yml.
 name: Build Android APK
 
 on:
