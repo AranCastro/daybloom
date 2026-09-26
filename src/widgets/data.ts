@@ -2,6 +2,7 @@
  * What each home-screen widget shows, worked out from the app state.
  * Pure functions, so widgets, the in-app gallery and tests all read the same numbers.
  */
+import { circleName, quadrantName } from '@/lib/labels';
 import { streakInfo } from '@/lib/badges';
 import { circleOf } from '@/lib/circle';
 import { dayKey, fromKey, shortDate } from '@/lib/dates';
@@ -39,6 +40,10 @@ export function snapshot(s: AppState, now: Date = new Date()) {
     focus: focusState(s, now),
     reach: reachPicks(s.people),
     matrix: matrixCells(s.tasks, today, s.widgetPrefs.Matrix.completed),
+    names: {
+      matrix: ([1, 2, 3, 4] as const).map((q) => quadrantName(s.labels, q)),
+      circle: ([1, 2, 3, 4] as const).map((q) => circleName(s.labels, q)),
+    },
     circle: circleCells(s.people),
   };
 }

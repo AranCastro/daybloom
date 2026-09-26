@@ -6,13 +6,16 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { BackupCard } from '@/components/backup';
 import { Icon } from '@/components/icons';
+import { AvatarPicker, ProfileAvatar } from '@/components/profile';
 import { Text } from '@/components/text';
 import { Card, Choice, Divider, Input, Row, Screen, tap } from '@/components/ui';
 import { useTheme } from '@/hooks/use-theme';
+import { QUADRANTS } from '@/lib/quadrants';
+import { CIRCLE } from '@/lib/circle';
 import { prettyTime } from '@/lib/dates';
 import { cancelFocusAlarm, cancelReminders, scheduleDailyReminder } from '@/lib/reminders';
 import { helpline } from '@/lib/region';
-import { AppState, resetAll, setSettings, update, useAppState } from '@/lib/store';
+import { AppState, resetAll, setLabel, setSettings, update, useAppState } from '@/lib/store';
 
 const TIMES = [
   { label: '8 AM', value: 8 },
@@ -28,6 +31,7 @@ export default function Settings() {
   const name = useAppState((s) => s.name);
   // Typed locally and saved once, so each keystroke does not rewrite storage and redraw widgets.
   const [draft, setDraft] = useState(name);
+  const [picking, setPicking] = useState(false);
   const reminder = useAppState((s) => s.reminder);
   const streak = useAppState((s) => s.streak);
   const prefs = useAppState((s) => s.settings);
@@ -147,6 +151,20 @@ export default function Settings() {
       </Card>
 
       <Card>
+        <Text variant="label">Profile</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+          <Pressable onPress={() => (tap(), setPicking(true))} accessibilityRole="button" accessibilityLabel="Change profile picture">
+            <ProfileAvatar size={64} />
+          </Pressable>
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text variant="bodyStrong">Profile picture</Text>
+            <Pressable onPress={() => (tap(), setPicking(true))} hitSlop={6}>
+              <Text variant="small" color="accent">
+                Upload a photo or choose an avatar
+              </Text>
+            </Pressable>
+          </View>
+        </View>
         <Text variant="label">Your first name</Text>
         <Input
           value={draft}
@@ -157,7 +175,10 @@ export default function Settings() {
           autoCapitalize="words"
         />
         <Text variant="small">Your buddy will see: “Call {draft.trim() || 'your friend'} today.”</Text>
+        <AvatarPicker visible={picking} onClose={() => setPicking(false)} />
       </Card>
+
+      <SectionNames />
 
       <Card>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -239,6 +260,46 @@ function SettingSwitch({ title, detail, value, onChange }: { title: string; deta
         thumbColor="#fff"
         accessibilityLabel={title}
       />
+    </View>
+  );
+}
+
+/** Rename the four matrix quadrants and the four circle sections (empty = the default name). */
+function SectionNames() {
+  const labels = useAppState((s) => s.labels);
+  const row = (kind: 'matrix' | 'circle', q: 1 | 2 | 3 | 4, fallback: string, hint: string) => (
+    <NameField key={`${kind}${q}`} value={labels[kind][q] ?? ''} placeholder={fallback} hint={hint} onSave={(v) => setLabel(kind, q, v)} />
+  );
+  return (
+    <Card>
+      <Text variant="label">Section names</Text>
+      <Text variant="small">Rename the matrix and circle headings to suit you. Leave a box empty to use the original name.</Text>
+      <Text variant="bodyStrong">Eisenhower Matrix</Text>
+      {QUADRANTS.map((i) => row('matrix', i.id, i.action, i.meaning))}
+      <Divider />
+      <Text variant="bodyStrong">People circle</Text>
+      {CIRCLE.map((i) => row('circle', i.id, i.title, i.meaning))}
+    </Card>
+  );
+}
+
+function NameField({ value, placeholder, hint, onSave }: { value: string; placeholder: string; hint: string; onSave: (v: string) => void }) {
+  const [draft, setDraft] = useState(value);
+  const save = () => draft.trim() !== value && onSave(draft);
+  return (
+    <View style={{ gap: 2 }}>
+      <Input
+        value={draft}
+        onChangeText={setDraft}
+        onEndEditing={save}
+        onBlur={save}
+        placeholder={placeholder}
+        maxLength={24}
+        accessibilityLabel={`Name for ${placeholder} (${hint})`}
+      />
+      <Text variant="small" color="textMuted" style={{ fontSize: 12 }}>
+        {hint}
+      </Text>
     </View>
   );
 }

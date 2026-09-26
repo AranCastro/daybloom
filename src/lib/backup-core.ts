@@ -27,7 +27,8 @@ export function makeBackup(state: AppState, now = Date.now()): string {
     format: BACKUP_FORMAT,
     appVersion: Constants.expoConfig?.version ?? '',
     exportedAt: now,
-    state: { ...rest, focus: { ...rest.focus, active: null } },
+    // A profile photo is a file on this phone, so it is not carried in the backup (a chosen avatar is).
+    state: { ...rest, focus: { ...rest.focus, active: null }, avatar: rest.avatar?.kind === 'photo' ? null : rest.avatar },
   };
   return JSON.stringify(file);
 }

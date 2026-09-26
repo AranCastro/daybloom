@@ -70,7 +70,10 @@ const SCALE: Record<WidgetPrefs['font'], number> = { small: 0.9, default: 1, lar
 /** Palette and props from a widget's look settings; `dark` is the phone's current scheme. */
 export function lookFor(spec: WidgetSpec, state: AppState, dark: boolean) {
   const prefs = spec.custom ? { ...DEFAULT_WIDGET_PREFS, ...state.widgetPrefs?.[spec.custom] } : DEFAULT_WIDGET_PREFS;
-  const useDark = prefs.theme === 'auto' ? dark : prefs.theme === 'dark';
+  // A widget's own theme wins; "auto" follows the theme chosen for all widgets, and "system" the phone.
+  const all = state.settings?.widgetTheme ?? 'system';
+  const choice = prefs.theme !== 'auto' ? prefs.theme : all === 'system' ? 'auto' : all;
+  const useDark = choice === 'auto' ? dark : choice === 'dark';
   const p: WidgetPalette = { ...(useDark ? DARK : LIGHT), alpha: Math.max(0.4, Math.min(1, prefs.opacity / 100)) };
   return { p, scale: SCALE[prefs.font], checkbox: prefs.checkbox };
 }

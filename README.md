@@ -62,6 +62,13 @@ One calm app where everything you do grows the same garden:
   week starts on Sunday or Monday, and the usual focus session (15, 25 or 50 minutes), plus name, daily
   reminder, nudge threshold and home-screen widgets.
 
+- **Profile and personalisation.** Settings → Profile: upload a photo (copied into the app's storage, not
+  included in backups) or choose one of 12 avatars (eight garden flowers, four coloured initials); it shows beside
+  the greeting on Today. Settings → Section names: rename the four matrix quadrants and the four circle
+  sections (empty = the original name); the new names appear in the app and on the widgets. Home screen
+  widgets → Widget theme: System, Light or Dark for every widget (the Matrix and People widgets can still
+  have their own).
+
 - **Backup and restore.** Settings → Backup and restore: **Back up to Google Drive** writes a backup file
   (JSON) and opens the share menu, where Drive can be chosen; **Restore from a backup** opens a backup file
   from Drive or the phone, shows what it contains and asks before replacing anything. **Weekly backup** (on

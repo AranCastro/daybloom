@@ -7,6 +7,7 @@ import { Text } from '@/components/text';
 import { Button, Card, Divider, Input, Screen, tap } from '@/components/ui';
 import { TabBarInset } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useCircleNames } from '@/lib/labels';
 import { prettyDate } from '@/lib/dates';
 import { shareInvite } from '@/lib/invite';
 import { newTopic } from '@/lib/ntfy';
@@ -212,6 +213,7 @@ function CircleCard({
   const t = useTheme();
   const { color, soft } = useCircleColors(q);
   const info = circleOf(q);
+  const name = useCircleNames()(q);
   return (
     <View style={[styles.circleCard, { backgroundColor: t.surface, borderColor: t.line }]}>
       <View style={[styles.circleTint, { backgroundColor: soft }]} />
@@ -219,7 +221,7 @@ function CircleCard({
         <View style={styles.circleTitle}>
           <CircleChip q={q} size={22} />
           <Text variant="heading" style={{ color, fontSize: 15.5, lineHeight: 20, flex: 1 }} numberOfLines={1} adjustsFontSizeToFit>
-            {info.title}
+            {name}
           </Text>
         </View>
         <View style={styles.circleMode}>
@@ -240,7 +242,7 @@ function CircleCard({
         ))}
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`Add to ${info.title}`}
+          accessibilityLabel={`Add to ${name}`}
           onPress={() => (tap(), onAdd())}
           style={[styles.addRow, { borderColor: t.line }]}>
           <Icon name="plus" color={t.textMuted} size={16} />

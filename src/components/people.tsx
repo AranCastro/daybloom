@@ -8,6 +8,7 @@ import { Text } from '@/components/text';
 import { Button, Input, tap } from '@/components/ui';
 import { Fonts, Radius } from '@/constants/theme';
 import { useIsDark, useTheme } from '@/hooks/use-theme';
+import { useCircleNames } from '@/lib/labels';
 import { confirmThen } from '@/lib/confirm';
 import { CIRCLE, circleOf } from '@/lib/circle';
 import { canPickContacts, pickContact } from '@/lib/pick-contact';
@@ -109,6 +110,7 @@ export function PersonSheet(props: SheetProps) {
 }
 
 function SheetBody({ onClose, person, defaultQuadrant = 1 }: SheetProps) {
+  const cName = useCircleNames();
   const t = useTheme();
   const [name, setName] = useState(person?.name ?? '');
   const [phone, setPhone] = useState(person?.phone ?? '');
@@ -140,7 +142,7 @@ function SheetBody({ onClose, person, defaultQuadrant = 1 }: SheetProps) {
               <Avatar person={person} size={52} />
               <View style={{ flex: 1 }}>
                 <Text variant="heading">{person.name}</Text>
-                <Text variant="small">{circleOf(person.quadrant).title}</Text>
+                <Text variant="small">{cName(person.quadrant)}</Text>
               </View>
             </View>
           ) : (
@@ -189,6 +191,7 @@ function CircleOption({ q, selected, onPress }: { q: CircleQuadrant; selected: b
   const t = useTheme();
   const { color, soft } = useCircleColors(q);
   const info = circleOf(q);
+  const cName = useCircleNames();
   return (
     <Pressable
       onPress={() => (tap(), onPress())}
@@ -198,7 +201,7 @@ function CircleOption({ q, selected, onPress }: { q: CircleQuadrant; selected: b
       <CircleChip q={q} size={24} />
       <View style={{ flex: 1 }}>
         <Text variant="bodyStrong" style={{ color: selected ? color : t.text, fontSize: 14.5 }}>
-          {info.title}
+          {cName(q)}
         </Text>
         <Text variant="small" style={{ fontSize: 11.5, lineHeight: 15 }}>
           {info.meaning}

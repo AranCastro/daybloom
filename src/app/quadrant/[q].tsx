@@ -11,6 +11,7 @@ import { Button, Card, Divider, Screen, tap } from '@/components/ui';
 import { Fonts } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useToday } from '@/hooks/use-today';
+import { useQuadrantNames } from '@/lib/labels';
 import { confirmThen } from '@/lib/confirm';
 import { quadrantOf } from '@/lib/quadrants';
 import { clearCompleted, moveTask, openTasks, Quadrant, Task, useAppState } from '@/lib/store';
@@ -20,6 +21,7 @@ export default function QuadrantScreen() {
   const params = useLocalSearchParams<{ q: string }>();
   const q = (Math.min(4, Math.max(1, Number(params.q) || 1)) as Quadrant);
   const info = quadrantOf(q);
+  const name = useQuadrantNames()(q);
   const { color, soft } = useQuadrantColors(q);
   const tasks = useAppState((s) => s.tasks);
   const [sheet, setSheet] = useState<{ open: boolean; task?: Task | null }>({ open: false });
@@ -41,7 +43,7 @@ export default function QuadrantScreen() {
       <Animated.View entering={FadeInDown.duration(400)} style={[styles.hero, { backgroundColor: soft }]}>
         <QuadrantChip q={q} size={40} />
         <Text variant="title" style={{ color }}>
-          {info.action}
+          {name}
         </Text>
         <Text variant="label">{info.meaning}</Text>
         <Text variant="body" color="textSecondary">
@@ -84,7 +86,7 @@ export default function QuadrantScreen() {
         <Card>
           <View style={styles.doneHead}>
             <Text variant="label">Completed · {done.length}</Text>
-            <Pressable onPress={() => (tap(), confirmClear(q, done.length))} hitSlop={8} accessibilityRole="button">
+            <Pressable onPress={() => (tap(), confirmClear(q, done.length, name))} hitSlop={8} accessibilityRole="button">
               <Text variant="small" color="accent">
                 Clear completed
               </Text>
@@ -132,10 +134,10 @@ function ArrangeRow({ task, today, first, last, color }: { task: Task; today: st
   );
 }
 
-function confirmClear(q: Quadrant, n: number) {
+function confirmClear(q: Quadrant, n: number, name: string) {
   confirmThen(
     `Clear ${n} completed ${n === 1 ? 'task' : 'tasks'}?`,
-    `Only tasks in ${quadrantOf(q).action} are removed. Your flowers and calendar stay.`,
+    `Only tasks in ${name} are removed. Your flowers and calendar stay.`,
     'Clear',
     () => clearCompleted(q),
   );

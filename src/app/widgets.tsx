@@ -11,7 +11,7 @@ import { Text } from '@/components/text';
 import { Button, Card, Choice, Divider, Screen, tap } from '@/components/ui';
 import { WidgetMock } from '@/components/widget-mock';
 import { useIsDark, useTheme } from '@/hooks/use-theme';
-import { DEFAULT_WIDGET_PREFS, getState, setWidgetPrefs, toggleTask, useAppState } from '@/lib/store';
+import { DEFAULT_WIDGET_PREFS, getState, setSettings, setWidgetPrefs, toggleTask, useAppState } from '@/lib/store';
 import { lookFor, WIDGETS, WidgetSpec } from '@/widgets/catalogue';
 import { snapshot } from '@/widgets/data';
 
@@ -33,6 +33,8 @@ export default function WidgetsScreen() {
           your garden too.
         </Text>
       </Animated.View>
+
+      <WidgetThemeCard />
 
       {WIDGETS.map((w, i) => (
         <Animated.View key={w.name} entering={FadeInDown.delay(60 * i).duration(400)}>
@@ -111,6 +113,29 @@ function WidgetCard({ spec }: { spec: WidgetSpec }) {
   );
 }
 
+/** One theme for every widget: follow the phone, or always light or dark. */
+function WidgetThemeCard() {
+  const theme = useAppState((s) => s.settings.widgetTheme);
+  return (
+    <Card>
+      <Text variant="label">Widget theme</Text>
+      <Choice
+        options={[
+          { label: 'System', value: 'system' },
+          { label: 'Light', value: 'light' },
+          { label: 'Dark', value: 'dark' },
+        ]}
+        value={theme}
+        onChange={(widgetTheme) => setSettings({ widgetTheme })}
+      />
+      <Text variant="small">
+        {theme === 'system' ? 'Widgets follow your phone’s light or dark mode.' : `All widgets stay ${theme}.`} The Matrix and People
+        widgets can also have their own theme below.
+      </Text>
+    </Card>
+  );
+}
+
 /** Look settings for the matrix widgets. Changes show in the preview and on the home screen at once. */
 function Customise({ name }: { name: 'Matrix' | 'Circle' }) {
   const t = useTheme();
@@ -131,7 +156,7 @@ function Customise({ name }: { name: 'Matrix' | 'Circle' }) {
       <Text variant="label">Theme</Text>
       <Choice
         options={[
-          { label: 'Auto', value: 'auto' },
+          { label: 'Same as all', value: 'auto' },
           { label: 'Light', value: 'light' },
           { label: 'Dark', value: 'dark' },
         ]}
