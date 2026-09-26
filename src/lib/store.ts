@@ -106,6 +106,10 @@ export type AppState = {
   focus: { sessions: FocusSession[]; active: ActiveTimer | null };
   /** Look of the matrix-style home-screen widgets, set in Settings → Home screen widgets. */
   widgetPrefs: Record<'Matrix' | 'Circle', WidgetPrefs>;
+  /** Home-screen task widgets that are locked: taps open the app instead of ticking tasks off. */
+  widgetLocks: Partial<Record<TaskWidget, boolean>>;
+  /** The last task ticked off from a widget, so the widget can offer Undo for a few minutes. */
+  widgetUndo: { taskId: string; widget: TaskWidget; at: number } | null;
   /** App-wide preferences from Settings. */
   settings: Settings;
   /** When backups were last made (kept on this phone; not replaced by a restore). */
@@ -142,6 +146,12 @@ export type WidgetPrefs = {
   completed: boolean;
 };
 
+/** Widgets that can tick tasks off from the home screen. */
+export type TaskWidget = 'Tasks' | 'Matrix';
+
+/** How long a widget offers Undo after a task is ticked off. */
+export const WIDGET_UNDO_MS = 10 * 60_000;
+
 export const DEFAULT_WIDGET_PREFS: WidgetPrefs = { theme: 'auto', opacity: 100, font: 'default', checkbox: true, completed: false };
 
 const KEY = 'nudge.state.v1';
@@ -163,6 +173,8 @@ const initial: AppState = {
   badges: {},
   garden: [],
   widgetPrefs: { Matrix: DEFAULT_WIDGET_PREFS, Circle: DEFAULT_WIDGET_PREFS },
+  widgetLocks: {},
+  widgetUndo: null,
   settings: DEFAULT_SETTINGS,
   backup: {},
   bloomCount: 0,
@@ -403,6 +415,39 @@ export function toggleTask(id: string) {
       const garden = s.garden.filter((b) => !(b.source === 'task' && b.ref === id));
       return { garden, bloomCount: Math.max(0, s.bloomCount - (s.garden.length - garden.length)) };
     });
+}
+
+/**
+ * A tap on a task in a home-screen widget. `done` only finishes (Focus today); `toggle` also
+ * un-finishes (Matrix). Does nothing while the widget is locked. Returns true when the task changed.
+ */
+export function widgetTickTask(widget: TaskWidget, id: string, mode: 'done' | 'toggle'): boolean {
+  if (state.widgetLocks[widget]) return false;
+  const task = state.tasks.find((t) => t.id === id);
+  if (!task || (mode === 'done' && task.done)) return false;
+  toggleTask(id);
+  update({ widgetUndo: task.done ? null : { taskId: id, widget, at: Date.now() } });
+  return true;
+}
+
+/** The task a widget can still undo, if it was ticked off there in the last few minutes and is still done. */
+export function widgetUndoFor(s: Pick<AppState, 'widgetUndo' | 'tasks'>, widget: TaskWidget, now = Date.now()): Task | null {
+  const u = s.widgetUndo;
+  if (!u || u.widget !== widget || now - u.at > WIDGET_UNDO_MS) return null;
+  return s.tasks.find((t) => t.id === u.taskId && t.done) ?? null;
+}
+
+/** Undo on a widget: puts the last ticked-off task back (and takes its flower back). */
+export function widgetUndo(widget: TaskWidget): boolean {
+  const task = widgetUndoFor(state, widget);
+  update({ widgetUndo: null });
+  if (!task) return false;
+  toggleTask(task.id);
+  return true;
+}
+
+export function toggleWidgetLock(widget: TaskWidget) {
+  update((s) => ({ widgetLocks: { ...s.widgetLocks, [widget]: !s.widgetLocks[widget] } }));
 }
 
 export function deleteTask(id: string) {

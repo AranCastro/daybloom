@@ -11,7 +11,7 @@ import { Text } from '@/components/text';
 import { Button, Card, Choice, Divider, Screen, tap } from '@/components/ui';
 import { WidgetMock } from '@/components/widget-mock';
 import { useIsDark, useTheme } from '@/hooks/use-theme';
-import { DEFAULT_WIDGET_PREFS, getState, setSettings, setWidgetPrefs, toggleTask, useAppState } from '@/lib/store';
+import { DEFAULT_WIDGET_PREFS, setSettings, setWidgetPrefs, toggleWidgetLock, useAppState, widgetTickTask, widgetUndo } from '@/lib/store';
 import { lookFor, WIDGETS, WidgetSpec } from '@/widgets/catalogue';
 import { snapshot } from '@/widgets/data';
 
@@ -195,11 +195,13 @@ async function onWidgetClick(action: string, data: Record<string, unknown>) {
   if (action === 'MOOD') {
     router.navigate('/today');
   } else if (action === 'TASK_DONE') {
-    const id = String(data.id ?? '');
-    if (getState().tasks.some((x) => x.id === id && !x.done)) toggleTask(id);
+    widgetTickTask('Tasks', String(data.id ?? ''), 'done');
   } else if (action === 'TASK_TOGGLE') {
-    const id = String(data.id ?? '');
-    if (getState().tasks.some((x) => x.id === id)) toggleTask(id);
+    widgetTickTask('Matrix', String(data.id ?? ''), 'toggle');
+  } else if (action === 'WIDGET_UNDO') {
+    widgetUndo(data.widget === 'Matrix' ? 'Matrix' : 'Tasks');
+  } else if (action === 'WIDGET_LOCK') {
+    toggleWidgetLock(data.widget === 'Matrix' ? 'Matrix' : 'Tasks');
   } else if (action === 'OPEN_APP') {
     router.navigate('/');
   } else if (action === 'OPEN_URI' && typeof data.uri === 'string') {
