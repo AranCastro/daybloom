@@ -94,6 +94,10 @@ export type AppState = {
   bloomCount: number;
   /** Tasks finished per day that were later cleared, so the calendar keeps their shading. */
   clearedWork: Record<string, number>;
+  /** The user's own names for the matrix quadrants and circle sections (empty = the default name). */
+  labels: { matrix: Partial<Record<Quadrant, string>>; circle: Partial<Record<CircleQuadrant, string>> };
+  /** Profile picture: a photo saved in the app's storage, or one of the built-in avatars. */
+  avatar: { kind: 'photo'; uri: string } | { kind: 'preset'; id: string } | null;
   tasks: Task[];
   people: Person[];
   /** Best scores and play counts per game id. */
@@ -125,9 +129,11 @@ export type Settings = {
   focusPreset: 'gentle' | 'classic' | 'deep';
   /** Keep a fresh backup file on the phone every week and offer to save it to Drive. */
   autoBackup: boolean;
+  /** Light or dark for every home-screen widget; "system" follows the phone. */
+  widgetTheme: 'system' | 'light' | 'dark';
 };
 
-export const DEFAULT_SETTINGS: Settings = { appearance: 'system', haptics: true, reduceMotion: false, weekStart: 0, focusPreset: 'classic', autoBackup: true };
+export const DEFAULT_SETTINGS: Settings = { appearance: 'system', haptics: true, reduceMotion: false, weekStart: 0, focusPreset: 'classic', autoBackup: true, widgetTheme: 'system' };
 
 export type WidgetPrefs = {
   theme: 'auto' | 'light' | 'dark';
@@ -165,6 +171,8 @@ const initial: AppState = {
   backup: {},
   bloomCount: 0,
   clearedWork: {},
+  labels: { matrix: {}, circle: {} },
+  avatar: null,
 };
 
 /** Fills in anything a saved (or restored) state is missing, so older data keeps working. */
@@ -179,6 +187,7 @@ function mergeSaved(saved: Partial<AppState>): AppState {
   merged.focus = { ...initial.focus, ...saved.focus };
   if (saved.bloomCount === undefined) merged.bloomCount = merged.garden.length;
   merged.clearedWork = { ...saved.clearedWork };
+  merged.labels = { matrix: { ...saved.labels?.matrix }, circle: { ...saved.labels?.circle } };
   // Older data has no lastNudgeDay: take it from the newest automatic nudge.
   if (!merged.lastNudgeDay) {
     const last = (merged.nudges ?? []).find((n) => n.kind === 'auto');
@@ -263,7 +272,20 @@ export function replaceState(saved: Partial<AppState>) {
   const next = mergeSaved(saved);
   next.backup = { ...state.backup, lastRestore: Date.now(), pendingSave: false };
   next.focus = { ...next.focus, active: null };
+  // Backups carry no photo: keep this phone's profile photo if the backup has no avatar of its own.
+  if (!next.avatar && state.avatar?.kind === 'photo') next.avatar = state.avatar;
   set(next);
+}
+
+/** Renames a matrix quadrant or circle section; an empty name brings back the default. */
+export function setLabel(kind: 'matrix' | 'circle', q: Quadrant, name: string) {
+  const clean = name.trim().slice(0, 24);
+  update((s) => {
+    const next = { ...s.labels[kind] };
+    if (clean) next[q] = clean;
+    else delete next[q];
+    return { labels: { ...s.labels, [kind]: next } };
+  });
 }
 
 export function setBackupInfo(patch: Partial<AppState['backup']>) {

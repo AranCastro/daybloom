@@ -11,6 +11,7 @@ import { Screen, tap } from '@/components/ui';
 import { TabBarInset } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useToday } from '@/hooks/use-today';
+import { useQuadrantNames } from '@/lib/labels';
 import { dayKey } from '@/lib/dates';
 import { QUADRANTS, quadrantOf } from '@/lib/quadrants';
 import { openTasks, Quadrant, Task, useAppState } from '@/lib/store';
@@ -86,6 +87,7 @@ function QuadrantCard({ q, tasks, today, onOpen }: { q: Quadrant; tasks: Task[];
   const t = useTheme();
   const { color, soft } = useQuadrantColors(q);
   const info = quadrantOf(q);
+  const name = useQuadrantNames()(q);
   const list = openTasks(tasks, q);
   // Keep today's completions visible (struck through) so ticking something off feels rewarded.
   const doneToday = tasks.filter((x) => x.quadrant === q && x.done && x.doneAt && dayKey(new Date(x.doneAt)) === today);
@@ -95,13 +97,13 @@ function QuadrantCard({ q, tasks, today, onOpen }: { q: Quadrant; tasks: Task[];
       <LinearGradient colors={[soft, withAlpha(soft, 0)]} style={styles.cardTint} pointerEvents="none" />
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`${info.action}, ${info.meaning}, ${list.length} open`}
+        accessibilityLabel={`${name}, ${info.meaning}, ${list.length} open`}
         onPress={() => (tap(), router.push({ pathname: '/quadrant/[q]', params: { q: String(q) } }))}
         style={styles.cardHead}>
         <View style={styles.cardTitleRow}>
           <QuadrantChip q={q} size={24} />
           <Text variant="heading" style={{ color, fontSize: 17, lineHeight: 21, flex: 1 }} numberOfLines={1}>
-            {info.action}
+            {name}
           </Text>
           {list.length > 0 && (
             <View style={[styles.count, { backgroundColor: color }]}>

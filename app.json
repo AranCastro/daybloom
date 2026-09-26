@@ -2,7 +2,7 @@
   "expo": {
     "name": "Daybloom",
     "slug": "daybloom",
-    "version": "1.6.0",
+    "version": "1.7.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "daybloom",
@@ -14,7 +14,7 @@
     },
     "android": {
       "package": "online.draran.daybloom",
-      "versionCode": 11,
+      "versionCode": 12,
       "adaptiveIcon": {
         "backgroundColor": "#F6F2EC",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -190,6 +190,14 @@
               "previewImage": "./assets/widgets/reach.png"
             }
           ]
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Daybloom uses a photo only if you choose one as your profile picture.",
+          "cameraPermission": false,
+          "microphonePermission": false
         }
       ]
     ],

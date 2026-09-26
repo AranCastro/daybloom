@@ -8,15 +8,16 @@ import { Icon } from '@/components/icons';
 import { MoodOrb } from '@/components/mood-orb';
 import { Avatar, ReachButtons } from '@/components/people';
 import { TaskRow, TaskSheet } from '@/components/tasks';
+import { ProfileAvatar } from '@/components/profile';
 import { Text } from '@/components/text';
 import { Card, Screen, tap } from '@/components/ui';
 import { TabBarInset } from '@/constants/theme';
 import { useAppActive } from '@/hooks/use-app-active';
 import { useClock } from '@/hooks/use-today';
 import { useTheme } from '@/hooks/use-theme';
+import { useCircleNames } from '@/lib/labels';
 import { addDays, dayKey, fromKey, greetingFor, prettyDate, weekdayShort } from '@/lib/dates';
 import { isLow, MOODS, MoodValue, moodOf } from '@/lib/moods';
-import { circleOf } from '@/lib/circle';
 import { BadgeCelebration } from '@/components/badge';
 import { WeeklyBackupCard } from '@/components/backup';
 import { Flower } from '@/components/flower';
@@ -80,10 +81,15 @@ export default function Today() {
           </Pressable>
           </View>
         </View>
-        <Text variant="title">
-          {greetingFor(hour)}
-          {name ? `, ${name}` : ''}
-        </Text>
+        <View style={[styles.inline, { gap: 12 }]}>
+          <Pressable onPress={() => (tap(), router.push('/settings'))} accessibilityRole="button" accessibilityLabel="Profile and settings">
+            <ProfileAvatar size={46} />
+          </Pressable>
+          <Text variant="title" style={{ flex: 1 }}>
+            {greetingFor(hour)}
+            {name ? `, ${name}` : ''}
+          </Text>
+        </View>
       </Animated.View>
 
       <TodayBlooms today={today} />
@@ -313,6 +319,7 @@ function GameLink({ mood }: { mood: MoodValue }) {
  * Least recently reached first, so the same person is not always asked.
  */
 function ReachOutCard() {
+  const cName = useCircleNames();
   const people = useAppState((s) => s.people);
   const caller = peopleIn(people, 1)[0] ?? peopleIn(people, 2)[0];
   const texter = peopleIn(people, 3)[0] ?? peopleIn(people, 4)[0];
@@ -344,7 +351,7 @@ function ReachOutCard() {
                   <Avatar person={person} size={40} />
                   <View style={{ flex: 1 }}>
                     <Text variant="bodyStrong">{person.name}</Text>
-                    <Text variant="small">{circleOf(person.quadrant).title}</Text>
+                    <Text variant="small">{cName(person.quadrant)}</Text>
                   </View>
                 </View>
                 <ReachButtons person={person} compact />

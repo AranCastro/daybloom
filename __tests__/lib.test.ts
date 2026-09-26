@@ -112,3 +112,24 @@ describe('WhatsApp numbers', () => {
     expect(whatsappNumber('9876543210', null)).toBe('9876543210');
   });
 });
+
+describe('section names and avatars', () => {
+  beforeEach(() => store.resetAll());
+
+  it('renames a quadrant and restores the default when cleared', () => {
+    const { quadrantName, circleName } = require('@/lib/labels');
+    store.setLabel('matrix', 1, '  Today, urgent  ');
+    expect(quadrantName(store.getState().labels, 1)).toBe('Today, urgent');
+    store.setLabel('matrix', 1, '');
+    expect(quadrantName(store.getState().labels, 1)).toBe('Do first');
+    store.setLabel('circle', 3, 'Text first');
+    expect(circleName(store.getState().labels, 3)).toBe('Text first');
+  });
+
+  it('keeps photos out of backups but keeps chosen avatars', () => {
+    const photo = parseBackup(makeBackup({ ...store.getState(), avatar: { kind: 'photo', uri: 'file:///x.jpg' } }));
+    const preset = parseBackup(makeBackup({ ...store.getState(), avatar: { kind: 'preset', id: 'flower:lotus' } }));
+    expect(photo.ok && photo.backup.state.avatar).toBeNull();
+    expect(preset.ok && preset.backup.state.avatar).toEqual({ kind: 'preset', id: 'flower:lotus' });
+  });
+});

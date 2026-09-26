@@ -566,7 +566,7 @@ export function MatrixWidget({ s, p, width, height, scale = 1, checkbox = true }
         return (
           <FlexWidget key={q} style={{ width: w, height: h, paddingHorizontal: 12, paddingVertical: 8 }}>
             <FlexWidget {...open(uri)} style={{ height: titleH, width: 'match_parent' }}>
-              <TextWidget text={info.action} style={{ fontSize: 12.5 * k, fontFamily: BOLD, color: info.color[p.mode] as `#${string}` }} maxLines={1} truncate="END" />
+              <TextWidget text={s.names.matrix[q - 1]} style={{ fontSize: 12.5 * k, fontFamily: BOLD, color: info.color[p.mode] as `#${string}` }} maxLines={1} truncate="END" />
             </FlexWidget>
             {tasks.length === 0 ? (
               <Empty text="No tasks" p={p} k={k} uri={uri} />
@@ -629,7 +629,7 @@ export function CircleWidget({ s, p, width, height, scale = 1, checkbox = true }
         return (
           <FlexWidget key={q} style={{ width: w, height: h, paddingHorizontal: 12, paddingVertical: 8 }}>
             <FlexWidget {...open(LINK.circle)} style={{ height: titleH, width: 'match_parent' }}>
-              <TextWidget text={info.title} style={{ fontSize: 12.5 * k, fontFamily: BOLD, color }} maxLines={1} truncate="END" />
+              <TextWidget text={s.names.circle[q - 1]} style={{ fontSize: 12.5 * k, fontFamily: BOLD, color }} maxLines={1} truncate="END" />
             </FlexWidget>
             {people.length === 0 ? (
               <Empty text="No one yet" p={p} k={k} uri={LINK.circle} />

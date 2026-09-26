@@ -20,6 +20,7 @@ import { Button, Input, tap } from '@/components/ui';
 import { Fonts, Radius } from '@/constants/theme';
 import { useIsDark, useTheme } from '@/hooks/use-theme';
 import { useToday } from '@/hooks/use-today';
+import { useQuadrantNames } from '@/lib/labels';
 import { confirmThen } from '@/lib/confirm';
 import { addDays, dayKey, fromKey, prettyDate } from '@/lib/dates';
 import { dueBadge, QUADRANTS, quadrantOf } from '@/lib/quadrants';
@@ -281,6 +282,7 @@ function QuadrantOption({ q, selected, onPress }: { q: Quadrant; selected: boole
   const t = useTheme();
   const { color, soft } = useQuadrantColors(q);
   const info = quadrantOf(q);
+  const qName = useQuadrantNames();
   return (
     <Pressable
       onPress={() => (tap(), onPress())}
@@ -290,7 +292,7 @@ function QuadrantOption({ q, selected, onPress }: { q: Quadrant; selected: boole
       <QuadrantChip q={q} size={24} />
       <View style={{ flex: 1 }}>
         <Text variant="bodyStrong" style={{ color: selected ? color : t.text, fontSize: 14.5 }}>
-          {info.action}
+          {qName(q)}
         </Text>
         <Text variant="small" style={{ fontSize: 11.5, lineHeight: 15 }}>
           {info.meaning}
