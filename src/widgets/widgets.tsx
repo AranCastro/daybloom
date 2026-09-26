@@ -319,15 +319,17 @@ export function TasksWidget({ s, p, height, flash }: WidgetProps) {
   const rows = Math.max(1, Math.floor((height - 84) / 30));
   const items = s.tasks.items.slice(0, rows);
   const more = s.tasks.more + (s.tasks.items.length - items.length);
-  const sub = flash ?? (s.tasks.doneToday ? `${s.tasks.doneToday} done today` : s.low && items.length ? 'One thing is enough' : '');
+  const locked = s.locks.Tasks;
+  const sub = flash ?? (locked ? 'Locked' : s.tasks.doneToday ? `${s.tasks.doneToday} done today` : s.low && items.length ? 'One thing is enough' : '');
 
   return (
     <Shell p={p} padding={16}>
-      <FlexWidget style={{ flexDirection: 'row', alignItems: 'center', width: 'match_parent' }} {...open(LINK.matrix)}>
-        <FlexWidget style={{ flex: 1 }}>
+      <FlexWidget style={{ flexDirection: 'row', alignItems: 'center', width: 'match_parent' }}>
+        <FlexWidget style={{ flex: 1 }} {...open(LINK.matrix)}>
           <Label text="Focus today" p={p} />
           {!!sub && <TextWidget text={sub} style={{ fontSize: 11, fontFamily: BODY, color: flash ? p.accent : p.dim }} maxLines={1} truncate="END" />}
         </FlexWidget>
+        <TaskControls p={p} widget="Tasks" locked={locked} undo={s.undo.Tasks} />
         <FlexWidget style={{ height: 30, width: 30, borderRadius: 15, backgroundColor: p.brand, alignItems: 'center', justifyContent: 'center' }} {...open(LINK.matrix)}>
           <SvgWidget svg={iconSvg('plus', p.brandInk, 16)} style={{ height: 16, width: 16 }} />
         </FlexWidget>
@@ -340,16 +342,14 @@ export function TasksWidget({ s, p, height, flash }: WidgetProps) {
         </FlexWidget>
       ) : (
         items.map((t) => (
-          // The whole row is the tap target: tapping a task finishes it.
+          // The whole row is the tap target: tapping a task finishes it (or, locked, opens the matrix).
           <FlexWidget
             key={t.id}
-            clickAction="TASK_DONE"
-            clickActionData={{ id: t.id }}
-            accessibilityLabel={`Mark done: ${t.title}`}
+            {...(locked ? open(LINK.matrix) : { clickAction: 'TASK_DONE', clickActionData: { id: t.id }, accessibilityLabel: `Mark done: ${t.title}` })}
             style={{ flexDirection: 'row', alignItems: 'center', width: 'match_parent', height: 32 }}
           >
             <FlexWidget style={{ paddingRight: 10, paddingVertical: 4 }}>
-              <SvgWidget svg={tickSvg(p.muted, 22)} style={{ height: 22, width: 22 }} />
+              <SvgWidget svg={tickSvg(locked ? p.line : p.muted, 22)} style={{ height: 22, width: 22 }} />
             </FlexWidget>
             <FlexWidget style={{ flex: 1 }}>
               <TextWidget text={t.title} style={{ fontSize: 14, fontFamily: BODY, color: p.ink }} maxLines={1} truncate="END" />
@@ -497,7 +497,38 @@ export function ReachWidget({ s, p }: WidgetProps) {
 const HEADER = 46;
 
 /** The shared 2 × 2 frame: a header, then four equal cells split by hairlines. */
-function Grid({ p, width, height, title, addUri, addLabel, cell }: {
+/**
+ * Lock and Undo for the widgets that tick tasks off. Locked, a tap on a task opens the app
+ * instead, so a brush of the home screen cannot finish anything. Undo puts back the last task
+ * ticked off from this widget (for a few minutes).
+ */
+function TaskControls({ p, widget, locked, undo }: { p: WidgetPalette; widget: 'Tasks' | 'Matrix'; locked: boolean; undo: string | null }) {
+  return (
+    <FlexWidget style={{ flexDirection: 'row', alignItems: 'center' }}>
+      {!!undo && (
+        <FlexWidget
+          clickAction="WIDGET_UNDO"
+          clickActionData={{ widget }}
+          accessibilityLabel={`Undo: ${undo}`}
+          style={{ flexDirection: 'row', alignItems: 'center', height: 28, paddingHorizontal: 10, borderRadius: 14, backgroundColor: p.line, marginRight: 6 }}
+        >
+          <SvgWidget svg={iconSvg('undo', p.ink, 14)} style={{ height: 14, width: 14 }} />
+          <TextWidget text=" Undo" style={{ fontSize: 12, fontFamily: BOLD, color: p.ink }} />
+        </FlexWidget>
+      )}
+      <FlexWidget
+        clickAction="WIDGET_LOCK"
+        clickActionData={{ widget }}
+        accessibilityLabel={locked ? 'Unlock: allow ticking tasks off here' : 'Lock: stop ticking tasks off by accident'}
+        style={{ height: 30, width: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', marginRight: 6, ...(locked ? { backgroundColor: p.line } : {}) }}
+      >
+        <SvgWidget svg={iconSvg(locked ? 'lock' : 'unlock', locked ? p.ink : p.muted, 16)} style={{ height: 16, width: 16 }} />
+      </FlexWidget>
+    </FlexWidget>
+  );
+}
+
+function Grid({ p, width, height, title, addUri, addLabel, cell, controls }: {
   p: WidgetPalette;
   width: number;
   height: number;
@@ -505,6 +536,7 @@ function Grid({ p, width, height, title, addUri, addLabel, cell }: {
   addUri: string;
   addLabel: string;
   cell: (q: 1 | 2 | 3 | 4, w: number, h: number) => React.JSX.Element;
+  controls?: React.JSX.Element;
 }) {
   const cw = Math.floor((width - 1) / 2);
   const ch = Math.floor((height - HEADER - 2) / 2);
@@ -521,6 +553,7 @@ function Grid({ p, width, height, title, addUri, addLabel, cell }: {
         <FlexWidget style={{ flex: 1 }} {...open(addUri)}>
           <TextWidget text={title} style={{ fontSize: 16, fontFamily: DISPLAY, color: p.ink }} maxLines={1} truncate="END" />
         </FlexWidget>
+        {controls}
         <FlexWidget {...open(addUri)} accessibilityLabel={addLabel} style={{ height: 32, width: 32, borderRadius: 16, backgroundColor: p.brand, alignItems: 'center', justifyContent: 'center' }}>
           <SvgWidget svg={iconSvg('plus', p.brandInk, 16)} style={{ height: 16, width: 16 }} />
         </FlexWidget>
@@ -556,6 +589,9 @@ export function MatrixWidget({ s, p, width, height, scale = 1, checkbox = true }
   const titleH = Math.round(18 * k) + 4;
   const lineH = Math.round(24 * k);
   const box = Math.round(16 * k);
+  // Ticking is on when checkboxes are shown and the widget is not locked.
+  const locked = s.locks.Matrix;
+  const ticks = checkbox && !locked;
 
   return (
     <Grid
@@ -563,6 +599,7 @@ export function MatrixWidget({ s, p, width, height, scale = 1, checkbox = true }
       width={width}
       height={height}
       title="Eisenhower Matrix"
+      controls={checkbox ? <TaskControls p={p} widget="Matrix" locked={locked} undo={s.undo.Matrix} /> : undefined}
       addUri={LINK.matrix}
       addLabel="Add a task"
       cell={(q, w, h) => {
@@ -579,17 +616,17 @@ export function MatrixWidget({ s, p, width, height, scale = 1, checkbox = true }
               <Empty text="No tasks" p={p} k={k} uri={uri} />
             ) : (
               tasks.slice(0, show).map((t) => (
-                // With checkboxes on, the whole row ticks the task; with them off, it opens the quadrant.
+                // With checkboxes on (and unlocked), the whole row ticks the task; otherwise it opens the quadrant.
                 <FlexWidget
                   key={t.id}
-                  {...(checkbox
+                  {...(ticks
                     ? { clickAction: 'TASK_TOGGLE', clickActionData: { id: t.id }, accessibilityLabel: `${t.done ? 'Mark not done' : 'Mark done'}: ${t.title}` }
                     : open(uri))}
                   style={{ flexDirection: 'row', alignItems: 'center', height: lineH, width: 'match_parent' }}
                 >
                   {checkbox && (
                     <FlexWidget style={{ paddingRight: 8, paddingVertical: 3 }}>
-                      <SvgWidget svg={t.done ? doneSvg(info.color[p.mode], box) : tickSvg(p.muted, box)} style={{ height: box, width: box }} />
+                      <SvgWidget svg={t.done ? doneSvg(info.color[p.mode], box) : tickSvg(locked ? p.line : p.muted, box)} style={{ height: box, width: box }} />
                     </FlexWidget>
                   )}
                   <FlexWidget style={{ flex: 1 }}>

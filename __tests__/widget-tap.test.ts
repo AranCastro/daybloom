@@ -44,3 +44,59 @@ describe('widget taps', () => {
     expect(store.getState().tasks.find((x) => x.id === t.id)?.done).toBe(false);
   });
 });
+
+describe('widget lock and undo', () => {
+  it('a locked widget does not tick tasks off; unlocking allows it again', async () => {
+    store.addTask('Call the lab', 1);
+    const t = store.getState().tasks.find((x) => x.title === 'Call the lab')!;
+    await tap('Tasks', 'WIDGET_LOCK', '');
+    expect(store.getState().widgetLocks.Tasks).toBe(true);
+    await tap('Tasks', 'TASK_DONE', t.id);
+    expect(store.getState().tasks.find((x) => x.id === t.id)?.done).toBe(false);
+    await tap('Tasks', 'WIDGET_LOCK', '');
+    await tap('Tasks', 'TASK_DONE', t.id);
+    expect(store.getState().tasks.find((x) => x.id === t.id)?.done).toBe(true);
+  });
+
+  it('the Matrix lock is separate from the Focus today lock', async () => {
+    store.addTask('Sort samples', 3);
+    const t = store.getState().tasks.find((x) => x.title === 'Sort samples')!;
+    await widgetClick('Matrix', 'WIDGET_LOCK', { widget: 'Matrix' });
+    await tap('Matrix', 'TASK_TOGGLE', t.id);
+    expect(store.getState().tasks.find((x) => x.id === t.id)?.done).toBe(false);
+    expect(store.getState().widgetLocks.Tasks).toBeFalsy();
+    await widgetClick('Matrix', 'WIDGET_LOCK', { widget: 'Matrix' });
+  });
+
+  it('Undo puts the task back and takes its flower back', async () => {
+    store.addTask('Email editor', 2);
+    const t = store.getState().tasks.find((x) => x.title === 'Email editor')!;
+    const blooms = store.getState().bloomCount;
+    await tap('Matrix', 'TASK_TOGGLE', t.id);
+    expect(store.getState().bloomCount).toBe(blooms + 1);
+    expect(store.widgetUndoFor(store.getState(), 'Matrix')?.id).toBe(t.id);
+    expect(store.widgetUndoFor(store.getState(), 'Tasks')).toBeNull();
+    await widgetClick('Matrix', 'WIDGET_UNDO', { widget: 'Matrix' });
+    expect(store.getState().tasks.find((x) => x.id === t.id)?.done).toBe(false);
+    expect(store.getState().bloomCount).toBe(blooms);
+    expect(store.widgetUndoFor(store.getState(), 'Matrix')).toBeNull();
+  });
+
+  it('Undo expires after ten minutes', async () => {
+    store.addTask('Print maps', 1);
+    const t = store.getState().tasks.find((x) => x.title === 'Print maps')!;
+    await tap('Tasks', 'TASK_DONE', t.id);
+    const later = Date.now() + store.WIDGET_UNDO_MS + 1000;
+    expect(store.widgetUndoFor(store.getState(), 'Tasks', later)).toBeNull();
+  });
+});
+
+function widgetClick(widgetName: string, clickAction: string, clickActionData: Record<string, string>) {
+  return widgetTaskHandler({
+    widgetInfo: { widgetName, widgetId: 1, width: 320, height: 320, screenInfo: {} as never },
+    widgetAction: 'WIDGET_CLICK',
+    clickAction,
+    clickActionData,
+    renderWidget: jest.fn(),
+  } as never);
+}

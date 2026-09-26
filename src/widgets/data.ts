@@ -10,6 +10,7 @@ import { FlowerKind, flowerOf, GOLDEN_EVERY } from '@/lib/flowers';
 import { isLow, moodOf, MoodValue } from '@/lib/moods';
 import { sortOpen } from '@/lib/quadrants';
 import { cleanNumber, whatsappNumber } from '@/lib/reach';
+import { widgetUndoFor } from '@/lib/store';
 import type { AppState, Person, Task } from '@/lib/store';
 
 export type Snapshot = ReturnType<typeof snapshot>;
@@ -45,6 +46,11 @@ export function snapshot(s: AppState, now: Date = new Date()) {
       circle: ([1, 2, 3, 4] as const).map((q) => circleName(s.labels, q)),
     },
     circle: circleCells(s.people),
+    locks: { Tasks: !!s.widgetLocks?.Tasks, Matrix: !!s.widgetLocks?.Matrix },
+    undo: {
+      Tasks: widgetUndoFor({ widgetUndo: s.widgetUndo ?? null, tasks: s.tasks }, 'Tasks', now.getTime())?.title ?? null,
+      Matrix: widgetUndoFor({ widgetUndo: s.widgetUndo ?? null, tasks: s.tasks }, 'Matrix', now.getTime())?.title ?? null,
+    },
   };
 }
 

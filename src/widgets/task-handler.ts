@@ -4,12 +4,14 @@
  *   MOOD       check in from the home screen
  *   TASK_DONE    tick off a task (grows a flower, as in the app)
  *   TASK_TOGGLE  tick or untick a task from the matrix widget (unticking takes its flower back)
+ *   WIDGET_UNDO  put back the task last ticked off from this widget
+ *   WIDGET_LOCK  lock or unlock ticking on this widget (locked, task taps open the app)
  */
 import type { WidgetTaskHandlerProps } from 'react-native-android-widget';
 
 import { flowerOf } from '@/lib/flowers';
 import { moodOf, MoodValue } from '@/lib/moods';
-import { awardBadges, getState, recordMood, reloadState, toggleTask } from '@/lib/store';
+import { awardBadges, getState, recordMood, reloadState, TaskWidget, toggleWidgetLock, widgetTickTask, widgetUndo } from '@/lib/store';
 import { renderFor, setFlash } from '@/widgets/catalogue';
 import { refreshWidgets } from '@/widgets/sync';
 
@@ -31,20 +33,25 @@ export async function widgetTaskHandler({ widgetInfo, widgetAction, clickAction,
       }
     }
 
-    if (clickAction === 'TASK_DONE') {
+    if (clickAction === 'TASK_DONE' || clickAction === 'TASK_TOGGLE') {
       const id = String(clickActionData?.id ?? '');
-      const task = getState().tasks.find((t) => t.id === id);
-      if (task && !task.done) {
-        toggleTask(id);
+      const widget: TaskWidget = clickAction === 'TASK_DONE' ? 'Tasks' : 'Matrix';
+      if (widgetTickTask(widget, id, clickAction === 'TASK_DONE' ? 'done' : 'toggle')) {
+        const task = getState().tasks.find((t) => t.id === id);
         const b = getState().garden[0];
-        setFlash(name, b && b.ref === id ? `Done · ${flowerOf(b.flower).name} bloomed` : 'Done');
+        if (task?.done) setFlash(name, b && b.ref === id ? `Done · ${flowerOf(b.flower).name} bloomed` : 'Done');
       }
     }
 
-    if (clickAction === 'TASK_TOGGLE') {
-      const id = String(clickActionData?.id ?? '');
-      const task = getState().tasks.find((t) => t.id === id);
-      if (task) toggleTask(id);
+    if (clickAction === 'WIDGET_UNDO') {
+      const widget: TaskWidget = clickActionData?.widget === 'Matrix' ? 'Matrix' : 'Tasks';
+      if (widgetUndo(widget)) setFlash(name, 'Put back');
+    }
+
+    if (clickAction === 'WIDGET_LOCK') {
+      const widget: TaskWidget = clickActionData?.widget === 'Matrix' ? 'Matrix' : 'Tasks';
+      toggleWidgetLock(widget);
+      setFlash(name, getState().widgetLocks[widget] ? 'Locked: taps open the app' : 'Unlocked: tap a task to tick it off');
     }
   }
 
