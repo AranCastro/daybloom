@@ -10,7 +10,7 @@ Tap your mood, finish tasks, focus and play. Everything grows your garden.
 
 **Category:** Health & Fitness *(alternative: Lifestyle)*
 
-**Contact email:** aran@draran.online
+**Contact email:** arancastro17@gmail.com
 
 **Privacy policy URL:** https://arancastro.github.io/privacy/
 

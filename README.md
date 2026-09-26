@@ -118,7 +118,8 @@ https://github.com/AranCastro/AranCastro.github.io/releases.
 
 Open that page on an Android phone, tap the `.apk`, and allow installing from the browser when asked.
 To rebuild by hand: GitHub → **Actions** → **Build Android APK** → **Run workflow**. These test builds
-are signed with a debug key; Play Store builds come from `eas build --profile production` (below).
+are signed with a debug key; Play Store bundles (`.aab`) come from the **Build Play Store bundle** workflow (Actions → Run workflow), signed
+with the upload key; see `docs/daybloom_play-release-guide_v1.md`. `eas build --profile production` (below) also works.
 
 ## Web demo on the website
 
