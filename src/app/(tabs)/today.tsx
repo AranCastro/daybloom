@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Linking, Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown, ZoomIn } from 'react-native-reanimated';
 
+import { NudgeReadyCard, useBuddy } from '@/components/buddy';
 import { Icon } from '@/components/icons';
 import { MoodOrb } from '@/components/mood-orb';
 import { Avatar, ReachButtons } from '@/components/people';
@@ -32,17 +33,13 @@ export default function Today() {
   const t = useTheme();
   const name = useAppState((s) => s.name);
   const checkins = useAppState((s) => s.checkins);
-  const buddy = useAppState((s) => s.buddy);
-  const nudges = useAppState((s) => s.nudges);
+  const { buddy, automatic } = useBuddy();
   const [editing, setEditing] = useState(false);
   const [celebrate, setCelebrate] = useState<Badge[]>([]);
   const { today, hour } = useClock();
   const streak = streakInfo(checkins, today);
 
   const todayMood = moodOf(checkins[today]);
-  const todaysNudge = nudges.find((n) => n.kind === 'auto' && dayKey(new Date(n.at)) === today && n.status !== 'expired');
-  const nudgedToday = !!todaysNudge;
-  const waiting = todaysNudge?.status === 'queued';
   const showPicker = !todayMood || editing;
 
   async function choose(v: MoodValue) {
@@ -155,23 +152,7 @@ export default function Today() {
 
       {todayMood?.value === 1 && !editing && <SupportCard />}
 
-      {nudgedToday && buddy && (
-        <Animated.View entering={FadeInDown.delay(150)}>
-          <Card tone="accent">
-            <View style={styles.inline}>
-              <Icon name="heart" color={t.accent} />
-              <Text variant="bodyStrong" style={{ flex: 1 }}>
-                {waiting ? `Waiting for the internet to reach ${buddy.name}` : `We asked ${buddy.name} to call you today`}
-              </Text>
-            </View>
-            <Text variant="small">
-              {waiting
-                ? 'The note will go as soon as your phone is online. Nothing about your answers is shared.'
-                : 'They were only asked to call. Nothing about your answers was shared.'}
-            </Text>
-          </Card>
-        </Animated.View>
-      )}
+      <NudgeReadyCard />
 
       {isLow(checkins[today]) && !editing && <ReachOutCard />}
 
@@ -185,19 +166,21 @@ export default function Today() {
 
       <Card>
         <Pressable onPress={() => router.navigate('/circle')} style={styles.inline}>
-          <View style={[styles.avatar, { backgroundColor: buddy ? t.brand : t.surfaceAlt }]}>
-            <Text variant="bodyStrong" style={{ color: buddy ? t.brandText : t.textSecondary }}>
-              {buddy ? buddy.name.slice(0, 1).toUpperCase() : '+'}
-            </Text>
-          </View>
+          {buddy ? (
+            <Avatar person={buddy} size={40} />
+          ) : (
+            <View style={[styles.avatar, { backgroundColor: t.surfaceAlt }]}>
+              <Text variant="bodyStrong" style={{ color: t.textSecondary }}>
+                +
+              </Text>
+            </View>
+          )}
           <View style={{ flex: 1 }}>
             <Text variant="bodyStrong">{buddy ? buddy.name : 'Choose your buddy'}</Text>
             <Text variant="small">
               {buddy
-                ? buddy.joined
-                  ? 'Connected. Quietly on standby.'
-                  : 'Invite sent. Waiting for them to join.'
-                : 'One person who would want to know.'}
+                ? `Your buddy${automatic ? ' (automatic)' : ''}. One tap to reach them on hard days.`
+                : 'One person to reach on hard days.'}
             </Text>
           </View>
           <Icon name="arrow" color={t.textMuted} size={20} />

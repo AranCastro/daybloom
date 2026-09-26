@@ -1,8 +1,9 @@
 /**
- * The buddy nudge must go out once per rough patch (audit H1, H4), and the rule itself must hold.
- * Storage and the network are replaced with in-memory fakes.
+ * The buddy nudge: offered once per rough patch (audit H1), the buddy is chosen or automatic,
+ * and the rule itself holds. Storage is replaced with an in-memory fake.
  */
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
+
 jest.mock('@/lib/kv', () => {
   const mem = new Map<string, string>();
   return {
@@ -13,38 +14,14 @@ jest.mock('@/lib/kv', () => {
   };
 });
 
-let mockOnline = true;
-let mockDelay = 0;
-const mockSent: string[] = [];
-jest.mock('@/lib/ntfy', () => ({
-  sendNudge: jest.fn(
-    (topic: string) =>
-      new Promise<boolean>((resolve) =>
-        setTimeout(() => {
-          if (mockOnline) mockSent.push(topic);
-          resolve(mockOnline);
-        }, mockDelay),
-      ),
-  ),
-  sendTest: jest.fn(async () => true),
-  buddyHasJoined: jest.fn(async () => false),
-}));
-
 import { isLowStreak } from '@/lib/nudge-rule';
+import * as store from '@/lib/store';
 
-type Store = typeof import('@/lib/store');
+const ready: string[] = [];
+store.onNudgeReady((name) => void ready.push(name));
 
-function freshStore(): Store {
-  let store!: Store;
-  jest.isolateModules(() => {
-    store = require('@/lib/store');
-  });
-  store.update({ onboarded: true, name: 'Aran', streak: 2, buddy: { name: 'Anu', topic: 'nudge-test', joined: true } });
-  return store;
-}
-
-/** Puts a low day yesterday so that one more low answer today meets the 2-day rule. */
-function lowYesterday(store: Store) {
+/** A low day yesterday, so one more low answer today meets the 2-day rule. */
+function lowYesterday() {
   const y = new Date();
   y.setDate(y.getDate() - 1);
   const key = `${y.getFullYear()}-${String(y.getMonth() + 1).padStart(2, '0')}-${String(y.getDate()).padStart(2, '0')}`;
@@ -52,10 +29,9 @@ function lowYesterday(store: Store) {
 }
 
 beforeEach(() => {
-  (require('@/lib/kv') as { clear: () => void }).clear();
-  mockSent.length = 0;
-  mockOnline = true;
-  mockDelay = 0;
+  store.resetAll();
+  ready.length = 0;
+  store.update({ onboarded: true, name: 'Aran', streak: 2 });
 });
 
 describe('nudge rule', () => {
@@ -68,45 +44,66 @@ describe('nudge rule', () => {
   });
 });
 
-describe('one nudge per rough patch', () => {
-  it('Low then Heavy while the first request is still open sends one nudge', async () => {
-    const store = freshStore();
-    lowYesterday(store);
-    mockDelay = 50;
-    const a = store.recordMood(2);
-    const b = store.recordMood(1);
-    await Promise.all([a, b]);
-    expect(mockSent).toHaveLength(1);
-    expect(store.getState().nudges.filter((n) => n.kind === 'auto')).toHaveLength(1);
+describe('who the buddy is', () => {
+  it('is automatically the first person added to Call anytime, preferring one with a number', () => {
+    expect(store.resolveBuddy()).toBeNull();
+    store.addPerson('Rahul', 3, '9000000001');
+    store.addPerson('Amma', 1);
+    const appa = store.addPerson('Appa', 1, '9000000002');
+    expect(store.resolveBuddy()?.id).toBe(appa.id);
   });
 
-  it('Low, Okay, Low on the same day sends one nudge', async () => {
-    const store = freshStore();
-    lowYesterday(store);
+  it('can be chosen, and falls back to automatic if that person is removed', () => {
+    const amma = store.addPerson('Amma', 1, '9000000003');
+    const rahul = store.addPerson('Rahul', 3, '9000000001');
+    store.setBuddy(rahul.id);
+    expect(store.resolveBuddy()?.id).toBe(rahul.id);
+    store.deletePerson(rahul.id);
+    expect(store.getState().buddyId).toBeNull();
+    expect(store.resolveBuddy()?.id).toBe(amma.id);
+  });
+});
+
+describe('one offer per rough patch', () => {
+  beforeEach(() => {
+    store.addPerson('Amma', 1, '9876543210');
+    lowYesterday();
+  });
+
+  it('Low then Heavy on the same day offers once', async () => {
+    await Promise.all([store.recordMood(2), store.recordMood(1)]);
+    expect(ready).toEqual(['Amma']);
+    expect(store.getState().nudges.filter((n) => n.kind === 'auto')).toHaveLength(1);
+    expect(store.todaysNudge()?.status).toBe('ready');
+  });
+
+  it('Low, Okay, Low on the same day offers once', async () => {
     await store.recordMood(2);
     await store.recordMood(3);
     await store.recordMood(2);
-    expect(mockSent).toHaveLength(1);
+    expect(ready).toHaveLength(1);
   });
 
-  it('two quick retries of a queued nudge send it once', async () => {
-    const store = freshStore();
-    lowYesterday(store);
-    mockOnline = false;
+  it('opening the message marks it and counts as reaching out; Not now hides it', async () => {
     await store.recordMood(2);
-    expect(store.getState().nudges[0].status).toBe('queued');
-    mockOnline = true;
-    mockDelay = 30;
-    await Promise.all([store.flushQueued(), store.flushQueued()]);
-    expect(mockSent).toHaveLength(1);
-    expect(store.getState().nudges[0].status).toBe('sent');
+    store.markNudgeOpened();
+    expect(store.todaysNudge()?.status).toBe('opened');
+    expect(store.getState().people[0].lastReachedAt).toBeDefined();
+    store.dismissNudge();
+    expect(store.todaysNudge()).toBeUndefined();
   });
 
-  it('a nudge that could not go out for 36 hours is dropped, not sent late', async () => {
-    const store = freshStore();
-    store.update({ nudges: [{ at: Date.now() - 40 * 60 * 60 * 1000, kind: 'auto', status: 'queued' }] });
-    await store.flushQueued();
-    expect(mockSent).toHaveLength(0);
-    expect(store.getState().nudges[0].status).toBe('expired');
+  it('the message never mentions mood', () => {
+    const text = store.nudgeMessage('Amma', 'Aran');
+    expect(text).toContain('call today');
+    expect(text).not.toMatch(/low|heavy|mood|sad|hard/i);
+  });
+
+  it('is not offered without a buddy', async () => {
+    store.resetAll();
+    store.update({ onboarded: true, streak: 2 });
+    lowYesterday();
+    expect(await store.recordMood(2)).toBe(false);
+    expect(ready).toHaveLength(0);
   });
 });

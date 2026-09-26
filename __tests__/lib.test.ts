@@ -9,7 +9,6 @@ jest.mock('@/lib/kv', () => {
     clear: () => mem.clear(),
   };
 });
-jest.mock('@/lib/ntfy', () => ({ sendNudge: jest.fn(async () => true), sendTest: jest.fn(async () => true), buddyHasJoined: jest.fn(async () => false) }));
 
 import { streakInfo } from '@/lib/badges';
 import { makeBackup, parseBackup } from '@/lib/backup-core';

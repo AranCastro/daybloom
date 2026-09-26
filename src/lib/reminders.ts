@@ -9,6 +9,8 @@ const CHANNEL = 'daily-checkin';
 const FOCUS_CHANNEL = 'focus-timer';
 const DAILY_ID = 'daily-checkin';
 const FOCUS_ID = 'focus-timer';
+const NUDGE_CHANNEL = 'buddy-nudge';
+const NUDGE_ID = 'buddy-nudge';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -36,6 +38,10 @@ async function ensureReady(): Promise<boolean> {
     await Notifications.setNotificationChannelAsync(FOCUS_CHANNEL, {
       name: 'Focus timer',
       importance: Notifications.AndroidImportance.HIGH,
+    });
+    await Notifications.setNotificationChannelAsync(NUDGE_CHANNEL, {
+      name: 'Reach your buddy',
+      importance: Notifications.AndroidImportance.DEFAULT,
     });
   }
   const current = await Notifications.getPermissionsAsync();
@@ -76,4 +82,25 @@ export async function scheduleFocusAlarm(at: number, title: string, body: string
 export async function cancelFocusAlarm(): Promise<void> {
   if (Platform.OS === 'web') return;
   await Notifications.cancelScheduledNotificationAsync(FOCUS_ID).catch(() => {});
+}
+
+/**
+ * After a few low days: a gentle local notification offering to message the buddy.
+ * Tapping it opens Today, where one tap opens SMS or WhatsApp with the message written.
+ */
+export async function notifyNudgeReady(buddyName: string): Promise<void> {
+  try {
+    if (!(await ensureReady())) return;
+    await Notifications.scheduleNotificationAsync({
+      identifier: NUDGE_ID,
+      content: {
+        title: 'A few hard days',
+        body: `Would you like to ask ${buddyName} to call you today? One tap and the message is ready.`,
+      },
+      // Shown now, on its own Android channel.
+      trigger: Platform.OS === 'android' ? { channelId: NUDGE_CHANNEL } : null,
+    });
+  } catch {
+    // Notifications off: the card on Today still offers it.
+  }
 }

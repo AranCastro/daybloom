@@ -11,7 +11,7 @@ import { ReducedMotionConfig, ReduceMotion } from 'react-native-reanimated';
 import { BloomToast } from '@/components/garden';
 import { useIsDark, useTheme } from '@/hooks/use-theme';
 import { weeklyBackupIfDue } from '@/lib/backup';
-import { flushQueued, refreshBuddyJoined, useAppState } from '@/lib/store';
+import { useAppState } from '@/lib/store';
 import { startWidgetSync } from '@/widgets/sync';
 
 SplashScreen.preventAutoHideAsync();
@@ -31,11 +31,9 @@ export default function RootLayout() {
     if (loaded || error) SplashScreen.hideAsync();
   }, [loaded, error]);
 
-  // Each time the app comes to the foreground: retry undelivered nudges and check whether the buddy joined.
+  // Each time the app comes to the foreground: make the weekly backup if it is due.
   useEffect(() => {
     const sync = () => {
-      flushQueued();
-      refreshBuddyJoined();
       weeklyBackupIfDue();
     };
     sync();
