@@ -15,7 +15,7 @@ import Animated, { FadeIn, useAnimatedStyle, useSharedValue, withSequence, withS
 
 import { MonthCalendar } from '@/components/calendar';
 import { Icon } from '@/components/icons';
-import { Effort, EFFORTS, effortInfo } from '@/lib/effort';
+import { Effort, EFFORTS, effortInfo, rewardLine } from '@/lib/effort';
 import { Text } from '@/components/text';
 import { Button, Input, tap } from '@/components/ui';
 import { Fonts, Radius } from '@/constants/theme';
@@ -270,6 +270,9 @@ function SheetBody({ onClose, task, defaultQuadrant = 1, defaultDue }: SheetProp
                       </Text>
                       <Text variant="small" style={{ fontSize: 11.5, lineHeight: 15 }}>
                         {e.hint}
+                      </Text>
+                      <Text variant="small" style={{ fontSize: 11, lineHeight: 14, color: e.tint, fontFamily: Fonts.bodyStrong }}>
+                        {rewardLine(e.id)}
                       </Text>
                     </View>
                   </Pressable>

@@ -22,7 +22,7 @@ jest.mock('expo-notifications', () => ({
 }));
 
 import { addDays, dayKey, fromKey } from '@/lib/dates';
-import { deepFirst, fitEnergy } from '@/lib/effort';
+import { deepFirst, fitEnergy, rewardFor } from '@/lib/effort';
 import { handleCheckinAction } from '@/lib/notification-checkin';
 import { findPatterns, MIN_DAYS } from '@/lib/patterns';
 import * as store from '@/lib/store';
@@ -95,6 +95,23 @@ describe('energy and effort levels', () => {
     expect(t.effort).toBe('quick');
     store.editTask(t.id, { effort: 'deep' });
     expect(store.getState().tasks.find((x) => x.id === t.id)?.effort).toBe('deep');
+  });
+
+  it('harder tasks grow more flowers, and unticking takes them all back', () => {
+    store.addTask('Write the thesis chapter', 2, undefined, 'deep');
+    store.addTask('Pay the electricity bill', 2, undefined, 'quick');
+    const deep = store.getState().tasks.find((x) => x.title === 'Write the thesis chapter')!;
+    const quick = store.getState().tasks.find((x) => x.title === 'Pay the electricity bill')!;
+    const before = store.getState().bloomCount;
+    store.toggleTask(deep.id);
+    expect(store.getState().bloomCount).toBe(before + 2);
+    store.toggleTask(quick.id);
+    expect(store.getState().bloomCount).toBe(before + 3);
+    store.toggleTask(deep.id);
+    expect(store.getState().bloomCount).toBe(before + 1);
+    expect(store.getState().garden.filter((b) => b.ref === deep.id)).toHaveLength(0);
+    expect(rewardFor({ effort: 'deep', quadrant: 1 })).toEqual({ flowers: 2, rare: 0.35 });
+    expect(rewardFor({ effort: undefined, quadrant: 2 })).toEqual({ flowers: 1, rare: 0.1 });
   });
 
   it('energy decides which effort levels show', () => {

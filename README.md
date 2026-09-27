@@ -26,6 +26,9 @@ weather following the phone, and Thottam now says Poo Kolam.
   the matrix shows Quick tasks only and the Focus tab suggests 15 minutes. Medium: Deep work is hidden. High:
   everything, with Deep work first in each quadrant, and Focus suggests Deep 50. "Show all" or "Usual order" undoes it
   for the day. Tasks marked "Quick and easy" in 2.2 became Quick.
+  **Rewards follow effort:** finishing a Quick task grows 1 flower (8% rare), Light 1 (12%), Moderate 1 (18%) and Deep
+  work 2 flowers (30% rare); Do first adds 5 points; a task with no level keeps 1 flower at 10% (15% in Do first).
+  Unticking takes all of a task's flowers back. The Focus today and Matrix widgets show each task's effort symbol.
 - **Weather that follows you.** With Live weather on, the garden refreshes every 10 minutes while it is on screen and
   whenever the phone has moved to another 0.1° cell (about 11 km); readings also set night and day from the real
   sun. The Garden tab offers a one-tap "Match the garden to your weather" while it is off.

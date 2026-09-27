@@ -10,6 +10,7 @@ import { FlowerKind, flowerOf, GOLDEN_EVERY } from '@/lib/flowers';
 import { isLow, moodOf, MoodValue } from '@/lib/moods';
 import { sortOpen } from '@/lib/quadrants';
 import { cleanNumber, whatsappNumber } from '@/lib/reach';
+import { effortInfo } from '@/lib/effort';
 import { widgetUndoFor } from '@/lib/store';
 import type { AppState, Person, Task } from '@/lib/store';
 
@@ -62,7 +63,7 @@ function matrixCells(tasks: Task[], today: string, withDone: boolean) {
     const done = withDone ? tasks.filter((t) => t.quadrant === q && t.done).sort((a, b) => (b.doneAt ?? 0) - (a.doneAt ?? 0)) : [];
     return {
       q,
-      tasks: [...open, ...done].map((t) => ({ id: t.id, title: t.title, done: t.done, due: t.done ? null : dueText(t.due, today) })),
+      tasks: [...open, ...done].map((t) => ({ id: t.id, title: t.title, done: t.done, due: t.done ? null : dueText(t.due, today), effort: effortMark(t) })),
     };
   });
 }
@@ -102,10 +103,15 @@ function focusList(tasks: Task[], today: string, low: boolean) {
   const limit = low ? 1 : 4;
   const doneToday = tasks.filter((t) => t.done && t.doneAt && dayKey(new Date(t.doneAt)) === today).length;
   return {
-    items: all.slice(0, limit).map((t) => ({ id: t.id, title: t.title, quadrant: t.quadrant, due: dueText(t.due, today) })),
+    items: all.slice(0, limit).map((t) => ({ id: t.id, title: t.title, quadrant: t.quadrant, due: dueText(t.due, today), effort: effortMark(t) })),
     more: Math.max(0, all.length - limit),
     doneToday,
   };
+}
+
+/** The task's effort symbol (🪶 Quick, 🌿 Light, 🌳 Moderate, 🏔️ Deep work), or null when none is set. */
+function effortMark(t: Task): string | null {
+  return t.effort ? effortInfo(t.effort).emoji : null;
 }
 
 function dueText(due: string | undefined, today: string): { text: string; late: boolean } | null {

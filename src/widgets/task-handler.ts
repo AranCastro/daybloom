@@ -41,7 +41,9 @@ export async function widgetTaskHandler({ widgetInfo, widgetAction, clickAction,
       if (widgetTickTask(widget, id, clickAction === 'TASK_DONE' ? 'done' : 'toggle')) {
         const task = getState().tasks.find((t) => t.id === id);
         const b = getState().garden[0];
-        if (task?.done) setFlash(name, b && b.ref === id ? `Done · ${flowerOf(b.flower).name} bloomed` : 'Done');
+        const grew = getState().garden.length - before;
+        if (task?.done)
+          setFlash(name, grew > 1 ? `Done · ${grew} flowers bloomed` : b && b.ref === id ? `Done · ${flowerOf(b.flower).name} bloomed` : 'Done');
       }
     }
 

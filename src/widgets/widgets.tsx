@@ -380,6 +380,7 @@ export function TasksWidget({ s, p, height, flash }: WidgetProps) {
             <FlexWidget style={{ paddingRight: 10, paddingVertical: 4 }}>
               <SvgWidget svg={tickSvg(locked ? p.line : p.muted, 22)} style={{ height: 22, width: 22 }} />
             </FlexWidget>
+            {t.effort && <TextWidget text={t.effort} style={{ fontSize: 13, marginRight: 5 }} />}
             <FlexWidget style={{ flex: 1 }}>
               <TextWidget text={t.title} style={{ fontSize: 14, fontFamily: BODY, color: p.ink }} maxLines={1} truncate="END" />
             </FlexWidget>
@@ -690,6 +691,7 @@ export function MatrixWidget({ s, p, width, height, scale = 1, checkbox = true }
                       <SvgWidget svg={t.done ? doneSvg(info.color[p.mode], box) : tickSvg(locked ? p.line : p.muted, box)} style={{ height: box, width: box }} />
                     </FlexWidget>
                   )}
+                  {t.effort && !t.done && <TextWidget text={t.effort} style={{ fontSize: 11.5 * k, marginRight: 4 }} />}
                   <FlexWidget style={{ flex: 1 }}>
                     <TextWidget
                       text={t.title}
