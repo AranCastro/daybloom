@@ -8,8 +8,9 @@ import * as Notifications from 'expo-notifications';
 import { flowerOf } from '@/lib/flowers';
 import { readItem, writeItem } from '@/lib/kv';
 import { moodOf } from '@/lib/moods';
-import { CHECKIN_ACTIONS, notifyCheckinNoted } from '@/lib/reminders';
-import { awardBadges, getState, recordMood, reloadState } from '@/lib/store';
+import { CHECKIN_ACTIONS, notifyCheckinNoted, ROUTINE_DONE } from '@/lib/reminders';
+import { taskIdFromReminder } from '@/lib/routines';
+import { awardBadges, ensureRoutines, flushState, getState, recordMood, reloadState, toggleTask } from '@/lib/store';
 
 export const NOTIFICATION_TASK = 'daybloom-notification-action';
 
@@ -51,4 +52,30 @@ export async function handleCheckinAction(actionId: string, notificationId?: str
   if (notificationId) await Notifications.dismissNotificationAsync(notificationId).catch(() => undefined);
   await notifyCheckinNoted(moodOf(action.mood)?.label ?? 'Checked in', grew);
   return true;
+}
+
+/**
+ * The Done button on a routine reminder: ticks that routine task (and grows its flower) without
+ * opening the app. Returns true when the action was a routine Done press that was handled.
+ */
+export async function handleRoutineAction(actionId: string, notificationId?: string, date?: number): Promise<boolean> {
+  if (actionId !== ROUTINE_DONE) return false;
+  const taskId = taskIdFromReminder(notificationId);
+  if (!taskId || !claimAction(actionId, notificationId, date)) return false;
+  reloadState();
+  // The reminder may arrive before the app has added today's routine tasks.
+  ensureRoutines();
+  const task = getState().tasks.find((t) => t.id === taskId);
+  if (task && !task.done) {
+    toggleTask(taskId);
+    awardBadges();
+  }
+  flushState();
+  if (notificationId) await Notifications.dismissNotificationAsync(notificationId).catch(() => undefined);
+  return true;
+}
+
+/** Any button on a Daybloom notification: a mood on the daily reminder, or Done on a routine. */
+export async function handleNotificationAction(actionId: string, notificationId?: string, date?: number): Promise<boolean> {
+  return (await handleCheckinAction(actionId, notificationId, date)) || (await handleRoutineAction(actionId, notificationId, date));
 }

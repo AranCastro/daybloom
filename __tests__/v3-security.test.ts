@@ -227,7 +227,9 @@ describe('focus alarm', () => {
     await scheduleFocusAlarm(Date.now() + 60_000, 'a', 'b');
     await scheduleFocusAlarm(Date.now() + 60_000, 'a', 'b');
     expect(n.scheduleNotificationAsync).toHaveBeenCalledTimes(2);
-    expect(category.mock.calls.length).toBeLessThanOrEqual(1);
+    // Each category (check-in buttons, routine Done) is set up at most once, not per alarm.
+    const ids = category.mock.calls.map((c) => c[0]);
+    expect(ids.length).toBe(new Set(ids).size);
   });
 });
 

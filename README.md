@@ -34,6 +34,14 @@ weather following the phone, and Thottam now says Poo Kolam.
   ticked, "I worked on it today", or a focus session on that task) grows one flower at the task's rare odds, and those
   flowers stay even if the task is unticked later; the full effort reward still comes when the task is finished. On a
   low- or medium-energy day, a big task with open steps stays in the matrix, because only its next step is asked.
+- **Routines (3.1).** When adding a task, "How often?" offers One time, Every day, Weekly (chosen weekdays) or Every
+  few days (2–30), and Once, Twice or Three times a day, each at its own time. On each day it is due, the routine adds
+  one task per time to its quadrant with its effort level, so ticking, flowers, widgets and the energy filter work as
+  for any task; rows and widgets show 🔁 and the time. An unfinished routine task is removed the next day rather than
+  carried over; finished ones are cleared with their calendar shading kept. An optional gentle reminder (a quiet
+  notification without sound or vibration) comes at each time, with a Done button that ticks the task without opening
+  the app; reminders are scheduled a week ahead and topped up whenever the app or a widget runs. Matrix → Routines lists
+  them; tap one to change it or stop it (`src/lib/routines.ts`, `ensureRoutines` in `src/lib/store.ts`).
 - **Weather that follows you.** With Live weather on, the garden refreshes every 10 minutes while it is on screen and
   whenever the phone has moved to another 0.1° cell (about 11 km); readings also set night and day from the real
   sun. The Garden tab offers a one-tap "Match the garden to your weather" while it is off.

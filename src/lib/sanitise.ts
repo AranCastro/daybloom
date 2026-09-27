@@ -6,6 +6,7 @@
  */
 import type { AppState, Bloom, NudgeLog, Person, Place, Pookalam, PookalamRing, Settings, Task, TaskStep, WidgetKey, WidgetPrefs } from '@/lib/store';
 import type { ActiveTimer, FocusSession } from '@/lib/focus';
+import { cleanTime, MAX_EVERY, MAX_TIMES, MIN_EVERY, type Routine } from '@/lib/routines';
 
 type Obj = Record<string, unknown>;
 
@@ -86,13 +87,34 @@ function task(v: unknown): Task | undefined {
     quadrant: oneOf(v.quadrant, QUADS) ? v.quadrant : 1,
     done: v.done === true,
     createdAt: isNum(v.createdAt) ? v.createdAt : 0,
-    ...pick(v, { doneAt: isNum, order: isNum, due: isDayKey, easy: isBool, effort: (x) => oneOf(x, EFFORTS) }),
+    ...pick(v, { doneAt: isNum, order: isNum, due: isDayKey, easy: isBool, effort: (x) => oneOf(x, EFFORTS), routineId: isStr, at: (x) => !!cleanTime(x) }),
+    ...(clampInt(v.slot, 0, MAX_TIMES - 1) !== undefined ? { slot: clampInt(v.slot, 0, MAX_TIMES - 1) } : {}),
   };
   const steps = list(v.steps, step);
   if (steps?.length) t.steps = steps;
   const worked = list(v.workedOn, (x) => (isDayKey(x) ? x : undefined));
   if (worked?.length) t.workedOn = worked;
   return t;
+}
+
+function routine(v: unknown): Routine | undefined {
+  if (!isObj(v) || !isStr(v.id) || !isStr(v.title) || !oneOf(v.kind, ['daily', 'weekly', 'interval'] as const)) return undefined;
+  const times = [...new Set(list(v.times, (x) => cleanTime(x)) ?? [])].sort().slice(0, MAX_TIMES);
+  const weekdays = [...new Set(list(v.weekdays, (x) => clampInt(x, 0, 6)) ?? [])];
+  if (v.kind === 'weekly' && !weekdays.length) return undefined;
+  return {
+    id: v.id,
+    title: v.title,
+    quadrant: oneOf(v.quadrant, QUADS) ? v.quadrant : 1,
+    kind: v.kind,
+    start: isDayKey(v.start) ? v.start : '2000-01-01',
+    times: times.length ? times : ['08:00'],
+    remind: v.remind !== false,
+    createdAt: isNum(v.createdAt) ? v.createdAt : 0,
+    ...(v.kind === 'weekly' ? { weekdays } : {}),
+    ...(v.kind === 'interval' ? { every: clampInt(v.every, MIN_EVERY, MAX_EVERY) ?? MIN_EVERY } : {}),
+    ...pick(v, { effort: (x) => oneOf(x, EFFORTS) }),
+  };
 }
 
 function person(v: unknown): Person | undefined {
@@ -240,6 +262,8 @@ const FIELDS: Record<string, (v: unknown) => unknown> = {
   labels,
   avatar,
   tasks: (v) => list(v, task),
+  routines: (v) => list(v, routine),
+  routineMade: (v) => strMap(v, (x) => (isDayKey(x) ? x : undefined)),
   people: (v) => list(v, person),
   games: (v) =>
     isObj(v)

@@ -11,6 +11,7 @@ import { isLow, moodOf, MoodValue } from '@/lib/moods';
 import { sortOpen } from '@/lib/quadrants';
 import { cleanNumber, whatsappNumber } from '@/lib/reach';
 import { effortInfo, stepProgress } from '@/lib/effort';
+import { clockText } from '@/lib/routines';
 import { widgetUndoFor } from '@/lib/store';
 import type { AppState, Person, Task } from '@/lib/store';
 
@@ -65,7 +66,7 @@ function matrixCells(tasks: Task[], today: string, withDone: boolean) {
     const done = withDone ? tasks.filter((t) => t.quadrant === q && t.done).sort((a, b) => (b.doneAt ?? 0) - (a.doneAt ?? 0)) : [];
     return {
       q,
-      tasks: [...open, ...done].map((t) => ({ id: t.id, title: t.title, done: t.done, due: t.done ? null : dueText(t.due, today), effort: effortMark(t), steps: stepsText(t), next: t.done ? null : (stepProgress(t)?.next ?? null) })),
+      tasks: [...open, ...done].map((t) => ({ id: t.id, title: t.title, done: t.done, due: t.done ? null : dueFor(t, today), effort: effortMark(t), steps: stepsText(t), next: t.done ? null : (stepProgress(t)?.next ?? null) })),
     };
   });
 }
@@ -99,13 +100,13 @@ export function reachUri(phone: string | undefined, mode: 'call' | 'message', op
 function focusList(tasks: Task[], today: string, low: boolean) {
   const dueNow = tasks
     .filter((t) => !t.done && t.due && t.due <= today)
-    .sort((a, b) => (a.due ?? '').localeCompare(b.due ?? '') || a.quadrant - b.quadrant);
+    .sort((a, b) => (a.due ?? '').localeCompare(b.due ?? '') || a.quadrant - b.quadrant || (a.at ?? '').localeCompare(b.at ?? ''));
   const doFirst = sortOpen(tasks.filter((t) => t.quadrant === 1 && !t.done && !dueNow.includes(t)));
   const all = [...dueNow, ...doFirst];
   const limit = low ? 1 : 4;
   const doneToday = tasks.filter((t) => t.done && t.doneAt && dayKey(new Date(t.doneAt)) === today).length;
   return {
-    items: all.slice(0, limit).map((t) => ({ id: t.id, title: t.title, quadrant: t.quadrant, due: dueText(t.due, today), effort: effortMark(t), steps: stepsText(t), next: t.done ? null : (stepProgress(t)?.next ?? null) })),
+    items: all.slice(0, limit).map((t) => ({ id: t.id, title: t.title, quadrant: t.quadrant, due: dueFor(t, today), effort: effortMark(t), steps: stepsText(t), next: t.done ? null : (stepProgress(t)?.next ?? null) })),
     more: Math.max(0, all.length - limit),
     doneToday,
   };
@@ -125,6 +126,12 @@ function effortMark(t: Task): string | null {
 function stepsText(t: Task): string | null {
   const p = stepProgress(t);
   return p && !t.done ? `${p.done}/${p.total}` : null;
+}
+
+/** A routine task shows its time ("8:00 am") while it is today's; other tasks their due date. */
+function dueFor(t: Task, today: string): { text: string; late: boolean } | null {
+  if (t.routineId && t.at && t.due === today) return { text: `🔁 ${clockText(t.at)}`, late: false };
+  return dueText(t.due, today);
 }
 
 function dueText(due: string | undefined, today: string): { text: string; late: boolean } | null {

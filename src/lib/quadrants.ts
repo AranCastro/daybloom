@@ -53,7 +53,7 @@ export const QUADRANTS: readonly QuadrantInfo[] = [
 ];
 
 /** Arranged tasks first (by hand), then dated ones (soonest due), then by creation. */
-export function sortOpen<T extends Pick<Task, 'order' | 'due' | 'createdAt'>>(tasks: T[]): T[] {
+export function sortOpen<T extends Pick<Task, 'order' | 'due' | 'createdAt'> & { at?: string }>(tasks: T[]): T[] {
   return [...tasks].sort((a, b) => {
     const oa = a.order ?? Infinity;
     const ob = b.order ?? Infinity;
@@ -61,6 +61,8 @@ export function sortOpen<T extends Pick<Task, 'order' | 'due' | 'createdAt'>>(ta
     if (a.due && b.due && a.due !== b.due) return a.due.localeCompare(b.due);
     if (a.due && !b.due) return -1;
     if (b.due && !a.due) return 1;
+    // Routine tasks due the same day follow their time of day.
+    if (a.at && b.at && a.at !== b.at) return a.at.localeCompare(b.at);
     return a.createdAt - b.createdAt;
   });
 }

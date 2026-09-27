@@ -9,7 +9,7 @@ import * as TaskManager from 'expo-task-manager';
 import { Platform } from 'react-native';
 import { registerWidgetConfigurationScreen, registerWidgetTaskHandler } from 'react-native-android-widget';
 
-import { handleCheckinAction, NOTIFICATION_TASK } from '@/lib/notification-checkin';
+import { handleNotificationAction, NOTIFICATION_TASK } from '@/lib/notification-checkin';
 import { notifyNudgeReady } from '@/lib/reminders';
 import { flushState, onNudgeReady } from '@/lib/store';
 import { WidgetConfigurationScreen } from '@/widgets/configure';
@@ -20,11 +20,11 @@ import { widgetTaskHandler } from '@/widgets/task-handler';
 onNudgeReady((name) => void notifyNudgeReady(name));
 
 if (Platform.OS === 'android') {
-  // Mood buttons on the daily reminder: check in without opening the app.
+  // Mood buttons on the daily reminder and Done on routine reminders, without opening the app.
   TaskManager.defineTask<Notifications.NotificationTaskPayload>(NOTIFICATION_TASK, async ({ data }) => {
     if (data && 'actionIdentifier' in data) {
       const r = data as unknown as { actionIdentifier: string; notification?: { date?: number; request?: { identifier?: string } } };
-      if (await handleCheckinAction(r.actionIdentifier, r.notification?.request?.identifier, r.notification?.date)) await refreshWidgets().catch(() => undefined);
+      if (await handleNotificationAction(r.actionIdentifier, r.notification?.request?.identifier, r.notification?.date)) await refreshWidgets().catch(() => undefined);
       // Write the check-in before the background task returns and the process may be reclaimed.
       flushState();
     }

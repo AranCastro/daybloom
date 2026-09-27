@@ -2,6 +2,7 @@
 import Svg, { Circle, Path } from 'react-native-svg';
 
 export type IconName =
+  | 'repeat'
   | 'sun'
   | 'people'
   | 'calendar'
@@ -93,6 +94,12 @@ export function Icon({ name, size = 22, color, strokeWidth = 1.8, fill = 'none' 
         </>
       )}
       {name === 'check' && <Path d="M5 12.5l4.5 4.5L19 7.5" {...p} />}
+      {name === 'repeat' && (
+        <>
+          <Path d="M4 11V9.5A3.5 3.5 0 017.5 6H19M16 3l3 3-3 3" {...p} />
+          <Path d="M20 13v1.5a3.5 3.5 0 01-3.5 3.5H5M8 21l-3-3 3-3" {...p} />
+        </>
+      )}
       {name === 'bell' && (
         <>
           <Path d="M6 16.5V11a6 6 0 0112 0v5.5l1.5 1.5h-15L6 16.5z" {...p} />

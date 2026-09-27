@@ -18,6 +18,7 @@ import { Icon } from '@/components/icons';
 import { Effort, EFFORTS, effortInfo, rewardLine, stepProgress } from '@/lib/effort';
 import { Text } from '@/components/text';
 import { Button, Input, tap } from '@/components/ui';
+import { defaultRepeat, RepeatDraft, RepeatEditor } from '@/components/repeat-editor';
 import { Fonts, Radius } from '@/constants/theme';
 import { useIsDark, useTheme } from '@/hooks/use-theme';
 import { useToday } from '@/hooks/use-today';
@@ -25,7 +26,31 @@ import { useQuadrantNames } from '@/lib/labels';
 import { confirmThen } from '@/lib/confirm';
 import { addDays, dayKey, fromKey, prettyDate } from '@/lib/dates';
 import { dueBadge, QUADRANTS, quadrantOf } from '@/lib/quadrants';
-import { addStep, addTask, deleteStep, deleteTask, editTask, hapticsOn, logProgress, moveTask, openTasks, Quadrant, Task, toggleStep, toggleTask, useAppState } from '@/lib/store';
+import { clockText } from '@/lib/routines';
+import { syncRoutinesNow } from '@/lib/routine-sync';
+import {
+  addRoutine,
+  addStep,
+  addTask,
+  deleteRoutine,
+  deleteStep,
+  deleteTask,
+  editRoutine,
+  editTask,
+  getRoutine,
+  hapticsOn,
+  logProgress,
+  makeRoutineFrom,
+  moveTask,
+  openTasks,
+  Quadrant,
+  Routine,
+  RoutineInput,
+  Task,
+  toggleStep,
+  toggleTask,
+  useAppState,
+} from '@/lib/store';
 
 export function useQuadrantColors(q: Quadrant) {
   const dark = useIsDark();
@@ -108,7 +133,16 @@ export function TaskRow({ task, today, onOpen, compact }: { task: Task; today: s
         <StepProgress task={task} compact={compact} />
         {!task.done && (task.due || task.effort) && (
           <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
-            <DueBadge due={task.due} today={today} />
+            {task.routineId && task.at && task.due === today ? (
+              <View style={styles.routineMeta}>
+                <Icon name="repeat" size={13} color={color} />
+                <Text variant="caption" strong color="textSecondary">
+                  {clockText(task.at)}
+                </Text>
+              </View>
+            ) : (
+              <DueBadge due={task.due} today={today} />
+            )}
             {task.effort && (
               <Text variant="caption">
                 {effortInfo(task.effort).emoji} {effortInfo(task.effort).label}
@@ -248,6 +282,8 @@ type SheetProps = {
   defaultQuadrant?: Quadrant;
   /** Due date for a new task (e.g. the day picked in the calendar). */
   defaultDue?: string;
+  /** A routine to edit directly (from the Routines screen), when no task of it is open. */
+  routine?: Routine | null;
 };
 
 export function TaskSheet(props: SheetProps) {
@@ -259,14 +295,22 @@ export function TaskSheet(props: SheetProps) {
   );
 }
 
-function SheetBody({ onClose, task, defaultQuadrant = 1, defaultDue }: SheetProps) {
+function SheetBody({ onClose, task, defaultQuadrant = 1, defaultDue, routine: routineProp }: SheetProps) {
   const t = useTheme();
   const today = useToday();
-  const [title, setTitle] = useState(task?.title ?? '');
-  const [q, setQ] = useState<Quadrant>(task?.quadrant ?? defaultQuadrant);
+  // The routine behind this sheet: the one passed in, or the one that added this task.
+  const [routine] = useState<Routine | undefined>(() => routineProp ?? getRoutine(task?.routineId));
+  const [repeat, setRepeat] = useState<RepeatDraft>(() =>
+    routine
+      ? { kind: routine.kind, weekdays: routine.weekdays ?? [fromKey(today).getDay()], every: routine.every ?? 3, times: routine.times, remind: routine.remind }
+      : defaultRepeat(fromKey(today)),
+  );
+  const repeating = repeat.kind !== 'once';
+  const [title, setTitle] = useState(routine?.title ?? task?.title ?? '');
+  const [q, setQ] = useState<Quadrant>(routine?.quadrant ?? task?.quadrant ?? defaultQuadrant);
   const [due, setDue] = useState<string | undefined>(task ? task.due : defaultDue);
   const [picking, setPicking] = useState(false);
-  const [effort, setEffort] = useState<Effort | undefined>(task?.effort);
+  const [effort, setEffort] = useState<Effort | undefined>(routine ? routine.effort : task?.effort);
   // Steps typed for a new task are kept here until it is added.
   const [draftSteps, setDraftSteps] = useState<string[]>([]);
   const presets = DUE_CHOICES.map((c) => (c.days === null ? undefined : dayKey(addDays(fromKey(today), c.days))));
@@ -279,8 +323,30 @@ function SheetBody({ onClose, task, defaultQuadrant = 1, defaultDue }: SheetProp
   function save() {
     const clean = title.trim();
     if (!clean) return;
+    if (repeating) {
+      const input: RoutineInput = {
+        title: clean,
+        quadrant: q,
+        effort,
+        kind: repeat.kind as Routine['kind'],
+        times: repeat.times,
+        remind: repeat.remind,
+        ...(repeat.kind === 'weekly' ? { weekdays: repeat.weekdays } : {}),
+        ...(repeat.kind === 'interval' ? { every: repeat.every } : {}),
+      };
+      if (routine) editRoutine(routine.id, input);
+      else if (task) makeRoutineFrom(task.id, input);
+      else addRoutine(input);
+      // Asks for notification permission the first time a reminder is switched on.
+      if (repeat.remind) void syncRoutinesNow(true);
+      if (hapticsOn()) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      onClose();
+      return;
+    }
+    // Switched back to One time: the routine stops, and today's task of it stays as an ordinary task.
+    if (routine) deleteRoutine(routine.id);
     if (task) editTask(task.id, { title: clean, quadrant: q, due, effort });
-    else {
+    else if (!routine) {
       const created = addTask(clean, q, due, effort);
       for (const st of draftSteps) addStep(created.id, st);
     }
@@ -294,7 +360,7 @@ function SheetBody({ onClose, task, defaultQuadrant = 1, defaultDue }: SheetProp
       <View style={[styles.sheet, { backgroundColor: t.surface }]}>
         <View style={[styles.grabber, { backgroundColor: t.line }]} />
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 18 }}>
-          <Text variant="heading">{task ? 'Edit task' : 'New task'}</Text>
+          <Text variant="heading">{routine ? 'Edit routine' : task ? 'Edit task' : repeating ? 'New routine' : 'New task'}</Text>
           <Input
             value={title}
             onChangeText={setTitle}
@@ -303,6 +369,8 @@ function SheetBody({ onClose, task, defaultQuadrant = 1, defaultDue }: SheetProp
             returnKeyType="done"
             onSubmitEditing={save}
           />
+
+          <RepeatEditor value={repeat} onChange={setRepeat} />
 
           <View style={{ gap: 10 }}>
             <Text variant="label">Where does it belong?</Text>
@@ -313,6 +381,7 @@ function SheetBody({ onClose, task, defaultQuadrant = 1, defaultDue }: SheetProp
             </View>
           </View>
 
+          {!repeating && (
           <View style={{ gap: 10 }}>
             <Text variant="label">Due</Text>
             <View style={styles.dueWrap}>
@@ -355,6 +424,7 @@ function SheetBody({ onClose, task, defaultQuadrant = 1, defaultDue }: SheetProp
             )}
             {due && !picking && <Text variant="small">{prettyDate(fromKey(due))}</Text>}
           </View>
+          )}
 
           <View style={{ gap: 10 }}>
             <Text variant="label">Effort (optional)</Text>
@@ -388,9 +458,16 @@ function SheetBody({ onClose, task, defaultQuadrant = 1, defaultDue }: SheetProp
             </Text>
           </View>
 
-          <StepsEditor task={task ?? null} big={effort === 'moderate' || effort === 'deep'} draft={draftSteps} setDraft={setDraftSteps} />
+          {!repeating && !routine && (
+            <StepsEditor task={task ?? null} big={effort === 'moderate' || effort === 'deep'} draft={draftSteps} setDraft={setDraftSteps} />
+          )}
 
-          <Button title={task ? 'Save changes' : 'Add task'} icon={task ? 'check' : 'plus'} onPress={save} disabled={!title.trim()} />
+          <Button
+            title={task || routine ? 'Save changes' : repeating ? 'Add routine' : 'Add task'}
+            icon={task || routine ? 'check' : 'plus'}
+            onPress={save}
+            disabled={!title.trim()}
+          />
           {index >= 0 && list.length > 1 && (
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <Button title="Move up" kind="secondary" disabled={index === 0} onPress={() => moveTask(task!.id, 'up')} style={{ flex: 1 }} />
@@ -408,10 +485,25 @@ function SheetBody({ onClose, task, defaultQuadrant = 1, defaultDue }: SheetProp
               }}
             />
           )}
+          {routine && (
+            <Pressable
+              onPress={() =>
+                confirmThen('Stop this routine?', `${routine.title} will not come back. Finished days keep their flowers.`, 'Stop', () => {
+                  deleteRoutine(routine.id, true);
+                  onClose();
+                })
+              }
+              style={styles.delete}>
+              <Icon name="repeat" color={t.textMuted} size={18} />
+              <Text variant="small" color="textMuted">
+                Stop repeating
+              </Text>
+            </Pressable>
+          )}
           {task && (
             <Pressable
               onPress={() =>
-                confirmThen('Delete this task?', task.title, 'Delete', () => {
+                confirmThen(task.routineId ? 'Skip this one today?' : 'Delete this task?', task.title, task.routineId ? 'Skip' : 'Delete', () => {
                   deleteTask(task.id);
                   onClose();
                 })
@@ -419,7 +511,7 @@ function SheetBody({ onClose, task, defaultQuadrant = 1, defaultDue }: SheetProp
               style={styles.delete}>
               <Icon name="trash" color={t.textMuted} size={18} />
               <Text variant="small" color="textMuted">
-                Delete task
+                {task.routineId ? 'Skip today' : 'Delete task'}
               </Text>
             </Pressable>
           )}
@@ -491,6 +583,7 @@ const styles = StyleSheet.create({
   dueWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   pick: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start' },
   calendar: { borderWidth: 1, borderRadius: Radius.md, padding: 10 },
+  routineMeta: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   dueChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: Radius.pill, borderWidth: 1 },
   delete: { flexDirection: 'row', gap: 8, alignSelf: 'center', alignItems: 'center', padding: 8 },
 });
