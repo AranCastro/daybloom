@@ -44,7 +44,13 @@ export type Task = {
   order?: number;
   /** How much it takes (lib/effort): the day's energy decides which levels the matrix shows. */
   effort?: 'quick' | 'light' | 'moderate' | 'deep';
+  /** Smaller steps for a task that takes more than one sitting. */
+  steps?: TaskStep[];
+  /** Days (YYYY-MM-DD) with progress on this task: a step ticked or "Worked on it today". */
+  workedOn?: string[];
 };
+
+export type TaskStep = { id: string; title: string; done: boolean };
 
 /** Morning energy: 1 low, 2 medium, 3 high. */
 export type EnergyLevel = 1 | 2 | 3;
@@ -522,9 +528,10 @@ function newId(): string {
   return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
 }
 
-export function addTask(title: string, quadrant: Quadrant, due?: string, effort?: Task['effort']) {
+export function addTask(title: string, quadrant: Quadrant, due?: string, effort?: Task['effort']): Task {
   const task: Task = { id: newId(), title: title.trim(), quadrant, due, done: false, createdAt: Date.now(), ...(effort ? { effort } : {}) };
   update((s) => ({ tasks: [...s.tasks, task] }));
+  return task;
 }
 
 export function editTask(id: string, patch: Partial<Pick<Task, 'title' | 'quadrant' | 'due' | 'effort'>>) {
@@ -551,6 +558,45 @@ export function toggleTask(id: string) {
       const garden = s.garden.filter((b) => !(b.source === 'task' && b.ref === id));
       return { garden, bloomCount: Math.max(0, s.bloomCount - (s.garden.length - garden.length)) };
     });
+}
+
+// ── Steps and progress: big tasks done over several days ────────────────────
+
+export function addStep(taskId: string, title: string) {
+  const clean = title.trim().slice(0, 80);
+  if (!clean) return;
+  update((s) => ({
+    tasks: s.tasks.map((t) => (t.id === taskId ? { ...t, steps: [...(t.steps ?? []), { id: newId(), title: clean, done: false }] } : t)),
+  }));
+}
+
+export function deleteStep(taskId: string, stepId: string) {
+  update((s) => ({ tasks: s.tasks.map((t) => (t.id === taskId ? { ...t, steps: (t.steps ?? []).filter((x) => x.id !== stepId) } : t)) }));
+}
+
+/** Ticks a step on or off. Ticking one counts as working on the task today. */
+export function toggleStep(taskId: string, stepId: string) {
+  const step = state.tasks.find((t) => t.id === taskId)?.steps?.find((x) => x.id === stepId);
+  if (!step) return;
+  update((s) => ({
+    tasks: s.tasks.map((t) => (t.id === taskId ? { ...t, steps: (t.steps ?? []).map((x) => (x.id === stepId ? { ...x, done: !x.done } : x)) } : t)),
+  }));
+  if (!step.done) logProgress(taskId);
+}
+
+/**
+ * "Worked on it today": the first progress on a task each day grows one flower (at the task's rare
+ * odds), so steady work on a long task is rewarded before it is finished. These flowers stay even if
+ * the task is later unticked; the finishing reward still comes when the whole task is done.
+ * Returns true when this was the first progress today.
+ */
+export function logProgress(taskId: string): boolean {
+  const task = state.tasks.find((t) => t.id === taskId);
+  const today = dayKey();
+  if (!task || task.done || task.workedOn?.includes(today)) return false;
+  update((s) => ({ tasks: s.tasks.map((t) => (t.id === taskId ? { ...t, workedOn: [...(t.workedOn ?? []), today] } : t)) }));
+  bloom('task', { ref: `${taskId}:progress:${today}`, note: `Progress: ${task.title}`, rareChance: rewardFor(task).rare });
+  return true;
 }
 
 /**

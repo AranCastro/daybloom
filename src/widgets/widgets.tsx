@@ -384,6 +384,7 @@ export function TasksWidget({ s, p, height, flash }: WidgetProps) {
             <FlexWidget style={{ flex: 1 }}>
               <TextWidget text={t.title} style={{ fontSize: 14, fontFamily: BODY, color: p.ink }} maxLines={1} truncate="END" />
             </FlexWidget>
+            {t.steps && <TextWidget text={t.steps} style={{ fontSize: 11, fontFamily: BOLD, color: p.dim, marginLeft: 6 }} />}
             {t.due && <TextWidget text={t.due.text} style={{ fontSize: 11, fontFamily: BOLD, color: t.due.late ? p.accent : p.dim, marginLeft: 8 }} />}
           </FlexWidget>
         ))
@@ -700,6 +701,7 @@ export function MatrixWidget({ s, p, width, height, scale = 1, checkbox = true }
                       truncate="END"
                     />
                   </FlexWidget>
+                  {t.steps && w >= 170 && <TextWidget text={t.steps} style={{ fontSize: 10.5 * k, fontFamily: BOLD, color: p.dim, marginLeft: 5 }} />}
                   {t.due && w >= 200 && <TextWidget text={t.due.text} style={{ fontSize: 10.5 * k, fontFamily: BOLD, color: t.due.late ? p.accent : p.dim, marginLeft: 6 }} />}
                 </FlexWidget>
               ))

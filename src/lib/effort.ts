@@ -53,10 +53,25 @@ export function allowedEfforts(energy: EnergyLevel | undefined): Effort[] {
   return ['quick', 'light', 'moderate', 'deep'];
 }
 
-/** Tasks the day's energy can carry; finished ones always stay. */
-export function fitEnergy<T extends Pick<Task, 'effort' | 'done'>>(tasks: T[], energy: EnergyLevel | undefined): T[] {
+/** A task split into steps with some still open: on a tired day its next small step can still be done. */
+export function hasOpenSteps(t: Pick<Task, 'steps'>): boolean {
+  return !!t.steps?.some((x) => !x.done);
+}
+
+/**
+ * Tasks the day's energy can carry; finished ones always stay. A big task that has open steps stays
+ * too, because only its next step is asked of you (the task row shows it).
+ */
+export function fitEnergy<T extends Pick<Task, 'effort' | 'done' | 'steps'>>(tasks: T[], energy: EnergyLevel | undefined): T[] {
   const ok = allowedEfforts(energy);
-  return tasks.filter((t) => t.done || ok.includes(effortOf(t)));
+  return tasks.filter((t) => t.done || ok.includes(effortOf(t)) || hasOpenSteps(t));
+}
+
+/** "2 of 5 steps" progress, or null for a task without steps. */
+export function stepProgress(t: Pick<Task, 'steps'>): { done: number; total: number; next: string | null } | null {
+  if (!t.steps?.length) return null;
+  const done = t.steps.filter((x) => x.done).length;
+  return { done, total: t.steps.length, next: t.steps.find((x) => !x.done)?.title ?? null };
 }
 
 /** Heaviest effort first, keeping the given order within each level (the sort is stable). */
