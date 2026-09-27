@@ -41,8 +41,8 @@ export type Task = {
   createdAt: number;
   /** Position set by hand (Arrange); tasks without one follow, in the automatic order. */
   order?: number;
-  /** Quick and easy: the only tasks the matrix shows on a low-energy day. */
-  easy?: boolean;
+  /** How much it takes (lib/effort): the day's energy decides which levels the matrix shows. */
+  effort?: 'quick' | 'light' | 'moderate' | 'deep';
 };
 
 /** Morning energy: 1 low, 2 medium, 3 high. */
@@ -242,6 +242,11 @@ function mergeSaved(saved: Partial<AppState>): AppState {
   merged.checkinPlace = { ...saved.checkinPlace };
   merged.pookalams = [...(saved.pookalams ?? [])];
   merged.energy = { ...saved.energy };
+  // 2.2 had a single "Quick and easy" flag; it is now the Quick effort level.
+  merged.tasks = (merged.tasks ?? []).map((t) => {
+    const { easy, ...rest } = t as Task & { easy?: boolean };
+    return easy && !rest.effort ? { ...rest, effort: 'quick' as const } : rest;
+  });
   merged.settings = { ...DEFAULT_SETTINGS, ...saved.settings };
   merged.backup = { ...initial.backup, ...saved.backup };
   // Nested objects are merged too, so fields added in later versions get their defaults.
@@ -516,12 +521,12 @@ function newId(): string {
   return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
 }
 
-export function addTask(title: string, quadrant: Quadrant, due?: string, easy?: boolean) {
-  const task: Task = { id: newId(), title: title.trim(), quadrant, due, done: false, createdAt: Date.now(), ...(easy ? { easy: true } : {}) };
+export function addTask(title: string, quadrant: Quadrant, due?: string, effort?: Task['effort']) {
+  const task: Task = { id: newId(), title: title.trim(), quadrant, due, done: false, createdAt: Date.now(), ...(effort ? { effort } : {}) };
   update((s) => ({ tasks: [...s.tasks, task] }));
 }
 
-export function editTask(id: string, patch: Partial<Pick<Task, 'title' | 'quadrant' | 'due' | 'easy'>>) {
+export function editTask(id: string, patch: Partial<Pick<Task, 'title' | 'quadrant' | 'due' | 'effort'>>) {
   // A task moved to another quadrant joins it at the end of the arranged tasks.
   update((s) => ({
     tasks: s.tasks.map((t) => (t.id === id ? { ...t, ...patch, order: patch.quadrant && patch.quadrant !== t.quadrant ? undefined : t.order } : t)),

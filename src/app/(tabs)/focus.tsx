@@ -69,13 +69,14 @@ export default function FocusScreen() {
   const lowMood = useAppState((s) => isLow(s.checkins[todayKey]));
   const lowEnergy = useAppState((s) => s.energy[todayKey] === 1);
   const lowToday = lowMood || lowEnergy;
+  const highEnergy = useAppState((s) => s.energy[todayKey] === 3);
   const defaultPreset = useAppState((s) => s.settings.focusPreset);
 
   const [now, setNow] = useState(() => Date.now());
   const [reward, setReward] = useState<{ flower: FlowerKind; session: FocusSession } | null>(null);
   const [breakOver, setBreakOver] = useState(false);
   const [preset, setPreset] = useState<FocusPreset>(
-    active?.preset ?? (params.preset && params.preset in PRESETS ? (params.preset as FocusPreset) : lowToday ? 'gentle' : defaultPreset),
+    active?.preset ?? (params.preset && params.preset in PRESETS ? (params.preset as FocusPreset) : lowToday ? 'gentle' : highEnergy ? 'deep' : defaultPreset),
   );
   const [taskId, setTaskId] = useState<string | undefined>(params.task);
 
