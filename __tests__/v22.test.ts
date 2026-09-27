@@ -22,6 +22,7 @@ jest.mock('expo-notifications', () => ({
 }));
 
 import { addDays, dayKey, fromKey } from '@/lib/dates';
+import { deepFirst, fitEnergy } from '@/lib/effort';
 import { handleCheckinAction } from '@/lib/notification-checkin';
 import { findPatterns, MIN_DAYS } from '@/lib/patterns';
 import * as store from '@/lib/store';
@@ -78,7 +79,7 @@ describe('patterns', () => {
   });
 });
 
-describe('energy and easy tasks', () => {
+describe('energy and effort levels', () => {
   beforeEach(reset);
 
   it('records energy and clears it on a second tap', () => {
@@ -88,12 +89,29 @@ describe('energy and easy tasks', () => {
     expect(store.getState().energy[TODAY]).toBeUndefined();
   });
 
-  it('marks tasks quick and easy on add and edit', () => {
-    store.addTask('Reply to email', 1, undefined, true);
+  it('sets an effort level on add and edit', () => {
+    store.addTask('Reply to email', 1, undefined, 'quick');
     const t = store.getState().tasks.find((x) => x.title === 'Reply to email')!;
-    expect(t.easy).toBe(true);
-    store.editTask(t.id, { easy: false });
-    expect(store.getState().tasks.find((x) => x.id === t.id)?.easy).toBe(false);
+    expect(t.effort).toBe('quick');
+    store.editTask(t.id, { effort: 'deep' });
+    expect(store.getState().tasks.find((x) => x.id === t.id)?.effort).toBe('deep');
+  });
+
+  it('energy decides which effort levels show', () => {
+    const mk = (effort: store.Task['effort'], done = false) => ({ effort, done });
+    const all = [mk('quick'), mk('light'), mk('moderate'), mk('deep'), mk(undefined), mk('deep', true)];
+    expect(fitEnergy(all, 1).map((t) => t.effort)).toEqual(['quick', 'deep']); // Quick, plus the finished deep task
+    expect(fitEnergy(all, 2).map((t) => t.effort)).toEqual(['quick', 'light', 'moderate', undefined, 'deep']);
+    expect(fitEnergy(all, 3)).toHaveLength(6);
+    expect(fitEnergy(all, undefined)).toHaveLength(6);
+    expect(deepFirst([mk('quick'), mk('deep'), mk(undefined)]).map((t) => t.effort)).toEqual(['deep', undefined, 'quick']);
+  });
+
+  it('turns the old "Quick and easy" flag into the Quick level', () => {
+    store.replaceState({ onboarded: true, tasks: [{ id: 'x', title: 'Old', quadrant: 1, done: false, createdAt: 1, easy: true } as never] });
+    const t = store.getState().tasks[0] as store.Task & { easy?: boolean };
+    expect(t.effort).toBe('quick');
+    expect(t.easy).toBeUndefined();
   });
 });
 

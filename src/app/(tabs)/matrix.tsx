@@ -14,7 +14,10 @@ import { useToday } from '@/hooks/use-today';
 import { useQuadrantNames } from '@/lib/labels';
 import { dayKey } from '@/lib/dates';
 import { QUADRANTS, quadrantOf } from '@/lib/quadrants';
+import { deepFirst, fitEnergy } from '@/lib/effort';
 import { openTasks, Quadrant, Task, useAppState } from '@/lib/store';
+
+const ENERGY_TINT = { 1: '#C9503B', 2: '#D08A2E', 3: '#3A9477' } as const;
 
 /** '#RRGGBB' -> 'rgba(r,g,b,a)' so gradients fade within the same hue. */
 function withAlpha(hex: string, a: number): string {
@@ -28,9 +31,10 @@ export default function Matrix() {
   const [sheet, setSheet] = useState<{ open: boolean; task?: Task | null }>({ open: false });
   const today = useToday();
 
-  const lowEnergy = useAppState((s) => s.energy[today] === 1);
+  const energy = useAppState((s) => s.energy[today]);
   const [showAll, setShowAll] = useState(false);
-  const easyOnly = lowEnergy && !showAll;
+  const filtering = !!energy && !showAll;
+  const shown = filtering ? fitEnergy(tasks, energy) : tasks;
   const open = tasks.filter((x) => !x.done);
   const dueToday = open.filter((x) => x.due && x.due <= today).length;
 
@@ -55,14 +59,20 @@ export default function Matrix() {
           </Text>
         </Animated.View>
 
-        {lowEnergy && (
-          <Pressable onPress={() => (tap(), setShowAll(!showAll))} accessibilityRole="button" style={[styles.energy, { backgroundColor: '#3A947718', borderColor: '#3A947755' }]}>
-            <Text style={{ fontSize: 16 }}>🪫</Text>
+        {!!energy && (
+          <Pressable onPress={() => (tap(), setShowAll(!showAll))} accessibilityRole="button" style={[styles.energy, { backgroundColor: ENERGY_TINT[energy] + '18', borderColor: ENERGY_TINT[energy] + '55' }]}>
+            <Text style={{ fontSize: 16 }}>{energy === 1 ? '🪫' : energy === 2 ? '🔋' : '⚡'}</Text>
             <Text variant="small" style={{ flex: 1, fontSize: 12.5, color: t.text }}>
-              {easyOnly ? 'Low energy today: showing quick and easy tasks only.' : 'Showing everything.'}
+              {!filtering
+                ? 'Showing every task.'
+                : energy === 1
+                  ? 'Low energy: showing Quick tasks only.'
+                  : energy === 2
+                    ? 'Medium energy: Deep work is hidden for today.'
+                    : 'High energy: Deep work first.'}
             </Text>
             <Text variant="small" color="accent" style={{ fontSize: 12.5 }}>
-              {easyOnly ? 'Show all' : 'Easy only'}
+              {filtering ? (energy === 3 ? 'Usual order' : 'Show all') : 'Fit my energy'}
             </Text>
           </Pressable>
         )}
@@ -75,7 +85,7 @@ export default function Matrix() {
                   key={info.id}
                   entering={FadeInDown.delay(80 * (start + i)).duration(420)}
                   style={{ flex: 1 }}>
-                  <QuadrantCard q={info.id} tasks={easyOnly ? tasks.filter((x) => x.easy || x.done) : tasks} today={today} onOpen={(task) => setSheet({ open: true, task })} />
+                  <QuadrantCard q={info.id} tasks={shown} keepOrder={filtering && energy === 3} today={today} onOpen={(task) => setSheet({ open: true, task })} />
                 </Animated.View>
               ))}
             </View>
@@ -98,12 +108,13 @@ export default function Matrix() {
   );
 }
 
-function QuadrantCard({ q, tasks, today, onOpen }: { q: Quadrant; tasks: Task[]; today: string; onOpen: (t: Task) => void }) {
+function QuadrantCard({ q, tasks, today, onOpen, keepOrder }: { q: Quadrant; tasks: Task[]; today: string; onOpen: (t: Task) => void; keepOrder?: boolean }) {
   const t = useTheme();
   const { color, soft } = useQuadrantColors(q);
   const info = quadrantOf(q);
   const name = useQuadrantNames()(q);
-  const list = openTasks(tasks, q);
+  // On a high-energy day deep work comes first; otherwise the usual order (arranged, then due).
+  const list = keepOrder ? deepFirst(openTasks(tasks, q)) : openTasks(tasks, q);
   // Keep today's completions visible (struck through) so ticking something off feels rewarded.
   const doneToday = tasks.filter((x) => x.quadrant === q && x.done && x.doneAt && dayKey(new Date(x.doneAt)) === today);
 

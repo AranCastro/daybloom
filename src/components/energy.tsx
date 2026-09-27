@@ -1,4 +1,4 @@
-/** Morning energy: low, medium or high. A low day trims the matrix to easy tasks and suggests 15-minute focus. */
+/** Morning energy: low, medium or high. It decides which effort levels the matrix shows (lib/effort). */
 import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
@@ -9,9 +9,9 @@ import { useTheme } from '@/hooks/use-theme';
 import { EnergyLevel, setEnergy, useAppState } from '@/lib/store';
 
 export const ENERGY: { value: EnergyLevel; label: string; emoji: string; line: string; tint: string }[] = [
-  { value: 1, label: 'Low', emoji: '🪫', line: 'Go easy. The matrix shows only quick and easy tasks today.', tint: '#C9503B' },
-  { value: 2, label: 'Medium', emoji: '🔋', line: 'A steady day. Pick one thing that matters.', tint: '#D08A2E' },
-  { value: 3, label: 'High', emoji: '⚡', line: 'Good energy. A good day for a Deep 50 focus session.', tint: '#3A9477' },
+  { value: 1, label: 'Low', emoji: '🪫', line: 'Go easy. The matrix shows Quick tasks only today.', tint: '#C9503B' },
+  { value: 2, label: 'Medium', emoji: '🔋', line: 'A steady day. Deep work is hidden; pick one thing that matters.', tint: '#D08A2E' },
+  { value: 3, label: 'High', emoji: '⚡', line: 'Good energy. Deep work comes first today; try a Deep 50 focus session.', tint: '#3A9477' },
 ];
 
 export function EnergyCard({ day, hour }: { day: string; hour: number }) {
