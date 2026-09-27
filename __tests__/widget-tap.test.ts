@@ -11,6 +11,7 @@ jest.mock('@/lib/kv', () => {
 jest.mock('@/widgets/sync', () => ({ refreshWidgets: jest.fn(async () => undefined) }));
 
 import * as store from '@/lib/store';
+import { snapshot } from '@/widgets/data';
 import { widgetTaskHandler } from '@/widgets/task-handler';
 
 function tap(widgetName: string, clickAction: string, id: string) {
@@ -88,6 +89,49 @@ describe('widget lock and undo', () => {
     await tap('Tasks', 'TASK_DONE', t.id);
     const later = Date.now() + store.WIDGET_UNDO_MS + 1000;
     expect(store.widgetUndoFor(store.getState(), 'Tasks', later)).toBeNull();
+  });
+});
+
+describe('big tasks with steps on the widgets', () => {
+  it('a tap ticks the next step, not the whole task; the last step finishes it', async () => {
+    const t = store.addTask('Write chapter 3', 1, undefined, 'deep');
+    store.addStep(t.id, 'Outline');
+    store.addStep(t.id, 'Draft');
+    const get = () => store.getState().tasks.find((x) => x.id === t.id)!;
+    const blooms = store.getState().bloomCount;
+    await tap('Tasks', 'TASK_DONE', t.id);
+    expect(get().done).toBe(false);
+    expect(get().steps?.map((x) => x.done)).toEqual([true, false]);
+    expect(store.getState().bloomCount).toBe(blooms + 1); // today's progress flower
+    // A second tap the same day ticks the last step and finishes the task (two flowers for Deep work).
+    await tap('Tasks', 'TASK_DONE', t.id);
+    expect(get().done).toBe(true);
+    expect(store.getState().bloomCount).toBe(blooms + 3);
+  });
+
+  it('Undo unticks the step that was ticked, and the finish with it', async () => {
+    const t = store.addTask('Field report', 2, undefined, 'moderate');
+    store.addStep(t.id, 'Collect photos');
+    store.addStep(t.id, 'Write summary');
+    const get = () => store.getState().tasks.find((x) => x.id === t.id)!;
+    await tap('Matrix', 'TASK_TOGGLE', t.id);
+    expect(store.widgetUndoFor(store.getState(), 'Matrix')?.undoStep?.title).toBe('Collect photos');
+    await widgetClick('Matrix', 'WIDGET_UNDO', { widget: 'Matrix' });
+    expect(get().steps?.every((x) => !x.done)).toBe(true);
+    await tap('Matrix', 'TASK_TOGGLE', t.id);
+    await tap('Matrix', 'TASK_TOGGLE', t.id);
+    expect(get().done).toBe(true);
+    await widgetClick('Matrix', 'WIDGET_UNDO', { widget: 'Matrix' });
+    expect(get().done).toBe(false);
+    expect(get().steps?.map((x) => x.done)).toEqual([true, false]);
+  });
+
+  it('the widget shows the next step', async () => {
+    const t = store.addTask('Map the watershed', 1);
+    store.addStep(t.id, 'Download DEM');
+    const item = snapshot(store.getState()).tasks.items.find((x) => x.id === t.id);
+    expect(item?.next).toBe('Download DEM');
+    expect(item?.steps).toBe('0/1');
   });
 });
 

@@ -2,7 +2,7 @@
  * Runs in the background when Android asks for a widget update or a widget is tapped.
  * Taps that open a screen are handled natively (OPEN_URI); this handles the rest:
  *   MOOD       check in from the home screen
- *   TASK_DONE    tick off a task (grows a flower, as in the app)
+ *   TASK_DONE    tick off a task (grows a flower, as in the app); a task with steps ticks its next step
  *   TASK_TOGGLE  tick or untick a task from the matrix widget (unticking takes its flower back)
  *   WIDGET_UNDO  put back the task last ticked off from this widget
  *   WIDGET_LOCK  lock or unlock ticking on this widget (locked, task taps open the app)
@@ -10,6 +10,7 @@
  */
 import type { WidgetTaskHandlerProps } from 'react-native-android-widget';
 
+import { stepProgress } from '@/lib/effort';
 import { FocusPreset, pauseTimer, PRESETS, resumeTimer, startFocus, stopTimer } from '@/lib/focus';
 import { flowerOf } from '@/lib/flowers';
 import { moodOf, MoodValue } from '@/lib/moods';
@@ -38,13 +39,15 @@ export async function widgetTaskHandler({ widgetInfo, widgetAction, clickAction,
     if (clickAction === 'TASK_DONE' || clickAction === 'TASK_TOGGLE') {
       const id = String(clickActionData?.id ?? '');
       const widget: TaskWidget = clickAction === 'TASK_DONE' ? 'Tasks' : 'Matrix';
-      if (widgetTickTask(widget, id, clickAction === 'TASK_DONE' ? 'done' : 'toggle')) {
-        const task = getState().tasks.find((t) => t.id === id);
-        const b = getState().garden[0];
-        const grew = getState().garden.length - before;
-        if (task?.done)
-          setFlash(name, grew > 1 ? `Done · ${grew} flowers bloomed` : b && b.ref === id ? `Done · ${flowerOf(b.flower).name} bloomed` : 'Done');
-      }
+      const changed = widgetTickTask(widget, id, clickAction === 'TASK_DONE' ? 'done' : 'toggle');
+      const task = getState().tasks.find((t) => t.id === id);
+      const b = getState().garden[0];
+      const grew = getState().garden.length - before;
+      const bloomed = grew > 1 ? ` · ${grew} flowers bloomed` : grew === 1 && b ? ` · ${flowerOf(b.flower).name} bloomed` : '';
+      if (changed === 'step' && task) {
+        const p = stepProgress(task);
+        setFlash(name, `Step done · ${p?.done}/${p?.total}${bloomed}`);
+      } else if (changed === 'task' && task?.done) setFlash(name, `Done${bloomed}`);
     }
 
     if (clickAction === 'FOCUS_START') {

@@ -50,8 +50,8 @@ export function snapshot(s: AppState, now: Date = new Date()) {
     circle: circleCells(s.people),
     locks: { Tasks: !!s.widgetLocks?.Tasks, Matrix: !!s.widgetLocks?.Matrix },
     undo: {
-      Tasks: widgetUndoFor({ widgetUndo: s.widgetUndo ?? null, tasks: s.tasks }, 'Tasks', now.getTime())?.title ?? null,
-      Matrix: widgetUndoFor({ widgetUndo: s.widgetUndo ?? null, tasks: s.tasks }, 'Matrix', now.getTime())?.title ?? null,
+      Tasks: undoLabel(widgetUndoFor({ widgetUndo: s.widgetUndo ?? null, tasks: s.tasks }, 'Tasks', now.getTime())),
+      Matrix: undoLabel(widgetUndoFor({ widgetUndo: s.widgetUndo ?? null, tasks: s.tasks }, 'Matrix', now.getTime())),
     },
   };
 }
@@ -63,7 +63,7 @@ function matrixCells(tasks: Task[], today: string, withDone: boolean) {
     const done = withDone ? tasks.filter((t) => t.quadrant === q && t.done).sort((a, b) => (b.doneAt ?? 0) - (a.doneAt ?? 0)) : [];
     return {
       q,
-      tasks: [...open, ...done].map((t) => ({ id: t.id, title: t.title, done: t.done, due: t.done ? null : dueText(t.due, today), effort: effortMark(t), steps: stepsText(t) })),
+      tasks: [...open, ...done].map((t) => ({ id: t.id, title: t.title, done: t.done, due: t.done ? null : dueText(t.due, today), effort: effortMark(t), steps: stepsText(t), next: t.done ? null : (stepProgress(t)?.next ?? null) })),
     };
   });
 }
@@ -103,10 +103,15 @@ function focusList(tasks: Task[], today: string, low: boolean) {
   const limit = low ? 1 : 4;
   const doneToday = tasks.filter((t) => t.done && t.doneAt && dayKey(new Date(t.doneAt)) === today).length;
   return {
-    items: all.slice(0, limit).map((t) => ({ id: t.id, title: t.title, quadrant: t.quadrant, due: dueText(t.due, today), effort: effortMark(t), steps: stepsText(t) })),
+    items: all.slice(0, limit).map((t) => ({ id: t.id, title: t.title, quadrant: t.quadrant, due: dueText(t.due, today), effort: effortMark(t), steps: stepsText(t), next: t.done ? null : (stepProgress(t)?.next ?? null) })),
     more: Math.max(0, all.length - limit),
     doneToday,
   };
+}
+
+/** What Undo would put back: the step's name when a step was ticked, else the task's. */
+function undoLabel(hit: ReturnType<typeof widgetUndoFor>): string | null {
+  return hit ? (hit.undoStep?.title ?? hit.title) : null;
 }
 
 /** The task's effort symbol (🪶 Quick, 🌿 Light, 🌳 Moderate, 🏔️ Deep work), or null when none is set. */
