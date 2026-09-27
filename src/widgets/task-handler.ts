@@ -14,7 +14,7 @@ import { stepProgress } from '@/lib/effort';
 import { FocusPreset, pauseTimer, PRESETS, resumeTimer, startFocus, stopTimer } from '@/lib/focus';
 import { flowerOf } from '@/lib/flowers';
 import { moodOf, MoodValue } from '@/lib/moods';
-import { awardBadges, getState, recordMood, reloadState, TaskWidget, toggleWidgetLock, widgetTickTask, widgetUndo } from '@/lib/store';
+import { awardBadges, flushState, getState, recordMood, reloadState, TaskWidget, toggleWidgetLock, widgetTickTask, widgetUndo } from '@/lib/store';
 import { renderFor, setFlash } from '@/widgets/catalogue';
 import { refreshWidgets } from '@/widgets/sync';
 
@@ -23,7 +23,8 @@ export async function widgetTaskHandler({ widgetInfo, widgetAction, clickAction,
   const name = widgetInfo.widgetName;
 
   if (widgetAction === 'WIDGET_CLICK') {
-    reloadState();
+    // Silent: this handler redraws the widgets itself below, so the reload need not trigger another redraw.
+    reloadState({ silent: true });
     const before = getState().garden.length;
 
     if (clickAction === 'MOOD') {
@@ -73,7 +74,9 @@ export async function widgetTaskHandler({ widgetInfo, widgetAction, clickAction,
     }
   }
 
-  if (widgetAction !== 'WIDGET_CLICK') reloadState();
+  if (widgetAction !== 'WIDGET_CLICK') reloadState({ silent: true });
+  // Android may stop this background task as soon as it returns: write the tap's changes now.
+  flushState();
 
   const tree = renderFor(name, getState(), widgetInfo.width, widgetInfo.height);
   if (tree) renderWidget(tree);

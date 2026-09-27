@@ -40,12 +40,16 @@ export function nearestPlace(places: Place[], here: Coords, radius = 400): Place
   return best?.p ?? null;
 }
 
-/** The phone's position, asking for permission if `ask` is true. Null when refused or unavailable. */
-export async function currentCoords(ask: boolean): Promise<Coords | null> {
+/**
+ * The phone's position, asking for permission if `ask` is true. Null when refused or unavailable.
+ * `cheap` only uses a recent position the phone already has, never waiting for a new fix.
+ */
+export async function currentCoords(ask: boolean, cheap = false): Promise<Coords | null> {
   try {
     const perm = ask ? await Location.requestForegroundPermissionsAsync() : await Location.getForegroundPermissionsAsync();
     if (!perm.granted) return null;
     const last = Platform.OS === 'web' ? null : await Location.getLastKnownPositionAsync({ maxAge: 10 * 60_000 });
+    if (!last && cheap) return null;
     const pos = last ?? (await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }));
     return { lat: pos.coords.latitude, lon: pos.coords.longitude };
   } catch {

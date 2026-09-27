@@ -37,6 +37,17 @@ export function backupFileName(now = new Date()): string {
   return `daybloom-backup-${dayKey(now)}.json`;
 }
 
+/** Far above any real backup (a full garden and years of check-ins are well under 5 MB). */
+export const MAX_BACKUP_BYTES = 25 * 1024 * 1024;
+
+/** File types the restore picker offers. Some Android file managers label .json files as octet-stream. */
+export const BACKUP_TYPES = ['application/json', 'text/plain', 'application/octet-stream'];
+
+/** Refuses a file too large to be a backup before it is read into memory (a video picked by mistake). */
+export function checkBackupSize(bytes: number | null | undefined): { ok: false; reason: string } | null {
+  return typeof bytes === 'number' && bytes > MAX_BACKUP_BYTES ? { ok: false, reason: 'This file is too large to be a Daybloom backup, so it was not opened.' } : null;
+}
+
 const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 
 /** Reads a backup file and checks it really is one before anything is replaced. */
@@ -54,7 +65,8 @@ export function parseBackup(text: string): { ok: true; backup: BackupFile; summa
     return { ok: false, reason: 'This backup was made by a newer version of Daybloom. Update the app, then try again.' };
   }
   const s = data.state as Record<string, unknown>;
-  // Every list and map must have the right shape, or the app could break after restoring.
+  // A file whose main lists are the wrong kind is refused outright; damaged entries inside them are
+  // dropped on restore (lib/sanitise), so one bad line cannot stop the app from opening.
   const lists = ['tasks', 'people', 'garden', 'nudges'] as const;
   const maps = ['checkins', 'badges'] as const;
   if (lists.some((k) => s[k] !== undefined && !Array.isArray(s[k])) || maps.some((k) => s[k] !== undefined && !isObj(s[k]))) {

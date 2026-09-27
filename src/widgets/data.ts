@@ -25,7 +25,9 @@ export function snapshot(s: AppState, now: Date = new Date()) {
   const bloomsToday = s.garden.filter((b) => dayKey(new Date(b.at)) === today).length;
   const latest: FlowerKind | null = s.garden[0] ? flowerOf(s.garden[0].flower) : null;
   const total = s.bloomCount ?? s.garden.length;
-  const toGolden = GOLDEN_EVERY - (total % GOLDEN_EVERY);
+  // The Golden Lotus follows every flower ever grown (a flower taken back does not count down again).
+  const ever = s.bloomsEver ?? total;
+  const toGolden = GOLDEN_EVERY - (ever % GOLDEN_EVERY);
 
   return {
     onboarded: s.onboarded,

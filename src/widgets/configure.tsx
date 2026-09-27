@@ -6,7 +6,7 @@
 import { Fraunces_600SemiBold } from '@expo-google-fonts/fraunces';
 import { Manrope_500Medium, Manrope_700Bold } from '@expo-google-fonts/manrope';
 import { useFonts } from 'expo-font';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import type { WidgetConfigurationScreenProps } from 'react-native-android-widget';
 
@@ -15,7 +15,7 @@ import { Backdrop } from '@/components/ui';
 import { WidgetMock } from '@/components/widget-mock';
 import { WidgetStyleControls } from '@/components/widget-style';
 import { useIsDark, useTheme } from '@/hooks/use-theme';
-import { getState, reloadState, setWidgetPrefs, useAppState, WIDGET_KEYS, WidgetKey } from '@/lib/store';
+import { getState, reloadState, setWidgetPrefs, useAppState, WIDGET_KEYS, WidgetKey, WidgetPrefs } from '@/lib/store';
 import { lookFor, renderFor, specOf } from '@/widgets/catalogue';
 import { snapshot } from '@/widgets/data';
 import { refreshWidgets } from '@/widgets/sync';
@@ -27,12 +27,14 @@ export function WidgetConfigurationScreen({ widgetInfo, renderWidget, setResult 
   const { width: screen } = useWindowDimensions();
   const name = (WIDGET_KEYS.includes(widgetInfo.widgetName as WidgetKey) ? widgetInfo.widgetName : 'Tasks') as WidgetKey;
   const spec = specOf(name)!;
-  // The app may have changed things since this window's copy of the state was read.
-  const [original] = useState(() => {
-    reloadState();
-    return getState().widgetPrefs[name];
-  });
   const state = useAppState((s) => s);
+  // The app may have changed things since this window's copy of the state was read. Reloading in an
+  // effect (not during render) lets every subscriber update normally; Cancel puts back what was read.
+  const original = useRef<WidgetPrefs | null>(null);
+  useEffect(() => {
+    reloadState();
+    original.current = getState().widgetPrefs[name];
+  }, [name]);
 
   // Redraw the real widget as the settings change.
   useEffect(() => {
@@ -44,7 +46,7 @@ export function WidgetConfigurationScreen({ widgetInfo, renderWidget, setResult 
   const Widget = spec.render;
 
   async function finish(ok: boolean) {
-    if (!ok) setWidgetPrefs(name, original);
+    if (!ok && original.current) setWidgetPrefs(name, original.current);
     // Other widgets of the same kind share these settings.
     await refreshWidgets().catch(() => undefined);
     setResult(ok ? 'ok' : 'cancel');
