@@ -117,6 +117,8 @@ export type AppState = {
   bloomsEver: number;
   /** Tasks finished per day that were later cleared, so the calendar keeps their shading. */
   clearedWork: Record<string, number>;
+  /** Focus sessions per day that fell off the 500-session list, so shading and streaks keep them. */
+  clearedFocus: Record<string, { sessions: number; minutes: number }>;
   /** The user's own names for the matrix quadrants and circle sections (empty = the default name). */
   labels: { matrix: Partial<Record<Quadrant, string>>; circle: Partial<Record<CircleQuadrant, string>> };
   /** Profile picture: a photo saved in the app's storage, or one of the built-in avatars. */
@@ -238,6 +240,7 @@ const initial: AppState = {
   bloomCount: 0,
   bloomsEver: 0,
   clearedWork: {},
+  clearedFocus: {},
   labels: { matrix: {}, circle: {} },
   avatar: null,
 };
@@ -276,6 +279,7 @@ function mergeSaved(raw: Partial<AppState>): AppState {
   if (saved.bloomCount === undefined) merged.bloomCount = merged.garden.length;
   merged.bloomsEver = Math.max(saved.bloomsEver ?? 0, merged.bloomCount);
   merged.clearedWork = { ...saved.clearedWork };
+  merged.clearedFocus = { ...saved.clearedFocus };
   merged.labels = { matrix: { ...saved.labels?.matrix }, circle: { ...saved.labels?.circle } };
   // Older versions kept a separate ntfy buddy; now the buddy is a person in the circle.
   const legacy = (saved as { buddy?: { name?: string } | null }).buddy;

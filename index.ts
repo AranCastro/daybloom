@@ -11,7 +11,7 @@ import { registerWidgetConfigurationScreen, registerWidgetTaskHandler } from 're
 
 import { handleCheckinAction, NOTIFICATION_TASK } from '@/lib/notification-checkin';
 import { notifyNudgeReady } from '@/lib/reminders';
-import { onNudgeReady } from '@/lib/store';
+import { flushState, onNudgeReady } from '@/lib/store';
 import { WidgetConfigurationScreen } from '@/widgets/configure';
 import { refreshWidgets } from '@/widgets/sync';
 import { widgetTaskHandler } from '@/widgets/task-handler';
@@ -23,8 +23,10 @@ if (Platform.OS === 'android') {
   // Mood buttons on the daily reminder: check in without opening the app.
   TaskManager.defineTask<Notifications.NotificationTaskPayload>(NOTIFICATION_TASK, async ({ data }) => {
     if (data && 'actionIdentifier' in data) {
-      const r = data as unknown as { actionIdentifier: string; notification?: { request?: { identifier?: string } } };
-      if (await handleCheckinAction(r.actionIdentifier, r.notification?.request?.identifier)) await refreshWidgets().catch(() => undefined);
+      const r = data as unknown as { actionIdentifier: string; notification?: { date?: number; request?: { identifier?: string } } };
+      if (await handleCheckinAction(r.actionIdentifier, r.notification?.request?.identifier, r.notification?.date)) await refreshWidgets().catch(() => undefined);
+      // Write the check-in before the background task returns and the process may be reclaimed.
+      flushState();
     }
   });
   void Notifications.registerTaskAsync(NOTIFICATION_TASK).catch(() => undefined);

@@ -2,7 +2,7 @@
   "expo": {
     "name": "Daybloom",
     "slug": "daybloom",
-    "version": "2.3.1",
+    "version": "3.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "daybloom",
@@ -14,7 +14,7 @@
     },
     "android": {
       "package": "online.draran.daybloom",
-      "versionCode": 22,
+      "versionCode": 23,
       "adaptiveIcon": {
         "backgroundColor": "#F6F2EC",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -24,7 +24,8 @@
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "android.permission.POST_NOTIFICATIONS",
-        "android.permission.SCHEDULE_EXACT_ALARM"
+        "android.permission.SCHEDULE_EXACT_ALARM",
+        "android.permission.USE_EXACT_ALARM"
       ],
       "blockedPermissions": [
         "android.permission.WRITE_CONTACTS",
@@ -34,7 +35,7 @@
         "android.permission.RECORD_AUDIO",
         "android.permission.ACCESS_BACKGROUND_LOCATION"
       ],
-      "allowBackup": true
+      "allowBackup": false
     },
     "web": {
       "output": "single",
@@ -230,7 +231,9 @@
           "isAndroidBackgroundLocationEnabled": false,
           "isAndroidForegroundServiceEnabled": false
         }
-      ]
+      ],
+      "expo-secure-store",
+      "expo-screen-capture"
     ],
     "experiments": {
       "typedRoutes": true,

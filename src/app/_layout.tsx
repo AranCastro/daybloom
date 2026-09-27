@@ -10,11 +10,13 @@ import { ReducedMotionConfig, ReduceMotion } from 'react-native-reanimated';
 
 import { BloomToast } from '@/components/garden';
 import { LockGate } from '@/components/lock-screen';
+import { SaveFailedBanner } from '@/components/save-failed-banner';
 import { useIsDark, useTheme } from '@/hooks/use-theme';
 import * as Notifications from 'expo-notifications';
 
 import { startLockWatch } from '@/lib/app-lock';
 import { handleCheckinAction } from '@/lib/notification-checkin';
+import { prepareNotifications } from '@/lib/reminders';
 import { weeklyBackupIfDue } from '@/lib/backup';
 import { startFocusSoundSync } from '@/lib/focus-sound';
 import { refreshWeather } from '@/lib/weather';
@@ -65,11 +67,14 @@ export default function RootLayout() {
   useEffect(() => startFocusSoundSync(getState, subscribe), []);
   useEffect(() => startLockWatch(), []);
 
-  // A mood button on the reminder pressed while the app is open.
+  // A mood button on the reminder pressed while the app is open (a press already handled by the
+  // background task is skipped inside handleCheckinAction).
   useEffect(() => {
     if (Platform.OS === 'web') return;
+    // Channels and the reminder's buttons, once, so a focus alarm is scheduled without delay.
+    void prepareNotifications();
     const sub = Notifications.addNotificationResponseReceivedListener((r) => {
-      void handleCheckinAction(r.actionIdentifier, r.notification.request.identifier);
+      void handleCheckinAction(r.actionIdentifier, r.notification.request.identifier, r.notification.date);
     });
     return () => sub.remove();
   }, []);
@@ -95,6 +100,7 @@ export default function RootLayout() {
         <Stack.Screen name="game/[id]" options={{ animation: 'fade_from_bottom', gestureEnabled: false }} />
       </Stack>
       <BloomToast />
+      <SaveFailedBanner />
       <LockGate />
     </>
   );

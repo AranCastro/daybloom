@@ -232,6 +232,11 @@ const FIELDS: Record<string, (v: unknown) => unknown> = {
   bloomCount: (v) => clampInt(v, 0, Number.MAX_SAFE_INTEGER),
   bloomsEver: (v) => clampInt(v, 0, Number.MAX_SAFE_INTEGER),
   clearedWork: (v) => dayMap(v, (x) => clampInt(x, 0, 10_000)),
+  clearedFocus: (v) =>
+    dayMap(v, (x) => {
+      const o = (x && typeof x === 'object' ? x : {}) as { sessions?: unknown; minutes?: unknown };
+      return { sessions: clampInt(o.sessions, 0, 10_000) ?? 0, minutes: clampInt(o.minutes, 0, 1_000_000) ?? 0 };
+    }),
   labels,
   avatar,
   tasks: (v) => list(v, task),

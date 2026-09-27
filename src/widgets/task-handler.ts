@@ -54,13 +54,14 @@ export async function widgetTaskHandler({ widgetInfo, widgetAction, clickAction,
     if (clickAction === 'FOCUS_START') {
       const preset = String(clickActionData?.preset ?? 'classic') as FocusPreset;
       if (preset in PRESETS && !getState().focus.active) {
-        startFocus(preset);
+        // Awaited: the headless task must not end before the alarm is scheduled.
+        await startFocus(preset);
         setFlash(name, `${PRESETS[preset].focus} minutes · go`);
       }
     }
-    if (clickAction === 'FOCUS_PAUSE') pauseTimer();
-    if (clickAction === 'FOCUS_RESUME') resumeTimer();
-    if (clickAction === 'FOCUS_STOP') stopTimer();
+    if (clickAction === 'FOCUS_PAUSE') await pauseTimer();
+    if (clickAction === 'FOCUS_RESUME') await resumeTimer();
+    if (clickAction === 'FOCUS_STOP') await stopTimer();
 
     if (clickAction === 'WIDGET_UNDO') {
       const widget: TaskWidget = clickActionData?.widget === 'Matrix' ? 'Matrix' : 'Tasks';

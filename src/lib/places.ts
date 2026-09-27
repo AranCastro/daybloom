@@ -6,6 +6,7 @@
 import * as Location from 'expo-location';
 import { Platform } from 'react-native';
 
+import { expectReturn } from '@/lib/app-lock';
 import type { AppState, Place } from '@/lib/store';
 
 export const PLACE_EMOJI = ['🏠', '🏢', '🎓', '👪', '☕', '🌳', '🛕', '🚆', '🏥', '🏖️', '💪', '📚'] as const;
@@ -46,6 +47,7 @@ export function nearestPlace(places: Place[], here: Coords, radius = 400): Place
  */
 export async function currentCoords(ask: boolean, cheap = false): Promise<Coords | null> {
   try {
+    if (ask) expectReturn();
     const perm = ask ? await Location.requestForegroundPermissionsAsync() : await Location.getForegroundPermissionsAsync();
     if (!perm.granted) return null;
     const last = Platform.OS === 'web' ? null : await Location.getLastKnownPositionAsync({ maxAge: 10 * 60_000 });

@@ -19,9 +19,15 @@ jest.mock('expo-crypto', () => {
   return {
     CryptoDigestAlgorithm: { SHA256: 'SHA-256' },
     digestStringAsync: async (_a: string, data: string) => createHash('sha256').update(data).digest('hex'),
+    digest: async (_a: string, data: Uint8Array) => new Uint8Array(createHash('sha256').update(data).digest()).buffer,
     randomUUID: () => randomUUID(),
   };
 });
+jest.mock('expo-secure-store', () => {
+  const mem = new Map<string, string>();
+  return { getItem: (k: string) => mem.get(k) ?? null, setItem: (k: string, v: string) => void mem.set(k, v), deleteItemAsync: async (k: string) => void mem.delete(k) };
+});
+jest.mock('expo-screen-capture', () => ({ preventScreenCaptureAsync: async () => undefined, allowScreenCaptureAsync: async () => undefined }));
 jest.mock('expo-local-authentication', () => ({
   hasHardwareAsync: async () => false,
   isEnrolledAsync: async () => false,
@@ -130,11 +136,12 @@ describe('app lock', () => {
 
   it('never stores the PIN itself, and turning it off removes it', async () => {
     await lock.setPin('1357');
-    const kv = jest.requireMock('@/lib/kv') as { readItem: (k: string) => string | null };
-    const raw = kv.readItem('daybloom.lock.v1') ?? '';
+    const secure = jest.requireMock('expo-secure-store') as { getItem: (k: string) => string | null };
+    const raw = secure.getItem('daybloom.lock.v1') ?? '';
+    expect(raw).toContain('hash');
     expect(raw).not.toContain('1357');
     lock.disableLock();
-    expect(kv.readItem('daybloom.lock.v1')).toBeNull();
+    expect(secure.getItem('daybloom.lock.v1') || null).toBeNull();
     expect(await lock.checkPin('9999')).toBe(true);
   });
 });
