@@ -9,7 +9,6 @@ import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { Icon } from '@/components/icons';
 import { Text } from '@/components/text';
 import { Button, Card, Input, tap } from '@/components/ui';
-import { Fonts } from '@/constants/theme';
 import { useIsDark, useTheme } from '@/hooks/use-theme';
 import { fromKey, prettyDate } from '@/lib/dates';
 import { setGoodNote, useAppState } from '@/lib/store';
@@ -19,6 +18,7 @@ const JAR = { light: ['#FFF4DC', '#FCE3C0'], dark: ['#3A2E1C', '#2E2618'] } as c
 /** Good or Bright day: "What went well today?" (one line, optional). */
 export function GoodDayPrompt({ day }: { day: string }) {
   const dark = useIsDark();
+  const t = useTheme();
   const saved = useAppState((s) => s.goodNotes[day]);
   const count = useAppState((s) => Object.keys(s.goodNotes).length);
   const [draft, setDraft] = useState(saved ?? '');
@@ -29,7 +29,7 @@ export function GoodDayPrompt({ day }: { day: string }) {
       <Animated.View entering={FadeIn.duration(300)}>
         <Card style={{ backgroundColor: dark ? JAR.dark[0] : JAR.light[0], borderColor: dark ? '#5A4526' : '#F1D29B' }}>
           <View style={styles.head}>
-            <Icon name="jar" color="#C98A1E" size={22} />
+            <Icon name="jar" color={t.legendary} size={22} />
             <Text variant="label" style={{ flex: 1 }}>
               In your jar of good days · {count}
             </Text>
@@ -39,7 +39,7 @@ export function GoodDayPrompt({ day }: { day: string }) {
               </Text>
             </Pressable>
           </View>
-          <Text variant="quote" style={{ fontSize: 18 }}>
+          <Text variant="quote">
             “{saved}”
           </Text>
           <Text variant="small">On a heavier day, Daybloom will hand this back to you.</Text>
@@ -52,7 +52,7 @@ export function GoodDayPrompt({ day }: { day: string }) {
     <Animated.View entering={FadeInDown.duration(350)}>
       <Card style={{ backgroundColor: dark ? JAR.dark[0] : JAR.light[0], borderColor: dark ? '#5A4526' : '#F1D29B' }}>
         <View style={styles.head}>
-          <Icon name="jar" color="#C98A1E" size={22} />
+          <Icon name="jar" color={t.legendary} size={22} />
           <Text variant="label" style={{ flex: 1 }}>
             Jar of good days
           </Text>
@@ -93,16 +93,18 @@ export function GoodDayMemory({ day }: { day: string }) {
     <Animated.View entering={FadeInDown.duration(450)}>
       <Card style={{ backgroundColor: dark ? JAR.dark[1] : JAR.light[1], borderColor: dark ? '#5A4526' : '#EBC380' }}>
         <View style={styles.head}>
-          <Icon name="jar" color="#C98A1E" size={22} />
+          <Icon name="jar" color={t.legendary} size={22} />
           <Text variant="label" style={{ flex: 1 }}>
             From your jar of good days
           </Text>
         </View>
-        <Text style={{ fontFamily: Fonts.displayItalic, fontSize: 21, lineHeight: 29, color: t.text }}>“{text}”</Text>
+        <Text variant="quote" color="text">
+          “{text}”
+        </Text>
         <Text variant="small">You wrote this on {prettyDate(fromKey(when))}. Days like that come back.</Text>
         {past.length > 1 && (
           <Pressable onPress={() => (tap(), setShift(shift + 1))} hitSlop={8} accessibilityRole="button" style={{ alignSelf: 'flex-start' }}>
-            <Text variant="bodyStrong" color="accent" style={{ fontSize: 14 }}>
+            <Text variant="bodySm" strong color="accent">
               Another from the jar
             </Text>
           </Pressable>
@@ -114,6 +116,7 @@ export function GoodDayMemory({ day }: { day: string }) {
 
 /** Garden tab: how full the jar is, and the latest lines. */
 export function GoodDaysJar() {
+  const t = useTheme();
   const notes = useAppState((s) => s.goodNotes);
   const entries = Object.entries(notes).sort(([a], [b]) => b.localeCompare(a));
   const [open, setOpen] = useState(false);
@@ -122,7 +125,7 @@ export function GoodDaysJar() {
   return (
     <Card>
       <View style={styles.head}>
-        <Icon name="jar" color="#C98A1E" size={22} />
+        <Icon name="jar" color={t.legendary} size={22} />
         <Text variant="label" style={{ flex: 1 }}>
           Jar of good days · {entries.length}
         </Text>
@@ -130,7 +133,7 @@ export function GoodDaysJar() {
       {shown.map(([d, text]) => (
         <View key={d} style={{ gap: 2 }}>
           <Text variant="body">“{text}”</Text>
-          <Text variant="small" style={{ fontSize: 12 }}>
+          <Text variant="caption">
             {prettyDate(fromKey(d))}
           </Text>
         </View>

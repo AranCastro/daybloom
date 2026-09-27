@@ -4,8 +4,8 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { Icon } from '@/components/icons';
 import { Text } from '@/components/text';
-import { Card, Choice, tap } from '@/components/ui';
-import { Fonts } from '@/constants/theme';
+import { Card, Choice, Tappable, tap } from '@/components/ui';
+import { Radius } from '@/constants/theme';
 import { useIsDark, useTheme } from '@/hooks/use-theme';
 import { previewSound, stopSound } from '@/lib/focus-sound';
 import { ragaForHour, soundOf, SOUNDS } from '@/lib/sounds';
@@ -31,7 +31,7 @@ export function NowPlaying() {
       accessibilityLabel={`${current.label} playing. Tap to turn the sound off`}
       style={[styles.now, { backgroundColor: current.tint + '22', borderColor: current.tint }]}>
       <Icon name={current.icon} color={current.tint} size={16} />
-      <Text style={{ fontFamily: Fonts.bodyStrong, fontSize: 12.5, color: t.text }}>{current.label}</Text>
+      <Text variant="caption" strong style={{ color: t.text }}>{current.label}</Text>
       <Icon name="mute" color={t.textSecondary} size={15} />
     </Pressable>
   );
@@ -60,7 +60,7 @@ export function SoundPicker({ running }: { running: boolean }) {
     <Card>
       <View style={styles.head}>
         <Text variant="label">Focus sound</Text>
-        <Text variant="small" color="textMuted" style={{ fontSize: 12 }}>
+        <Text variant="caption" color="textMuted">
           {current ? (running ? `Playing · ${current.label}` : 'Plays during focus · tap to hear') : 'Silence'}
         </Text>
       </View>
@@ -73,7 +73,7 @@ export function SoundPicker({ running }: { running: boolean }) {
       {suits && suits.id !== sound && (
         <Pressable onPress={() => choose(suits.id)} accessibilityRole="button" style={[styles.suggest, { backgroundColor: suits.tint + '1A' }]}>
           <Icon name={suits.icon} color={suits.tint} size={16} />
-          <Text variant="small" style={{ flex: 1, fontSize: 12.5 }}>
+          <Text variant="caption" style={{ flex: 1 }}>
             {suits.id === 'raga-bhairav' ? 'Morning is the time for Raga Bhairav.' : 'Evening is the time for Raga Yaman.'} Tap to try it.
           </Text>
         </Pressable>
@@ -85,13 +85,13 @@ export function SoundPicker({ running }: { running: boolean }) {
           </Text>
           <View style={styles.volHead}>
             <Icon name="volume" color={t.textSecondary} size={18} />
-            <Text variant="bodyStrong" style={{ fontSize: 14 }}>
+            <Text variant="bodySm" strong>
               Volume
             </Text>
           </View>
           <Choice options={VOLUMES} value={VOLUMES.reduce((a, b) => (Math.abs(b.value - volume) < Math.abs(a.value - volume) ? b : a)).value} onChange={(v) => setSettings({ focusVolume: v })} />
           {current.id === 'gamma' && (
-            <Text variant="small" style={{ fontSize: 12 }}>
+            <Text variant="caption">
               Gamma plays 200 Hz in one ear and 240 Hz in the other; use headphones to hear the 40 Hz beat.
             </Text>
           )}
@@ -104,31 +104,32 @@ export function SoundPicker({ running }: { running: boolean }) {
 function Tile({ label, blurb, icon, tint, on, onPress, dark }: { label: string; blurb: string; icon: Parameters<typeof Icon>[0]['name']; tint: string; on: boolean; onPress: () => void; dark: boolean }) {
   const t = useTheme();
   return (
-    <Pressable
+    <Tappable
       onPress={onPress}
+      haptic={false}
+      radius={Radius.md}
       accessibilityRole="radio"
       accessibilityState={{ selected: on }}
       accessibilityLabel={`${label}. ${blurb}`}
-      style={({ pressed }) => [
-        styles.tile,
-        { borderColor: on ? tint : t.line, backgroundColor: on ? tint + (dark ? '33' : '1F') : t.surface, transform: [{ scale: pressed ? 0.96 : 1 }] },
-      ]}>
+      containerStyle={styles.tileBox}
+      style={[styles.tile, { borderColor: on ? tint : t.line, backgroundColor: on ? tint + (dark ? '33' : '1F') : t.surface }]}>
       <View style={[styles.iconBubble, { backgroundColor: on ? tint : tint + '26' }]}>
         <Icon name={icon} color={on ? '#fff' : tint} size={22} />
       </View>
-      <Text style={{ fontFamily: Fonts.bodyStrong, fontSize: 11.5, lineHeight: 14, color: t.text, textAlign: 'center' }} numberOfLines={2}>
+      <Text variant="caption" strong numberOfLines={2} style={{ color: t.text, textAlign: 'center' }}>
         {label}
       </Text>
-    </Pressable>
+    </Tappable>
   );
 }
 
 const styles = StyleSheet.create({
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'space-between' },
-  tile: { width: '23%', minWidth: 72, minHeight: 96, alignItems: 'center', gap: 6, paddingVertical: 10, paddingHorizontal: 3, borderRadius: 18, borderWidth: 1.5 },
+  tileBox: { width: '23%', minWidth: 72 },
+  tile: { minHeight: 96, alignItems: 'center', gap: 6, paddingVertical: 10, paddingHorizontal: 3, borderRadius: Radius.md, borderWidth: 1.5 },
   iconBubble: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center' },
-  suggest: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 10, borderRadius: 14 },
-  now: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'center', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, borderWidth: 1 },
+  suggest: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 10, borderRadius: Radius.sm },
+  now: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'center', paddingHorizontal: 12, paddingVertical: 6, borderRadius: Radius.pill, borderWidth: 1 },
   volHead: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
 });

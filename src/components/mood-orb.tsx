@@ -6,7 +6,6 @@ import Animated, {
   cancelAnimation,
   Easing,
   useAnimatedStyle,
-  useReducedMotion,
   useSharedValue,
   withRepeat,
   withSequence,
@@ -16,7 +15,7 @@ import Svg, { Circle, Path } from 'react-native-svg';
 
 import { useAppActive } from '@/hooks/use-app-active';
 import { Mood } from '@/lib/moods';
-import { useAppState } from '@/lib/store';
+import { useReduceMotion } from '@/hooks/use-reduce-motion';
 
 /** Mouth curve per mood: positive bends up (smile), negative bends down. */
 const CURVE: Record<number, number> = { 5: 7, 4: 4.5, 3: 0.5, 2: -3, 1: -5 };
@@ -30,9 +29,7 @@ export function MoodOrb({ mood, size, breathe = false, face = true }: Props) {
   // endless animation would otherwise keep the phone redrawing (and warm) on every other screen.
   const focused = useIsFocused();
   const appActive = useAppActive();
-  const systemReduce = useReducedMotion();
-  const settingReduce = useAppState((s) => s.settings.reduceMotion);
-  const reduceMotion = systemReduce || settingReduce;
+  const reduceMotion = useReduceMotion();
   const run = breathe && focused && appActive && !reduceMotion;
 
   useEffect(() => {
@@ -100,3 +97,28 @@ const styles = StyleSheet.create({
   halo: { opacity: 0.22 },
   shine: { position: 'absolute' },
 });
+
+/**
+ * A still, hook-free mood swatch for dense grids (the month calendar, the week strip, place
+ * rows). A calendar holds up to 31 of them, and each MoodOrb runs four hooks and two gradients.
+ */
+export function MoodDot({ mood, size }: { mood: Mood; size: number }) {
+  return (
+    <View
+      accessibilityElementsHidden
+      importantForAccessibility="no"
+      style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: mood.colors[1], overflow: 'hidden' }}>
+      <View
+        style={{
+          position: 'absolute',
+          width: size * 0.78,
+          height: size * 0.78,
+          borderRadius: size,
+          left: size * 0.06,
+          top: size * 0.04,
+          backgroundColor: mood.colors[0],
+        }}
+      />
+    </View>
+  );
+}

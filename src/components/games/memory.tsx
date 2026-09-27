@@ -15,10 +15,12 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { Confetti, haptic, ResultPanel } from '@/components/games/fx';
+import { shuffle } from '@/components/games/shuffle';
 import { GameShell, StatPill } from '@/components/games/shell';
 import { Icon, IconName } from '@/components/icons';
 import { Text } from '@/components/text';
 import { Choice } from '@/components/ui';
+import { Radius } from '@/constants/theme';
 import { useIsDark, useTheme } from '@/hooks/use-theme';
 import { gameOf } from '@/lib/games';
 import { recordGame, useAppState } from '@/lib/store';
@@ -45,13 +47,8 @@ const LEVELS: Record<Level, { label: string; pairs: number; cols: number; key: s
 type Card = { key: string; symbol: number };
 
 function newDeck(pairs: number): Card[] {
-  const picks = [...SYMBOLS.keys()].sort(() => Math.random() - 0.5).slice(0, pairs);
-  const deck = [...picks, ...picks].map((symbol, i) => ({ key: `${Date.now()}-${i}`, symbol }));
-  for (let i = deck.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [deck[i], deck[j]] = [deck[j], deck[i]];
-  }
-  return deck;
+  const picks = shuffle([...SYMBOLS.keys()]).slice(0, pairs);
+  return shuffle([...picks, ...picks].map((symbol, i) => ({ key: `${Date.now()}-${i}`, symbol })));
 }
 
 function starsFor(moves: number, pairs: number): number {
@@ -82,6 +79,22 @@ export function MemoryGame() {
   const secondsRef = useRef(0);
   /** Bumped on every reset so timers from an abandoned board do nothing. */
   const roundRef = useRef(0);
+  /** Pending flip timers, cleared on unmount so a match settled after closing awards nothing. */
+  const timers = useRef(new Set<ReturnType<typeof setTimeout>>());
+  useEffect(() => {
+    const pending = timers.current;
+    return () => {
+      pending.forEach(clearTimeout);
+      pending.clear();
+    };
+  }, []);
+  const later = (fn: () => void, ms: number) => {
+    const id = setTimeout(() => {
+      timers.current.delete(id);
+      fn();
+    }, ms);
+    timers.current.add(id);
+  };
 
   // Timers pause while the app is in the background.
   const appActive = useAppActive();
@@ -127,7 +140,7 @@ export function MemoryGame() {
     if (deck[a].symbol === deck[b].symbol) {
       const nowMatched = new Set(matched).add(deck[a].symbol);
       // Let the second card finish flipping before it settles as matched.
-      setTimeout(() => {
+      later(() => {
         if (round !== roundRef.current) return;
         haptic.success();
         setMatched(nowMatched);
@@ -140,12 +153,12 @@ export function MemoryGame() {
         }
       }, 320);
     } else {
-      setTimeout(() => {
+      later(() => {
         if (round !== roundRef.current) return;
         haptic.warning();
         setWrong([a, b]);
       }, 380);
-      setTimeout(() => {
+      later(() => {
         if (round !== roundRef.current) return;
         setWrong([]);
         setOpen([]);
@@ -239,14 +252,14 @@ function FlipCard({ symbol, up, matched, wrong, onPress, small }: { symbol: numb
       <Animated.View style={[{ flex: 1 }, wrap]}>
         <Animated.View style={[styles.face, { borderColor: t.line, backgroundColor: t.surface }, back]}>
           <LinearGradient colors={dark ? ['#2A3A33', '#1D2A25'] : ['#EAF2EE', '#D9E7E0']} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
-          <View style={[styles.backMark, { borderColor: dark ? '#6CC4A6' : '#3A9477' }]}>
-            <View style={[styles.backDot, { backgroundColor: dark ? '#6CC4A6' : '#3A9477' }]} />
+          <View style={[styles.backMark, { borderColor: t.success }]}>
+            <View style={[styles.backDot, { backgroundColor: t.success }]} />
           </View>
         </Animated.View>
         <Animated.View
           style={[
             styles.face,
-            { backgroundColor: dark ? t.surfaceAlt : sym.soft, borderColor: wrong ? '#E0664F' : sym.color, borderWidth: matched ? 2.5 : 1.5 },
+            { backgroundColor: dark ? t.surfaceAlt : sym.soft, borderColor: wrong ? t.danger : sym.color, borderWidth: matched ? 2.5 : 1.5 },
             front,
           ]}>
           <Icon name={sym.icon} color={sym.color} size={small ? 28 : 36} strokeWidth={2} fill={matched ? sym.soft : 'none'} />
@@ -264,7 +277,7 @@ const styles = StyleSheet.create({
   cell: { aspectRatio: 0.82, padding: 5 },
   face: {
     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-    borderRadius: 18,
+    borderRadius: Radius.md,
     borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',

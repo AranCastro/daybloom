@@ -8,8 +8,8 @@ import { Medal, tierLabel } from '@/components/badge';
 import { Icon } from '@/components/icons';
 import { Text } from '@/components/text';
 import { Card, Screen, tap } from '@/components/ui';
-import { Fonts } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
+import { Radius, Shadow } from '@/constants/theme';
+import { useIsDark, useTheme } from '@/hooks/use-theme';
 import { useToday } from '@/hooks/use-today';
 import { BADGES, REST_DAY_AFTER, streakInfo } from '@/lib/badges';
 import { addDays, dayKey, fromKey, shortDate, weekdayShort } from '@/lib/dates';
@@ -17,6 +17,7 @@ import { awardBadges, useAppState } from '@/lib/store';
 
 export default function BadgesScreen() {
   const t = useTheme();
+  const dark = useIsDark();
   const checkins = useAppState((s) => s.checkins);
   const earned = useAppState((s) => s.badges);
   const today = useToday();
@@ -36,10 +37,12 @@ export default function BadgesScreen() {
         <Icon name="back" color={t.textSecondary} />
       </Pressable>
 
-      <Animated.View entering={FadeInDown.duration(400)} style={[styles.hero, { backgroundColor: t.accentSoft }]}>
+      <Animated.View entering={FadeInDown.duration(400)} style={[styles.hero, { backgroundColor: t.accentSoft }, !dark && Shadow.md]}>
         <View style={styles.flameRow}>
           <Icon name="flame" color={t.accent} size={44} fill={s.current > 0 ? t.accent : 'none'} />
-          <Text style={{ fontFamily: Fonts.display, fontSize: 64, lineHeight: 70, color: t.text }}>{s.current}</Text>
+          <Text variant="display" style={styles.bigNumber}>
+            {s.current}
+          </Text>
         </View>
         <Text variant="heading">day streak</Text>
         <Text variant="small" center>
@@ -73,7 +76,7 @@ export default function BadgesScreen() {
                   ]}>
                   {on && <Icon name="check" color="#fff" size={12} strokeWidth={2.6} />}
                 </View>
-                <Text variant="small" style={{ fontSize: 10.5 }} color={isToday ? 'text' : 'textMuted'}>
+                <Text variant="micro" color={isToday ? 'text' : 'textMuted'}>
                   {weekdayShort(d).slice(0, 1)}
                 </Text>
               </View>
@@ -81,7 +84,7 @@ export default function BadgesScreen() {
           })}
         </View>
         <View style={styles.restNote}>
-          <Icon name="leaf" color="#3A9477" size={16} />
+          <Icon name="leaf" color={t.success} size={16} />
           <Text variant="small" style={{ flex: 1 }}>
             Rest days: after {REST_DAY_AFTER} check-ins in a row, one missed day will not break your streak.
             {s.restDaysUsed > 0 ? ` You have used ${s.restDaysUsed} in this streak.` : ''}
@@ -99,10 +102,10 @@ export default function BadgesScreen() {
             <Animated.View key={b.id} entering={FadeInDown.delay(40 * i).duration(350)} style={styles.cell}>
               <View style={[styles.badgeCard, { backgroundColor: t.surface, borderColor: t.line, opacity: when ? 1 : 0.85 }]}>
                 <Medal badge={b} size={58} locked={!when} />
-                <Text variant="bodyStrong" center style={{ fontSize: 13.5, lineHeight: 17 }}>
+                <Text variant="small" strong color="text" center>
                   {b.title}
                 </Text>
-                <Text variant="small" center style={{ fontSize: 11, lineHeight: 14 }}>
+                <Text variant="micro" center>
                   {when ? `${tierLabel(b.tier)} · ${shortDate(new Date(when))}` : b.goal}
                 </Text>
               </View>
@@ -117,10 +120,10 @@ export default function BadgesScreen() {
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <View style={{ flex: 1, alignItems: 'center' }}>
-      <Text variant="bodyStrong" style={{ fontSize: 18 }}>
+      <Text variant="numeral">
         {value}
       </Text>
-      <Text variant="small" style={{ fontSize: 11.5 }}>
+      <Text variant="caption">
         {label}
       </Text>
     </View>
@@ -128,7 +131,8 @@ function Stat({ label, value }: { label: string; value: string }) {
 }
 
 const styles = StyleSheet.create({
-  hero: { borderRadius: 30, padding: 22, alignItems: 'center', gap: 4 },
+  hero: { borderRadius: Radius.xl, padding: 22, alignItems: 'center', gap: 4 },
+  bigNumber: { fontSize: 64, lineHeight: 70 },
   flameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   statRow: { flexDirection: 'row', alignSelf: 'stretch', marginTop: 12 },
   days: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 },
@@ -137,5 +141,5 @@ const styles = StyleSheet.create({
   restNote: { flexDirection: 'row', gap: 8, alignItems: 'center', marginTop: 8 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -5 },
   cell: { width: '33.33%', padding: 5 },
-  badgeCard: { borderRadius: 20, borderWidth: 1, padding: 10, alignItems: 'center', gap: 6, minHeight: 150 },
+  badgeCard: { borderRadius: Radius.md, borderWidth: 1, padding: 10, alignItems: 'center', gap: 6, minHeight: 150 },
 });

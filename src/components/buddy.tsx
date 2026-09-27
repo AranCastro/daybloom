@@ -120,7 +120,7 @@ export function BuddyCard() {
         <View style={styles.row}>
           <Avatar person={buddy} size={56} />
           <View style={{ flex: 1 }}>
-            <Text variant="title" style={{ fontSize: 24, lineHeight: 30 }}>
+            <Text variant="heading">
               {buddy.name}
             </Text>
             <Text variant="small">

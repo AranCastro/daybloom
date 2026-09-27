@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Icon } from '@/components/icons';
 import { Text } from '@/components/text';
 import { Backdrop, tap } from '@/components/ui';
-import { MaxContentWidth } from '@/constants/theme';
+import { MaxContentWidth, Radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 export function GameShell({ title, stat, children }: { title: string; stat?: ReactNode; children: ReactNode }) {
@@ -43,7 +43,7 @@ export function StatPill({ label, color }: { label: string; color?: string }) {
   const t = useTheme();
   return (
     <View style={[styles.pill, { backgroundColor: t.surface, borderColor: t.line }]}>
-      <Text variant="bodyStrong" style={{ fontSize: 14, color: color ?? t.text }}>
+      <Text variant="bodySm" strong style={{ color: color ?? t.text }}>
         {label}
       </Text>
     </View>
@@ -55,5 +55,5 @@ const styles = StyleSheet.create({
   top: { flexDirection: 'row', alignItems: 'center', gap: 10, height: 56 },
   close: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   stat: { minWidth: 40, alignItems: 'flex-end' },
-  pill: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, borderWidth: 1 },
+  pill: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: Radius.pill, borderWidth: 1 },
 });

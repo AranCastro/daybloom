@@ -4,14 +4,15 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { Text } from '@/components/text';
 import { Card, tap } from '@/components/ui';
-import { Fonts } from '@/constants/theme';
+import { Radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { EnergyLevel, setEnergy, useAppState } from '@/lib/store';
 
-export const ENERGY: { value: EnergyLevel; label: string; emoji: string; line: string; tint: string }[] = [
-  { value: 1, label: 'Low', emoji: '🪫', line: 'Go easy. The matrix shows Quick tasks only today.', tint: '#C9503B' },
-  { value: 2, label: 'Medium', emoji: '🔋', line: 'A steady day. Deep work is hidden; pick one thing that matters.', tint: '#D08A2E' },
-  { value: 3, label: 'High', emoji: '⚡', line: 'Good energy. Deep work comes first today; try a Deep 50 focus session.', tint: '#3A9477' },
+/** `tint` names a status colour, so each level has a light and a dark shade. */
+export const ENERGY: { value: EnergyLevel; label: string; emoji: string; line: string; tint: 'danger' | 'warning' | 'success' }[] = [
+  { value: 1, label: 'Low', emoji: '🪫', line: 'Go easy. The matrix shows Quick tasks only today.', tint: 'danger' },
+  { value: 2, label: 'Medium', emoji: '🔋', line: 'A steady day. Deep work is hidden; pick one thing that matters.', tint: 'warning' },
+  { value: 3, label: 'High', emoji: '⚡', line: 'Good energy. Deep work comes first today; try a Deep 50 focus session.', tint: 'success' },
 ];
 
 export function EnergyCard({ day, hour }: { day: string; hour: number }) {
@@ -38,10 +39,10 @@ export function EnergyCard({ day, hour }: { day: string; hour: number }) {
               accessibilityLabel={`${e.label} energy`}
               style={({ pressed }) => [
                 styles.btn,
-                { borderColor: on ? e.tint : t.line, backgroundColor: on ? e.tint + '22' : t.surface, transform: [{ scale: pressed ? 0.96 : 1 }] },
+                { borderColor: on ? t[e.tint] : t.line, backgroundColor: on ? t[e.tint] + '22' : t.surface, transform: [{ scale: pressed ? 0.96 : 1 }] },
               ]}>
-              <Text style={{ fontSize: 22 }}>{e.emoji}</Text>
-              <Text style={{ fontFamily: Fonts.bodyStrong, fontSize: 13, color: t.text }}>{e.label}</Text>
+              <Text variant="heading">{e.emoji}</Text>
+              <Text variant="small" strong style={{ color: t.text }}>{e.label}</Text>
             </Pressable>
           );
         })}
@@ -57,5 +58,5 @@ export function EnergyCard({ day, hour }: { day: string; hour: number }) {
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', gap: 8 },
-  btn: { flex: 1, alignItems: 'center', gap: 4, paddingVertical: 12, borderRadius: 18, borderWidth: 1.5 },
+  btn: { flex: 1, alignItems: 'center', gap: 4, paddingVertical: 12, borderRadius: Radius.md, borderWidth: 1.5 },
 });

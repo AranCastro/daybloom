@@ -7,8 +7,8 @@ import Animated, { FadeInDown, ZoomIn } from 'react-native-reanimated';
 import { Icon } from '@/components/icons';
 import { QuadrantChip, TaskRow, TaskSheet, useQuadrantColors } from '@/components/tasks';
 import { Text } from '@/components/text';
-import { Screen, tap } from '@/components/ui';
-import { TabBarInset } from '@/constants/theme';
+import { EmptyState, Screen, Tappable, tap } from '@/components/ui';
+import { Radius, Shadow, Spacing, TabBarInset } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useToday } from '@/hooks/use-today';
 import { useQuadrantNames } from '@/lib/labels';
@@ -17,7 +17,8 @@ import { QUADRANTS, quadrantOf } from '@/lib/quadrants';
 import { deepFirst, fitEnergy } from '@/lib/effort';
 import { openTasks, Quadrant, Task, useAppState } from '@/lib/store';
 
-const ENERGY_TINT = { 1: '#C9503B', 2: '#D08A2E', 3: '#3A9477' } as const;
+/** Energy tints, from the status colours of the current scheme. */
+const ENERGY_TINT = { 1: 'danger', 2: 'warning', 3: 'success' } as const;
 
 /** '#RRGGBB' -> 'rgba(r,g,b,a)' so gradients fade within the same hue. */
 function withAlpha(hex: string, a: number): string {
@@ -60,9 +61,12 @@ export default function Matrix() {
         </Animated.View>
 
         {!!energy && (
-          <Pressable onPress={() => (tap(), setShowAll(!showAll))} accessibilityRole="button" style={[styles.energy, { backgroundColor: ENERGY_TINT[energy] + '18', borderColor: ENERGY_TINT[energy] + '55' }]}>
-            <Text style={{ fontSize: 16 }}>{energy === 1 ? '🪫' : energy === 2 ? '🔋' : '⚡'}</Text>
-            <Text variant="small" style={{ flex: 1, fontSize: 12.5, color: t.text }}>
+          <Tappable
+            onPress={() => setShowAll(!showAll)}
+            radius={Radius.sm}
+            style={[styles.energy, { backgroundColor: withAlpha(t[ENERGY_TINT[energy]], 0.09), borderColor: withAlpha(t[ENERGY_TINT[energy]], 0.33) }]}>
+            <Text variant="body">{energy === 1 ? '🪫' : energy === 2 ? '🔋' : '⚡'}</Text>
+            <Text variant="caption" color="text" style={{ flex: 1 }}>
               {!filtering
                 ? 'Showing every task.'
                 : energy === 1
@@ -71,10 +75,16 @@ export default function Matrix() {
                     ? 'Medium energy: Deep work is hidden for today.'
                     : 'High energy: Deep work first.'}
             </Text>
-            <Text variant="small" color="accent" style={{ fontSize: 12.5 }}>
+            <Text variant="caption" strong color="accent">
               {filtering ? (energy === 3 ? 'Usual order' : 'Show all') : 'Fit my energy'}
             </Text>
-          </Pressable>
+          </Tappable>
+        )}
+
+        {tasks.length === 0 && (
+          <Animated.View entering={FadeInDown.delay(120).duration(420)} style={[styles.emptyAll, { backgroundColor: t.surface, borderColor: t.line }]}>
+            <EmptyState size={52} line="An empty matrix. Add one thing on your mind and sort it by urgency and importance." action="Add your first task" onAction={() => setSheet({ open: true, task: null })} />
+          </Animated.View>
         )}
 
         <View style={styles.grid}>
@@ -98,7 +108,7 @@ export default function Matrix() {
           accessibilityRole="button"
           accessibilityLabel="Add task"
           onPress={() => (tap('medium'), setSheet({ open: true, task: null }))}
-          style={({ pressed }) => [styles.fabBtn, { backgroundColor: t.brand, transform: [{ scale: pressed ? 0.94 : 1 }] }]}>
+          style={({ pressed }) => [styles.fabBtn, { backgroundColor: t.brand, transform: [{ scale: pressed ? 0.94 : 1 }] }, Shadow.md]}>
           <Icon name="plus" color={t.brandText} size={28} strokeWidth={2.4} />
         </Pressable>
       </Animated.View>
@@ -128,25 +138,25 @@ function QuadrantCard({ q, tasks, today, onOpen, keepOrder }: { q: Quadrant; tas
         style={styles.cardHead}>
         <View style={styles.cardTitleRow}>
           <QuadrantChip q={q} size={24} />
-          <Text variant="heading" style={{ color, fontSize: 17, lineHeight: 21, flex: 1 }} numberOfLines={1}>
+          <Text variant="headingSm" style={{ color, flex: 1 }} numberOfLines={1}>
             {name}
           </Text>
           {list.length > 0 && (
             <View style={[styles.count, { backgroundColor: color }]}>
-              <Text variant="bodyStrong" style={{ color: '#fff', fontSize: 11.5, lineHeight: 15 }}>
+              <Text variant="micro" strong style={[styles.tabular, { color: '#fff' }]}>
                 {list.length}
               </Text>
             </View>
           )}
         </View>
-        <Text variant="small" style={{ fontSize: 11.5, lineHeight: 15 }} numberOfLines={1}>
+        <Text variant="caption" numberOfLines={1}>
           {info.meaning}
         </Text>
       </Pressable>
 
       {list.length === 0 && doneToday.length === 0 ? (
         <View style={styles.empty}>
-          <Text variant="small" color="textMuted" center style={{ fontSize: 12.5 }}>
+          <Text variant="caption" color="textMuted" center>
             No tasks
           </Text>
         </View>
@@ -163,12 +173,14 @@ function QuadrantCard({ q, tasks, today, onOpen, keepOrder }: { q: Quadrant; tas
 }
 
 const styles = StyleSheet.create({
-  energy: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 14, borderWidth: 1 },
+  energy: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 8, borderRadius: Radius.sm, borderWidth: 1 },
+  emptyAll: { borderRadius: Radius.lg, borderWidth: 1, paddingHorizontal: 20, paddingVertical: 10 },
+  tabular: { fontVariant: ['tabular-nums'] },
   header: { gap: 2, marginTop: 8 },
   calBtn: { position: 'absolute', right: 0, top: 0, width: 42, height: 42, borderRadius: 21, borderWidth: 1, alignItems: 'center', justifyContent: 'center', zIndex: 1 },
   grid: { flex: 1, gap: 12, marginTop: 4 },
   gridRow: { flex: 1, flexDirection: 'row', gap: 12 },
-  card: { flex: 1, borderRadius: 24, borderWidth: 1, paddingHorizontal: 14, paddingTop: 14, overflow: 'hidden' },
+  card: { flex: 1, borderRadius: Radius.lg, borderWidth: 1, paddingHorizontal: Spacing.cardCompact, paddingTop: Spacing.cardCompact, overflow: 'hidden' },
   cardTint: { position: 'absolute', top: 0, left: 0, right: 0, height: 90 },
   cardHead: { gap: 3, marginBottom: 8 },
   cardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -182,10 +194,5 @@ const styles = StyleSheet.create({
     borderRadius: 31,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.22,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 10,
   },
 });

@@ -2,18 +2,29 @@
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { router, useIsFocused, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, Platform, Pressable, StyleSheet, View } from 'react-native';
-import Animated, { Easing, FadeIn, FadeInDown, useAnimatedProps, useSharedValue, withTiming, ZoomIn } from 'react-native-reanimated';
-import Svg, { Circle } from 'react-native-svg';
+import { Alert, Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import Animated, {
+  cancelAnimation,
+  Easing,
+  FadeIn,
+  FadeInDown,
+  ReduceMotion,
+  useAnimatedProps,
+  useSharedValue,
+  withTiming,
+  ZoomIn,
+} from 'react-native-reanimated';
+import Svg, { Circle, Line } from 'react-native-svg';
 
 import { Bud, Flower } from '@/components/flower';
 import { Confetti, haptic } from '@/components/games/fx';
 import { Icon } from '@/components/icons';
 import { Text } from '@/components/text';
 import { Button, Card, Choice, Screen, tap } from '@/components/ui';
-import { Fonts, TabBarInset } from '@/constants/theme';
+import { Radius, Spacing, TabBarInset } from '@/constants/theme';
 import { useAppActive } from '@/hooks/use-app-active';
-import { useIsDark, useTheme } from '@/hooks/use-theme';
+import { useReduceMotion } from '@/hooks/use-reduce-motion';
+import { useTheme } from '@/hooks/use-theme';
 import { useToday } from '@/hooks/use-today';
 import { FlowerKind, GOLDEN_EVERY, RARITY_LABEL } from '@/lib/flowers';
 import {
@@ -42,6 +53,19 @@ const STROKE = 10;
 const R = (RING - STROKE) / 2;
 const CIRC = 2 * Math.PI * R;
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+/** The drawing box has room around the ring for the glow, which is wider than the stroke. */
+const PAD = 8;
+const BOX = RING + PAD * 2;
+/** Faint tick marks every five minutes of the session. */
+const TICK_MS = 5 * 60_000;
+
+/**
+ * A preset name from a link or widget. `in` would also accept inherited keys, so
+ * daybloom://focus?preset=constructor gave "Start NaN-minute focus".
+ */
+function presetFrom(value: string | undefined): FocusPreset | undefined {
+  return value !== undefined && Object.hasOwn(PRESETS, value) ? (value as FocusPreset) : undefined;
+}
 
 function confirmStop(onYes: () => void) {
   const title = 'Stop this session?';
@@ -58,7 +82,9 @@ function confirmStop(onYes: () => void) {
 
 export default function FocusScreen() {
   const t = useTheme();
-  const dark = useIsDark();
+  const reduceMotion = useReduceMotion();
+  const { width } = useWindowDimensions();
+  const ringSize = Math.min(RING, Math.min(width, 520) - Spacing.screen * 2);
   const params = useLocalSearchParams<{ task?: string; preset?: string }>();
   const active = useAppState((s) => s.focus.active);
   const sessions = useAppState((s) => s.focus.sessions);
@@ -76,7 +102,7 @@ export default function FocusScreen() {
   const [reward, setReward] = useState<{ flower: FlowerKind; session: FocusSession } | null>(null);
   const [breakOver, setBreakOver] = useState(false);
   const [preset, setPreset] = useState<FocusPreset>(
-    active?.preset ?? (params.preset && params.preset in PRESETS ? (params.preset as FocusPreset) : lowToday ? 'gentle' : highEnergy ? 'deep' : defaultPreset),
+    active?.preset ?? presetFrom(params.preset) ?? (lowToday ? 'gentle' : highEnergy ? 'deep' : defaultPreset),
   );
   const [taskId, setTaskId] = useState<string | undefined>(params.task);
 
@@ -84,7 +110,8 @@ export default function FocusScreen() {
   const [seen, setSeen] = useState({ preset: params.preset, task: params.task });
   if (seen.preset !== params.preset || seen.task !== params.task) {
     setSeen({ preset: params.preset, task: params.task });
-    if (!active && params.preset && params.preset in PRESETS) setPreset(params.preset as FocusPreset);
+    const linked = presetFrom(params.preset);
+    if (!active && linked) setPreset(linked);
     if (!active && params.task !== seen.task) setTaskId(params.task);
   }
 
@@ -131,13 +158,31 @@ export default function FocusScreen() {
   const left = active ? remaining(active, now) : PRESETS[preset].focus * 60_000;
   const total = active ? active.total : PRESETS[preset].focus * 60_000;
   const progress = active ? 1 - left / total : 0;
-  const ringColor = active?.kind === 'break' ? (dark ? '#6CC4A6' : '#3A9477') : t.accent;
+  const ringColor = active?.kind === 'break' ? t.success : t.accent;
 
+  // One linear sweep over the time that is left, rather than a step each second. It restarts
+  // on pause, resume and return to the tab. Under Reduce motion the ring steps with the clock.
   const ring = useSharedValue(0);
+  const visible = focused && appActive;
+  const step = reduceMotion ? now : 0;
   useEffect(() => {
-    ring.set(withTiming(progress, { duration: 300, easing: Easing.linear }));
-  }, [progress, ring]);
+    cancelAnimation(ring);
+    if (!active) {
+      ring.set(0);
+      return;
+    }
+    const leftNow = remaining(active, Date.now());
+    ring.set(1 - leftNow / active.total);
+    if (active.endAt === null || reduceMotion || !visible || leftNow <= 0) return;
+    // A progress indicator rather than decoration: the sweep itself is not skipped by the
+    // app-wide reduced-motion config (that case is handled above by stepping).
+    ring.set(withTiming(1, { duration: leftNow, easing: Easing.linear, reduceMotion: ReduceMotion.Never }));
+    return () => cancelAnimation(ring);
+  }, [active, reduceMotion, visible, step, ring]);
   const ringProps = useAnimatedProps(() => ({ strokeDashoffset: CIRC * (1 - ring.value) }));
+  const ticks = Math.floor(total / TICK_MS);
+  // The face stops just inside the tick marks.
+  const faceSize = Math.round((R - STROKE / 2 - 11) * 2 * (ringSize / BOX));
 
   const today = sessionsOn(sessions, todayKey);
   const focusTask = tasks.find((x) => x.id === (active?.taskId ?? taskId));
@@ -156,8 +201,8 @@ export default function FocusScreen() {
     <Screen bottomInset={TabBarInset + 24}>
       <View style={[styles.top, { justifyContent: 'flex-end' }]}>
         <View style={[styles.todayPill, { backgroundColor: t.surface, borderColor: t.line }]}>
-          <Icon name="leaf" color="#3A9477" size={15} />
-          <Text variant="bodyStrong" style={{ fontSize: 13 }}>
+          <Icon name="leaf" color={t.success} size={15} />
+          <Text variant="small" strong color="text" style={styles.tabular}>
             {today.length} today
           </Text>
         </View>
@@ -195,9 +240,41 @@ export default function FocusScreen() {
             </Text>
           </Animated.View>
 
-          <View style={styles.ringBox}>
-            <Svg width={RING} height={RING} style={StyleSheet.absoluteFill}>
+          <View style={[styles.ringBox, { width: ringSize, height: ringSize }]}>
+            <Svg width={ringSize} height={ringSize} viewBox={`${-PAD} ${-PAD} ${BOX} ${BOX}`} style={StyleSheet.absoluteFill}>
               <Circle cx={RING / 2} cy={RING / 2} r={R} stroke={t.surfaceAlt} strokeWidth={STROKE} fill="none" />
+              {Array.from({ length: ticks > 1 ? ticks : 0 }, (_, i) => {
+                const a = (i / ticks) * 2 * Math.PI - Math.PI / 2;
+                const r1 = R - STROKE / 2 - 9;
+                const r2 = R - STROKE / 2 - 4;
+                return (
+                  <Line
+                    key={i}
+                    x1={RING / 2 + r1 * Math.cos(a)}
+                    y1={RING / 2 + r1 * Math.sin(a)}
+                    x2={RING / 2 + r2 * Math.cos(a)}
+                    y2={RING / 2 + r2 * Math.sin(a)}
+                    stroke={t.textMuted}
+                    strokeOpacity={0.35}
+                    strokeWidth={1.5}
+                    strokeLinecap="round"
+                  />
+                );
+              })}
+              {/* A soft glow in the ring colour, under the progress stroke. */}
+              <AnimatedCircle
+                cx={RING / 2}
+                cy={RING / 2}
+                r={R}
+                stroke={ringColor}
+                strokeOpacity={active ? 0.16 : 0}
+                strokeWidth={STROKE + 10}
+                strokeLinecap="round"
+                fill="none"
+                strokeDasharray={`${CIRC} ${CIRC}`}
+                animatedProps={ringProps}
+                transform={`rotate(-90 ${RING / 2} ${RING / 2})`}
+              />
               <AnimatedCircle
                 cx={RING / 2}
                 cy={RING / 2}
@@ -211,9 +288,9 @@ export default function FocusScreen() {
                 transform={`rotate(-90 ${RING / 2} ${RING / 2})`}
               />
             </Svg>
-            <View style={[styles.face, { backgroundColor: t.surface }]}>
+            <View style={[styles.face, { width: faceSize, height: faceSize, backgroundColor: t.surface }]}>
               <Bud size={92} grow={active?.kind === 'focus' ? progress : 0} />
-              <Text style={{ fontFamily: Fonts.display, fontSize: 52, lineHeight: 58, color: t.text }} accessibilityLabel={`${fmtClock(left)} remaining`}>
+              <Text variant="display" accessibilityLabel={`${fmtClock(left)} remaining`}>
                 {fmtClock(left)}
               </Text>
               <Text variant="small">
@@ -245,7 +322,7 @@ export default function FocusScreen() {
                           key={task.id}
                           onPress={() => (tap(), setTaskId(on ? undefined : task.id))}
                           style={[styles.chip, { borderColor: on ? t.text : t.line, backgroundColor: on ? t.text : 'transparent' }]}>
-                          <Text variant="small" numberOfLines={1} style={{ color: on ? t.background : t.text, fontFamily: Fonts.bodyStrong, maxWidth: 220 }}>
+                          <Text variant="small" strong numberOfLines={1} style={{ color: on ? t.background : t.text, maxWidth: 220 }}>
                             {task.title}
                           </Text>
                         </Pressable>
@@ -302,11 +379,12 @@ function RewardView({
   const t = useTheme();
   const [taskMarked, setTaskMarked] = useState(false);
   const f = reward.flower;
-  const rareColor = f.rarity === 'legendary' ? '#C98A1E' : f.rarity === 'rare' ? '#7E6FD0' : '#3A9477';
+  const rareColor = f.rarity === 'legendary' ? t.legendary : f.rarity === 'rare' ? t.rare : t.success;
   return (
     <View>
       <Confetti count={f.rarity === 'common' ? 30 : 60} />
-      <Animated.View entering={FadeIn.duration(300)} style={[styles.reward, { backgroundColor: t.surface, borderColor: t.line }]}>
+      <Animated.View entering={FadeIn.duration(300)}>
+        <Card tone="raised" style={styles.reward}>
         <Text variant="label" center>
           Session complete · {reward.session.minutes} min
         </Text>
@@ -315,14 +393,14 @@ function RewardView({
           <Flower kind={f} size={170} stem />
         </Animated.View>
         <Animated.View entering={ZoomIn.delay(450).springify()} style={[styles.rarity, { backgroundColor: rareColor }]}>
-          <Text variant="bodyStrong" style={{ color: '#fff', fontSize: 12.5 }}>
+          <Text variant="caption" strong color="onStatus">
             {RARITY_LABEL[f.rarity]}
           </Text>
         </Animated.View>
         <Text variant="title" center>
           You grew a {f.name}
         </Text>
-        <Text variant="quote" color="textSecondary" center style={{ fontSize: 17 }}>
+        <Text variant="quoteSm" color="textSecondary" center>
           {f.line}
         </Text>
         <View style={[styles.statsRow, { borderColor: t.line }]}>
@@ -345,6 +423,7 @@ function RewardView({
         )}
         <Button title={`Take a ${restMinutes}-minute break`} icon="leaf" onPress={onBreak} style={{ alignSelf: 'stretch' }} />
         <Button title="Skip break" kind="quiet" onPress={onSkip} style={{ alignSelf: 'stretch' }} />
+        </Card>
       </Animated.View>
     </View>
   );
@@ -353,10 +432,8 @@ function RewardView({
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <View style={{ flex: 1, alignItems: 'center' }}>
-      <Text variant="bodyStrong" style={{ fontSize: 18 }}>
-        {value}
-      </Text>
-      <Text variant="small" style={{ fontSize: 11.5 }}>
+      <Text variant="numeral">{value}</Text>
+      <Text variant="caption">
         {label}
       </Text>
     </View>
@@ -369,8 +446,7 @@ function FocusStats({ sessions, garden }: { sessions: FocusSession[]; garden: Bl
   const old = Object.values(cleared).reduce((n, d) => ({ sessions: n.sessions + d.sessions, minutes: n.minutes + d.minutes }), { sessions: 0, minutes: 0 });
   const minutes = sessions.reduce((n, s) => n + s.minutes, 0) + old.minutes;
   return (
-    <Pressable onPress={() => (tap(), router.navigate('/journey'))} accessibilityRole="button" accessibilityLabel="Open your garden">
-      <Card>
+    <Card onPress={() => router.navigate('/journey')} accessibilityLabel="Open your garden">
         <View style={styles.gardenHead}>
           <Text variant="label">Your garden · {garden.length} blooms</Text>
           <Text variant="small" color="accent">
@@ -383,23 +459,23 @@ function FocusStats({ sessions, garden }: { sessions: FocusSession[]; garden: Bl
           <Stat label="Focus streak" value={`${focusStreak(sessions, undefined, cleared)} d`} />
           <Stat label="Focus hours" value={(minutes / 60).toFixed(1)} />
         </View>
-      </Card>
-    </Pressable>
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
   top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', height: 36 },
-  todayPill: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, borderWidth: 1 },
-  ringBox: { width: RING, height: RING, alignSelf: 'center', alignItems: 'center', justifyContent: 'center', marginVertical: 6 },
-  face: { width: RING - 44, height: RING - 44, borderRadius: RING, alignItems: 'center', justifyContent: 'center', gap: 2 },
+  todayPill: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: Radius.pill, borderWidth: 1 },
+  tabular: { fontVariant: ['tabular-nums'] },
+  ringBox: { alignSelf: 'center', alignItems: 'center', justifyContent: 'center', marginVertical: 6 },
+  face: { borderRadius: RING, alignItems: 'center', justifyContent: 'center', gap: 2 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, borderWidth: 1 },
+  chip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: Radius.pill, borderWidth: 1 },
   controls: { flexDirection: 'row', gap: 10 },
-  reward: { borderRadius: 30, borderWidth: 1, padding: 22, gap: 10, alignItems: 'center' },
+  reward: { borderRadius: Radius.xl, padding: 22, gap: 10, alignItems: 'center' },
   bloom: { width: 190, height: 190, alignItems: 'center', justifyContent: 'center' },
   bloomGlow: { position: 'absolute', width: 150, height: 150, borderRadius: 75, opacity: 0.45 },
-  rarity: { paddingHorizontal: 12, paddingVertical: 4, borderRadius: 999 },
+  rarity: { paddingHorizontal: 12, paddingVertical: 4, borderRadius: Radius.pill },
   statsRow: { flexDirection: 'row', alignSelf: 'stretch', borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 12 },
   gardenStats: { flexDirection: 'row', paddingTop: 10 },
   gardenHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },

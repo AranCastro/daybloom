@@ -82,18 +82,11 @@ export function Checkbox({ checked, color, onPress, size = 22, label }: { checke
 }
 
 export function DueBadge({ due, today }: { due?: string; today: string }) {
-  const t = useTheme();
-  const dark = useIsDark();
   const b = dueBadge(due, today);
   if (!b) return null;
-  const color =
-    b.tone === 'late' || b.tone === 'today'
-      ? dark ? '#F08A74' : '#C9503B'
-      : b.tone === 'soon'
-        ? dark ? '#EDB65A' : '#B57A12'
-        : t.textMuted;
+  const color = b.tone === 'late' || b.tone === 'today' ? 'danger' : b.tone === 'soon' ? 'warningText' : 'textMuted';
   return (
-    <Text variant="small" style={{ color, fontSize: 12, fontFamily: Fonts.bodyStrong }}>
+    <Text variant="caption" strong color={color}>
       {b.text}
     </Text>
   );
@@ -106,10 +99,10 @@ export function TaskRow({ task, today, onOpen, compact }: { task: Task; today: s
       <Checkbox checked={task.done} color={color} onPress={() => toggleTask(task.id)} size={compact ? 20 : 22} label={task.title} />
       <Pressable style={{ flex: 1 }} onPress={() => (tap(), onOpen(task))}>
         <Text
-          variant="body"
+          variant={compact ? 'bodySm' : 'body'}
           color={task.done ? 'textMuted' : 'text'}
           numberOfLines={2}
-          style={[{ fontSize: compact ? 14.5 : 16, lineHeight: compact ? 19 : 22 }, task.done && styles.struck]}>
+          style={[!compact && styles.taskTitle, task.done && styles.struck]}>
           {task.title}
         </Text>
         <StepProgress task={task} compact={compact} />
@@ -117,7 +110,7 @@ export function TaskRow({ task, today, onOpen, compact }: { task: Task; today: s
           <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
             <DueBadge due={task.due} today={today} />
             {task.effort && (
-              <Text variant="small" style={{ fontSize: 12 }}>
+              <Text variant="caption">
                 {effortInfo(task.effort).emoji} {effortInfo(task.effort).label}
               </Text>
             )}
@@ -140,12 +133,12 @@ export function StepProgress({ task, compact }: { task: Task; compact?: boolean 
         <View style={[styles.stepTrack, { backgroundColor: t.surfaceAlt, width: compact ? 44 : 64 }]}>
           <View style={{ width: `${Math.round((p.done / p.total) * 100)}%`, height: '100%', borderRadius: 3, backgroundColor: color }} />
         </View>
-        <Text variant="small" style={{ fontSize: 11.5 }}>
+        <Text variant="caption" style={styles.tabular}>
           {p.done}/{p.total} steps
         </Text>
       </View>
       {!!p.next && !compact && (
-        <Text variant="small" numberOfLines={1} style={{ fontSize: 12 }}>
+        <Text variant="caption" numberOfLines={1}>
           Next: {p.next}
         </Text>
       )}
@@ -176,7 +169,7 @@ function StepsEditor({ task, big, draft, setDraft }: { task: Task | null; big: b
     <View style={{ gap: 10 }}>
       <Text variant="label">Steps{hasSteps ? '' : ' (optional)'}</Text>
       {big && !hasSteps && (
-        <Text variant="small" style={{ fontSize: 12 }}>
+        <Text variant="caption">
           A bigger task rarely fits in one day. Break it into steps you can finish in one sitting; each day you make
           progress grows a flower.
         </Text>
@@ -185,7 +178,7 @@ function StepsEditor({ task, big, draft, setDraft }: { task: Task | null; big: b
         ? steps.map((st) => (
             <View key={st.id} style={styles.stepRow}>
               <Checkbox checked={st.done} color={t.brand} onPress={() => toggleStep(task.id, st.id)} size={20} label={st.title} />
-              <Text variant="body" style={[{ flex: 1, fontSize: 15 }, st.done && styles.struck]} color={st.done ? 'textMuted' : 'text'}>
+              <Text variant="bodySm" style={[{ flex: 1 }, st.done && styles.struck]} color={st.done ? 'textMuted' : 'text'}>
                 {st.title}
               </Text>
               <Pressable onPress={() => (tap(), deleteStep(task.id, st.id))} hitSlop={8} accessibilityLabel={`Remove step ${st.title}`}>
@@ -196,7 +189,7 @@ function StepsEditor({ task, big, draft, setDraft }: { task: Task | null; big: b
         : draft.map((st, i) => (
             <View key={i} style={styles.stepRow}>
               <Text variant="small">{i + 1}.</Text>
-              <Text variant="body" style={{ flex: 1, fontSize: 15 }}>
+              <Text variant="bodySm" color="text" style={{ flex: 1 }}>
                 {st}
               </Text>
               <Pressable onPress={() => (tap(), setDraft(draft.filter((_, j) => j !== i)))} hitSlop={8} accessibilityLabel={`Remove step ${st}`}>
@@ -219,13 +212,13 @@ function StepsEditor({ task, big, draft, setDraft }: { task: Task | null; big: b
           }}
           disabled={worked.includes(today)}
           accessibilityRole="button"
-          style={[styles.worked, { borderColor: worked.includes(today) ? '#3A9477' : t.line, backgroundColor: worked.includes(today) ? '#3A947718' : 'transparent' }]}>
-          <Text style={{ fontSize: 18 }}>{worked.includes(today) ? '🌱' : '⏳'}</Text>
+          style={[styles.worked, { borderColor: worked.includes(today) ? t.success : t.line, backgroundColor: worked.includes(today) ? t.successSoft : 'transparent' }]}>
+          <Text variant="numeral">{worked.includes(today) ? '🌱' : '⏳'}</Text>
           <View style={{ flex: 1 }}>
-            <Text variant="bodyStrong" style={{ fontSize: 14 }}>
+            <Text variant="bodySm" strong color="text">
               {worked.includes(today) ? 'Progress noted today' : 'I worked on it today'}
             </Text>
-            <Text variant="small" style={{ fontSize: 12 }}>
+            <Text variant="caption">
               {worked.length ? `Worked on ${worked.length} ${worked.length === 1 ? 'day' : 'days'} so far. ` : ''}One flower for each day of progress.
             </Text>
           </View>
@@ -331,7 +324,7 @@ function SheetBody({ onClose, task, defaultQuadrant = 1, defaultDue }: SheetProp
                     key={c.label}
                     onPress={() => (tap(), setDue(value), setPicking(false))}
                     style={[styles.dueChip, { borderColor: on ? t.text : t.line, backgroundColor: on ? t.text : 'transparent' }]}>
-                    <Text variant="small" style={{ color: on ? t.background : t.text, fontFamily: Fonts.bodyStrong }}>
+                    <Text variant="small" strong style={{ color: on ? t.background : t.text }}>
                       {c.label}
                     </Text>
                   </Pressable>
@@ -344,7 +337,7 @@ function SheetBody({ onClose, task, defaultQuadrant = 1, defaultDue }: SheetProp
               accessibilityLabel="Pick a date"
               style={[styles.dueChip, styles.pick, { borderColor: custom || picking ? t.text : t.line, backgroundColor: custom ? t.text : 'transparent' }]}>
               <Icon name="calendar" color={custom ? t.background : t.text} size={16} />
-              <Text variant="small" style={{ color: custom ? t.background : t.text, fontFamily: Fonts.bodyStrong }}>
+              <Text variant="small" strong style={{ color: custom ? t.background : t.text }}>
                 {custom && due ? prettyDate(fromKey(due)) : 'Pick a date'}
               </Text>
             </Pressable>
@@ -376,15 +369,13 @@ function SheetBody({ onClose, task, defaultQuadrant = 1, defaultDue }: SheetProp
                     accessibilityState={{ selected: on }}
                     accessibilityLabel={`${e.label}: ${e.hint}`}
                     style={[styles.effort, { borderColor: on ? e.tint : t.line, backgroundColor: on ? e.tint + '1F' : 'transparent' }]}>
-                    <Text style={{ fontSize: 18 }}>{e.emoji}</Text>
+                    <Text variant="numeral">{e.emoji}</Text>
                     <View style={{ flex: 1 }}>
-                      <Text variant="bodyStrong" style={{ fontSize: 14 }}>
+                      <Text variant="bodySm" strong color="text">
                         {e.label}
                       </Text>
-                      <Text variant="small" style={{ fontSize: 11.5, lineHeight: 15 }}>
-                        {e.hint}
-                      </Text>
-                      <Text variant="small" style={{ fontSize: 11, lineHeight: 14, color: e.tint, fontFamily: Fonts.bodyStrong }}>
+                      <Text variant="caption">{e.hint}</Text>
+                      <Text variant="micro" strong style={{ color: e.tint }}>
                         {rewardLine(e.id)}
                       </Text>
                     </View>
@@ -392,7 +383,7 @@ function SheetBody({ onClose, task, defaultQuadrant = 1, defaultDue }: SheetProp
                 );
               })}
             </View>
-            <Text variant="small" style={{ fontSize: 12 }}>
+            <Text variant="caption">
               Low energy shows Quick tasks only; medium hides Deep work; high shows everything, Deep work first.
             </Text>
           </View>
@@ -451,10 +442,10 @@ function QuadrantOption({ q, selected, onPress }: { q: Quadrant; selected: boole
       style={[styles.qOption, { backgroundColor: selected ? soft : t.background, borderColor: selected ? color : t.line }]}>
       <QuadrantChip q={q} size={24} />
       <View style={{ flex: 1 }}>
-        <Text variant="bodyStrong" style={{ color: selected ? color : t.text, fontSize: 14.5 }}>
+        <Text variant="bodySm" strong style={{ color: selected ? color : t.text }}>
           {qName(q)}
         </Text>
-        <Text variant="small" style={{ fontSize: 11.5, lineHeight: 15 }}>
+        <Text variant="caption">
           {info.meaning}
         </Text>
       </View>
@@ -466,13 +457,16 @@ const styles = StyleSheet.create({
   stepTrack: { height: 5, borderRadius: 3, overflow: 'hidden' },
   stepRow: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 34 },
   stepAdd: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
-  worked: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, borderRadius: 16, borderWidth: 1.5 },
+  worked: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, borderRadius: Radius.md, borderWidth: 1.5 },
   effortGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  effort: { width: '48%', flexGrow: 1, flexDirection: 'row', alignItems: 'center', gap: 8, padding: 10, borderRadius: 16, borderWidth: 1.5 },
+  effort: { width: '48%', flexGrow: 1, flexDirection: 'row', alignItems: 'center', gap: 8, padding: 10, borderRadius: Radius.md, borderWidth: 1.5 },
   chip: { alignItems: 'center', justifyContent: 'center' },
   box: { borderWidth: 2, borderRadius: 7, alignItems: 'center', justifyContent: 'center' },
   row: { flexDirection: 'row', gap: 12, alignItems: 'flex-start', paddingVertical: 7 },
   struck: { textDecorationLine: 'line-through' },
+  // A task title reads as body text but a touch tighter, so two lines stay compact.
+  taskTitle: { lineHeight: 22 },
+  tabular: { fontVariant: ['tabular-nums'] },
   scrim: { flex: 1, backgroundColor: 'rgba(10,8,6,0.38)' },
   sheet: {
     borderTopLeftRadius: 30,

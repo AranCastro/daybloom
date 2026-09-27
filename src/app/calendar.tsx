@@ -64,7 +64,7 @@ export default function CalendarScreen() {
       <Card>
         <MonthCalendar selected={day} onSelect={setDay} marks={marks} heat={heat} />
         <HeatLegend />
-        <Text variant="small" color="textMuted" style={{ fontSize: 12 }}>
+        <Text variant="caption" color="textMuted">
           Past days are shaded by tasks finished and focus sessions. Dots show tasks due.
         </Text>
       </Card>

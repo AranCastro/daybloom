@@ -4,7 +4,7 @@
  */
 import * as Haptics from 'expo-haptics';
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, {
   Easing,
   FadeIn,
@@ -20,7 +20,7 @@ import Animated, {
 import { Icon } from '@/components/icons';
 import { Text } from '@/components/text';
 import { Button } from '@/components/ui';
-import { Fonts } from '@/constants/theme';
+import { Fonts, Radius, Shadow } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { hapticsOn } from '@/lib/store';
 
@@ -98,7 +98,10 @@ function ConfettiPiece({ piece }: { piece: Piece }) {
   return <Animated.View style={[{ position: 'absolute', top: 0, left: `${piece.x}%`, width: piece.w, height: piece.h, borderRadius: 2, backgroundColor: piece.color }, style]} />;
 }
 
-export function Confetti({ count = 42, height = 700 }: { count?: number; height?: number }) {
+/** Falls the full height of the window by default, so it clears tall phones too. */
+export function Confetti({ count = 42, height }: { count?: number; height?: number }) {
+  const { height: windowHeight } = useWindowDimensions();
+  const fallTo = (height ?? windowHeight) + 60;
   const [pieces] = useState<Piece[]>(() =>
     Array.from({ length: count }, (_, i) => ({
       x: Math.random() * 96,
@@ -106,7 +109,7 @@ export function Confetti({ count = 42, height = 700 }: { count?: number; height?
       color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
       w: 6 + Math.random() * 6,
       h: 10 + Math.random() * 8,
-      fall: height * (0.55 + Math.random() * 0.45),
+      fall: fallTo * (0.7 + Math.random() * 0.3),
       spin: 360 + Math.random() * 540,
       drift: 10 + Math.random() * 24,
     })),
@@ -147,7 +150,7 @@ export function Countdown({ onDone, color }: { onDone: () => void; color: string
   }, []);
   return (
     <View style={styles.countdown}>
-      <Animated.Text key={n} entering={ZoomIn.duration(320).springify()} style={{ fontFamily: Fonts.display, fontSize: 120, lineHeight: 132, color }}>
+      <Animated.Text key={n} entering={ZoomIn.duration(320).springify()} style={[styles.countdownDigit, { color }]}>
         {n}
       </Animated.Text>
       <Text variant="label">Get ready</Text>
@@ -215,13 +218,15 @@ export function ResultPanel({
 }) {
   const t = useTheme();
   return (
-    <Animated.View entering={FadeInDown.duration(420)} style={[styles.panel, { backgroundColor: t.surface, borderColor: t.line }]}>
+    <Animated.View entering={FadeInDown.duration(420)} style={[styles.panel, { backgroundColor: t.raised, borderColor: t.line }, Shadow.md]}>
       <Text variant="label" center>
         {eyebrow}
       </Text>
       {stars !== undefined && <Stars count={stars} color={color} />}
       <View style={styles.valueRow}>
-        <Text style={{ fontFamily: Fonts.display, fontSize: 64, lineHeight: 72, color: t.text }}>{value}</Text>
+        <Text variant="display" style={styles.bigValue}>
+          {value}
+        </Text>
         {unit ? (
           <Text variant="body" color="textSecondary" style={{ marginBottom: 12 }}>
             {unit}
@@ -231,13 +236,13 @@ export function ResultPanel({
       {newBest && (
         <Animated.View entering={ZoomIn.delay(500).springify()} style={[styles.badge, { backgroundColor: color }]}>
           <Icon name="spark" color="#fff" size={14} />
-          <Text variant="bodyStrong" style={{ color: '#fff', fontSize: 13 }}>
+          <Text variant="small" strong style={{ color: '#fff' }}>
             New personal best
           </Text>
         </Animated.View>
       )}
       {line ? (
-        <Text variant="quote" color="textSecondary" center style={{ fontSize: 17 }}>
+        <Text variant="quoteSm" color="textSecondary" center>
           {line}
         </Text>
       ) : null}
@@ -245,10 +250,8 @@ export function ResultPanel({
         <View style={[styles.statsRow, { borderColor: t.line }]}>
           {stats.map((s) => (
             <View key={s.label} style={{ flex: 1, alignItems: 'center' }}>
-              <Text variant="bodyStrong" style={{ fontSize: 18 }}>
-                {s.value}
-              </Text>
-              <Text variant="small" style={{ fontSize: 11.5 }}>
+              <Text variant="numeral">{s.value}</Text>
+              <Text variant="caption">
                 {s.label}
               </Text>
             </View>
@@ -267,11 +270,13 @@ const styles = StyleSheet.create({
   origin: { position: 'absolute', width: 0, height: 0 },
   float: { position: 'absolute', fontSize: 20, width: 80, left: -40, top: -14, textAlign: 'center' },
   countdown: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 4 },
+  countdownDigit: { fontFamily: Fonts.display, fontSize: 120, lineHeight: 132, includeFontPadding: false },
+  bigValue: { fontSize: 64, lineHeight: 72 },
   track: { height: 8, borderRadius: 4, overflow: 'hidden' },
   fill: { height: '100%', borderRadius: 4 },
   stars: { flexDirection: 'row', gap: 10, justifyContent: 'center', marginTop: 6 },
-  panel: { borderRadius: 30, borderWidth: 1, padding: 22, gap: 10, alignItems: 'center' },
+  panel: { borderRadius: Radius.xl, borderWidth: 1, padding: 22, gap: 10, alignItems: 'center' },
   valueRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 6 },
-  badge: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 999 },
+  badge: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 5, borderRadius: Radius.pill },
   statsRow: { flexDirection: 'row', alignSelf: 'stretch', borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 12, marginTop: 4 },
 });

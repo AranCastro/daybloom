@@ -8,6 +8,7 @@ import { Confetti } from '@/components/games/fx';
 import { Icon } from '@/components/icons';
 import { Text } from '@/components/text';
 import { Button } from '@/components/ui';
+import { Radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { Badge, BadgeTier } from '@/lib/badges';
 
@@ -66,7 +67,7 @@ export function BadgeCelebration({ badges, onClose }: { badges: Badge[]; onClose
             <Text variant="title" center>
               {first.title}
             </Text>
-            <Text variant="quote" color="textSecondary" center style={{ fontSize: 17 }}>
+            <Text variant="quoteSm" color="textSecondary" center>
               {first.cheer}
             </Text>
             {badges.length > 1 && (
@@ -101,6 +102,6 @@ const styles = StyleSheet.create({
   center: { alignItems: 'center', justifyContent: 'center' },
   shine: { position: 'absolute', backgroundColor: 'rgba(255,255,255,0.55)', transform: [{ rotate: '-25deg' }] },
   scrim: { flex: 1, backgroundColor: 'rgba(10,8,6,0.45)', alignItems: 'center', justifyContent: 'center', padding: 24 },
-  card: { width: '100%', maxWidth: 380, borderRadius: 32, padding: 24, gap: 12, alignItems: 'center' },
+  card: { width: '100%', maxWidth: 380, borderRadius: Radius.xl, padding: 24, gap: 12, alignItems: 'center' },
   more: { flexDirection: 'row', alignItems: 'center', gap: 6 },
 });
