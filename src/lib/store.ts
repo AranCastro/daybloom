@@ -4,7 +4,7 @@
  * user sends themselves with one tap (SMS or WhatsApp); the app sends nothing on its own.
  */
 import { useSyncExternalStore } from 'react';
-import { Platform } from 'react-native';
+import { AppState as RNAppState, Platform } from 'react-native';
 
 import { dayKey } from '@/lib/dates';
 import { readItem, removeItem, writeItem } from '@/lib/kv';
@@ -15,6 +15,7 @@ import { MoodValue } from '@/lib/moods';
 import { sortOpen } from '@/lib/quadrants';
 import { isLowStreak } from '@/lib/nudge-rule';
 import { rewardFor } from '@/lib/effort';
+import { sanitise } from '@/lib/sanitise';
 
 export type NudgeLog = {
   at: number;
@@ -110,8 +111,10 @@ export type AppState = {
   armed: boolean;
   /** Day (YYYY-MM-DD) of the last automatic nudge, so changing an answer that day cannot re-arm it. */
   lastNudgeDay?: string;
-  /** Every flower ever grown (the garden list keeps the newest 2,000); drives the Golden Lotus. */
+  /** Flowers in the garden, counting past the newest 2,000 the list keeps (unticking a task takes its flower back). */
   bloomCount: number;
+  /** Every flower ever grown, never taken back: drives the Golden Lotus, so untick and tick cannot earn it twice. */
+  bloomsEver: number;
   /** Tasks finished per day that were later cleared, so the calendar keeps their shading. */
   clearedWork: Record<string, number>;
   /** The user's own names for the matrix quadrants and circle sections (empty = the default name). */
@@ -233,13 +236,18 @@ const initial: AppState = {
   settings: DEFAULT_SETTINGS,
   backup: {},
   bloomCount: 0,
+  bloomsEver: 0,
   clearedWork: {},
   labels: { matrix: {}, circle: {} },
   avatar: null,
 };
 
-/** Fills in anything a saved (or restored) state is missing, so older data keeps working. */
-function mergeSaved(saved: Partial<AppState>): AppState {
+/**
+ * Fills in anything a saved (or restored) state is missing, so older data keeps working. The single
+ * way in for both launch and restore, so everything is cleaned first (lib/sanitise).
+ */
+function mergeSaved(raw: Partial<AppState>): AppState {
+  const saved = sanitise(raw);
   const merged = { ...initial, ...saved };
   merged.widgetPrefs = Object.fromEntries(
     WIDGET_KEYS.map((k) => [k, { ...DEFAULT_WIDGET_PREFS, ...saved.widgetPrefs?.[k] }]),
@@ -261,7 +269,12 @@ function mergeSaved(saved: Partial<AppState>): AppState {
   merged.reminder = { ...initial.reminder, ...saved.reminder };
   merged.games = { best: { ...saved.games?.best }, plays: { ...saved.games?.plays } };
   merged.focus = { ...initial.focus, ...saved.focus };
+  // Gardens began with focus sessions only: carry those flowers over once (before they are counted).
+  if (!saved.garden && saved.focus?.sessions?.length) {
+    merged.garden = saved.focus.sessions.map((f, i) => ({ id: `m${i}-${f.at}`, at: f.at, flower: f.flower, source: 'focus' as const, ref: f.taskId }));
+  }
   if (saved.bloomCount === undefined) merged.bloomCount = merged.garden.length;
+  merged.bloomsEver = Math.max(saved.bloomsEver ?? 0, merged.bloomCount);
   merged.clearedWork = { ...saved.clearedWork };
   merged.labels = { matrix: { ...saved.labels?.matrix }, circle: { ...saved.labels?.circle } };
   // Older versions kept a separate ntfy buddy; now the buddy is a person in the circle.
@@ -276,19 +289,15 @@ function mergeSaved(saved: Partial<AppState>): AppState {
     const last = (merged.nudges ?? []).find((n) => n.kind === 'auto');
     if (last) merged.lastNudgeDay = dayKey(new Date(last.at));
   }
-  // Gardens began with focus sessions only: carry those flowers over once.
-  if (!saved.garden && saved.focus?.sessions?.length) {
-    merged.garden = saved.focus.sessions.map((f, i) => ({ id: `m${i}-${f.at}`, at: f.at, flower: f.flower, source: 'focus' as const, ref: f.taskId }));
-  }
   return merged;
 }
 
 function load(): AppState {
-  const raw = readItem(KEY);
-  if (!raw) return initial;
   try {
-    return mergeSaved(JSON.parse(raw) as Partial<AppState>);
+    const raw = readItem(KEY);
+    return raw ? mergeSaved(JSON.parse(raw) as Partial<AppState>) : initial;
   } catch {
+    // Unreadable database or file: start from defaults rather than crash at launch.
     return initial;
   }
 }
@@ -296,10 +305,64 @@ function load(): AppState {
 let state: AppState = load();
 const listeners = new Set<() => void>();
 
+// ── Saving ───────────────────────────────────────────────────────────────────
+// Changes apply to memory (and the screen) at once; the write to storage is coalesced into one per
+// burst of updates (a widget tap makes several) and runs after the current task, off the tap's path.
+
+let dirty = false;
+let queued = false;
+let saveFailed = false;
+const saveListeners = new Set<() => void>();
+
+function setSaveFailed(failed: boolean) {
+  if (saveFailed === failed) return;
+  saveFailed = failed;
+  saveListeners.forEach((l) => l());
+}
+
+/** Writes pending changes now. Called before the app goes to the background and before a background task returns. */
+export function flushState(): void {
+  queued = false;
+  if (!dirty) return;
+  try {
+    writeItem(KEY, JSON.stringify(state));
+    dirty = false;
+    setSaveFailed(false);
+  } catch {
+    // Disk full or the database is unavailable: keep the change in memory, say so, and try again next time.
+    setSaveFailed(true);
+  }
+}
+
 function set(next: AppState) {
   state = next;
-  writeItem(KEY, JSON.stringify(state));
+  dirty = true;
+  if (!queued) {
+    queued = true;
+    queueMicrotask(flushState);
+  }
   listeners.forEach((l) => l());
+}
+
+// Leaving the app (or the screen turning off) writes anything still pending.
+try {
+  RNAppState.addEventListener?.('change', (s) => {
+    if (s !== 'active') flushState();
+  });
+} catch {
+  // No app lifecycle here (tests, some headless contexts).
+}
+
+/** True while the last save failed (for a banner asking the user to free some space). */
+export function useSaveFailed(): boolean {
+  return useSyncExternalStore(
+    (cb) => {
+      saveListeners.add(cb);
+      return () => saveListeners.delete(cb);
+    },
+    () => saveFailed,
+    () => saveFailed,
+  );
 }
 
 export function update(patch: Partial<AppState> | ((s: AppState) => Partial<AppState>)): void {
@@ -311,10 +374,16 @@ export function getState(): AppState {
   return state;
 }
 
-/** Re-reads saved state (a home-screen widget may have changed it while the app was closed). */
-export function reloadState(): void {
+/**
+ * Re-reads saved state (a home-screen widget may have changed it while the app was closed).
+ * `silent` skips telling subscribers: a widget tap redraws the widgets itself, and the changes it
+ * then makes notify anyway.
+ */
+export function reloadState(opts: { silent?: boolean } = {}): void {
+  // Anything not yet written would otherwise be lost by reading the older copy back.
+  flushState();
   state = load();
-  listeners.forEach((l) => l());
+  if (!opts.silent) listeners.forEach((l) => l());
 }
 
 /** Plain change subscription, for code outside React (home-screen widgets). */
@@ -446,8 +515,27 @@ export function setBackupInfo(patch: Partial<AppState['backup']>) {
   update((s) => ({ backup: { ...s.backup, ...patch } }));
 }
 
+const eraseHooks = new Set<() => void>();
+
+/** Extra clean-up for "Erase everything" (the weekly backup files register here, from lib/backup). */
+export function onErase(fn: () => void): () => void {
+  eraseHooks.add(fn);
+  return () => eraseHooks.delete(fn);
+}
+
 export function resetAll() {
-  removeItem(KEY);
+  try {
+    removeItem(KEY);
+  } catch {
+    // The write of the empty state below replaces it anyway.
+  }
+  eraseHooks.forEach((fn) => {
+    try {
+      fn();
+    } catch {
+      // Clean-up is best effort; the erase itself must still happen.
+    }
+  });
   set(initial);
 }
 
@@ -779,9 +867,10 @@ export function bloomedToday(source: BloomSource, ref?: string): boolean {
 
 /** Grows one flower. `silent` skips the toast (the focus screen shows its own reveal). */
 export function bloom(source: BloomSource, opts: { ref?: string; note?: string; rareChance?: number; silent?: boolean } = {}): FlowerKind {
-  const kind = pickFlower(state.bloomCount + 1, state.garden[0]?.flower, opts.rareChance ?? 0.1);
+  // The Golden Lotus follows every flower ever grown, so a flower taken back cannot bring it round again.
+  const kind = pickFlower(state.bloomsEver + 1, state.garden[0]?.flower, opts.rareChance ?? 0.1);
   const b: Bloom = { id: newId(), at: Date.now(), flower: kind.id, source, ref: opts.ref, note: opts.note };
-  update((s) => ({ garden: [b, ...s.garden].slice(0, 2000), bloomCount: s.bloomCount + 1 }));
+  update((s) => ({ garden: [b, ...s.garden].slice(0, 2000), bloomCount: s.bloomCount + 1, bloomsEver: s.bloomsEver + 1 }));
   if (!opts.silent) bloomListeners.forEach((l) => l(b, kind));
   return kind;
 }

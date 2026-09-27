@@ -144,7 +144,8 @@ weather following the phone, and Thottam now says Poo Kolam.
 
 - **Backup and restore.** Settings → Backup and restore: **Back up to Google Drive** writes a backup file
   (JSON) and opens the share menu, where Drive can be chosen; **Restore from a backup** opens a backup file
-  from Drive or the phone, shows what it contains and asks before replacing anything. **Weekly backup** (on
+  from Drive or the phone (JSON or text, up to 25 MB), shows what it contains and asks before replacing
+  anything; damaged entries in the file are left out rather than restored. **Weekly backup** (on
   by default) keeps a fresh backup in the app's storage every week (the last four are kept) and shows a
   "Save to Drive" card on Today. Android's own Google backup (`allowBackup`) also includes the app's data.
   Code: `src/lib/backup-core.ts` (file format and checks), `src/lib/backup.ts` / `backup.web.ts`,

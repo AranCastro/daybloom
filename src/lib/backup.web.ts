@@ -1,7 +1,7 @@
 /** Backup and restore in the browser demo: download a file, and restore from a chosen file. */
 import * as DocumentPicker from 'expo-document-picker';
 
-import { backupFileName, makeBackup, parseBackup } from '@/lib/backup-core';
+import { backupFileName, checkBackupSize, makeBackup, parseBackup } from '@/lib/backup-core';
 import { getState, setBackupInfo } from '@/lib/store';
 
 function download(): boolean {
@@ -28,9 +28,14 @@ export async function pickBackup() {
   const result = await DocumentPicker.getDocumentAsync({ type: ['application/json', 'text/plain'] });
   if (result.canceled || !result.assets?.length) return null;
   const asset = result.assets[0];
+  const tooBig = checkBackupSize(asset.size ?? asset.file?.size);
+  if (tooBig) return tooBig;
   const text = asset.file ? await asset.file.text() : await (await fetch(asset.uri)).text();
   return parseBackup(text);
 }
+
+/** The browser keeps no backup files, so there is nothing to remove. */
+export function deleteLocalBackups(): void {}
 
 /** The browser keeps no weekly files. */
 export function weeklyBackupIfDue(): void {}
