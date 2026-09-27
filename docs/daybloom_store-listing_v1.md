@@ -26,6 +26,9 @@ Choose how today feels, from Bright to Heavy. No writing, no journaling. Your st
 **A garden that grows with you**
 Checking in, finishing a task, a focus session, a short game, reaching out to someone and earning a badge each grow a flower. Collect twelve kinds, including rare finds such as Neelakurinji, and a Golden Lotus every twentieth bloom.
 
+**New in 2.0**
+App lock with PIN or fingerprint. Seven focus sounds: white noise, rain, fire, wind, thunderstorm, birds and a 40 Hz gamma beat. Twenty optional feeling tags after your check-in. Style any widget: light or dark, and as transparent as you like. Start, pause and stop a Pomodoro right from your home screen.
+
 **Nudge a Friend**
 Pick one trusted person from your contacts, or let the app use the first person in your closest circle. After a few low days in a row, one tap opens SMS or WhatsApp with a short request to call you; you press Send. Your buddy needs no app and never sees your answers.
 

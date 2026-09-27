@@ -35,6 +35,7 @@ import {
 import { isLow } from '@/lib/moods';
 import { Bloom, getState, openTasks, toggleTask, useAppState } from '@/lib/store';
 import { GardenBed } from '@/components/garden';
+import { NowPlaying, SoundPicker } from '@/components/sound-picker';
 
 const RING = 280;
 const STROKE = 10;
@@ -254,6 +255,7 @@ export default function FocusScreen() {
             </View>
           )}
 
+          {active?.kind === 'focus' && active.endAt !== null && <NowPlaying />}
           {active?.kind === 'focus' && (
             <View style={styles.controls}>
               {active.endAt === null ? (
@@ -267,6 +269,8 @@ export default function FocusScreen() {
           {active?.kind === 'break' && <Button title="Skip break" kind="secondary" onPress={stopTimer} />}
         </>
       )}
+
+      {!reward && <SoundPicker running={!!active && active.kind === 'focus' && active.endAt !== null} />}
 
       <FocusStats sessions={sessions} garden={garden} />
     </Screen>

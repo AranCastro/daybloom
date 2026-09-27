@@ -13,7 +13,7 @@ import { CIRCLE } from '@/lib/circle';
 import { MOODS } from '@/lib/moods';
 import { QUADRANTS } from '@/lib/quadrants';
 import type { Snapshot } from '@/widgets/data';
-import { budSvg, doneSvg, flowerSvg, iconSvg, orbSvg, tickSvg, whatsappSvg } from '@/widgets/svg';
+import { budSvg, doneSvg, dotSvg, flowerSvg, iconSvg, orbSvg, ringSvg, tickSvg, whatsappSvg } from '@/widgets/svg';
 
 // ── Palette ──────────────────────────────────────────────────────────────────
 
@@ -262,6 +262,8 @@ export function GardenWidget({ s, p, width }: WidgetProps) {
         </FlexWidget>
         <TextWidget text={count} style={{ fontSize: 17, fontFamily: DISPLAY, color: p.ink }} />
         <TextWidget text={golden} style={{ fontSize: 11, fontFamily: BODY, color: p.dim }} maxLines={1} truncate="END" />
+        <Spacer size={5} />
+        <GoldenBar g={g} p={p} width={width - 28} />
       </Shell>
     );
   }
@@ -275,7 +277,9 @@ export function GardenWidget({ s, p, width }: WidgetProps) {
           <Label text="Your garden" p={p} />
           <TextWidget text={count} style={{ fontSize: 22, fontFamily: DISPLAY, color: p.ink }} />
           <TextWidget text={`${sub} · ${golden}`} style={{ fontSize: 11, fontFamily: BODY, color: p.dim }} maxLines={1} truncate="END" />
-          <Spacer size={8} />
+          <Spacer size={6} />
+          <GoldenBar g={g} p={p} width={width - 32 - 100} />
+          <Spacer size={6} />
           <FlexWidget style={{ flexDirection: 'row' }}>
             {g.recent.slice(1, 5).map((f, i) => (
               <SvgWidget key={i} svg={flowerSvg(f, 26)} style={{ height: 26, width: 26, marginRight: 4 }} />
@@ -287,9 +291,20 @@ export function GardenWidget({ s, p, width }: WidgetProps) {
   );
 }
 
+/** How close the next Golden Lotus is (every twentieth bloom). */
+function GoldenBar({ g, p, width }: { g: Snapshot['garden']; p: WidgetPalette; width: number }) {
+  const w = Math.max(40, width);
+  const filled = Math.max(4, Math.round(w * (1 - g.toGolden / g.golden)));
+  return (
+    <FlexWidget style={{ flexDirection: 'row', height: 6, width: w, borderRadius: 3, backgroundColor: p.line }}>
+      <FlexWidget style={{ height: 6, width: filled, borderRadius: 3, backgroundColor: '#E0A23A' }} />
+    </FlexWidget>
+  );
+}
+
 // ── 3. Streak ────────────────────────────────────────────────────────────────
 
-export function StreakWidget({ s, p }: WidgetProps) {
+export function StreakWidget({ s, p, height }: WidgetProps) {
   if (!s.onboarded) return <Welcome p={p} />;
   const line = s.checkedToday ? 'Checked in today' : s.streak > 0 ? 'Not yet today' : 'Start today';
   return (
@@ -305,7 +320,20 @@ export function StreakWidget({ s, p }: WidgetProps) {
             style={{ fontSize: 20, fontFamily: DISPLAY, color: p.ink }}
             maxLines={1}
           />
-          <TextWidget text={line} style={{ fontSize: 11, fontFamily: BODY, color: s.checkedToday ? p.dim : p.accent }} maxLines={1} truncate="END" />
+          {height >= 70 ? (
+            // This week at a glance: one dot per day in that day's mood colour.
+            <FlexWidget style={{ flexDirection: 'row', alignItems: 'center', marginTop: 3 }}>
+              {s.week.map((d, i) => (
+                <SvgWidget
+                  key={i}
+                  svg={dotSvg(d.color ?? p.line, 9, d.today ? p.ink : undefined)}
+                  style={{ height: 9, width: 9, marginRight: 3 }}
+                />
+              ))}
+            </FlexWidget>
+          ) : (
+            <TextWidget text={line} style={{ fontSize: 11, fontFamily: BODY, color: s.checkedToday ? p.dim : p.accent }} maxLines={1} truncate="END" />
+          )}
         </FlexWidget>
       </FlexWidget>
     </Shell>
@@ -348,6 +376,7 @@ export function TasksWidget({ s, p, height, flash }: WidgetProps) {
             {...(locked ? open(LINK.matrix) : { clickAction: 'TASK_DONE', clickActionData: { id: t.id }, accessibilityLabel: `Mark done: ${t.title}` })}
             style={{ flexDirection: 'row', alignItems: 'center', width: 'match_parent', height: 32 }}
           >
+            <FlexWidget style={{ height: 18, width: 3, borderRadius: 2, backgroundColor: QUADRANTS[t.quadrant - 1].color[p.mode] as `#${string}`, marginRight: 7 }} />
             <FlexWidget style={{ paddingRight: 10, paddingVertical: 4 }}>
               <SvgWidget svg={tickSvg(locked ? p.line : p.muted, 22)} style={{ height: 22, width: 22 }} />
             </FlexWidget>
@@ -366,23 +395,49 @@ export function TasksWidget({ s, p, height, flash }: WidgetProps) {
 
 // ── 5. Focus timer ───────────────────────────────────────────────────────────
 
-export function FocusWidget({ s, p }: WidgetProps) {
+export function FocusWidget({ s, p, width, height }: WidgetProps) {
   if (!s.onboarded) return <Welcome p={p} />;
   const f = s.focus;
+  const big = width >= 220 && height >= 170;
 
   if (f.running) {
     const done = !f.paused && f.leftMin === 0;
-    const title = done ? 'Time is up' : f.paused ? 'Paused' : f.kind === 'break' ? 'On a break' : 'Focusing';
-    const line = done ? 'Open to collect your flower' : f.paused ? `${f.leftMin} min left` : `Until ${f.until}`;
+    const isBreak = f.kind === 'break';
+    const color = isBreak ? '#3A9477' : p.accent;
+    const title = done ? 'Time is up' : f.paused ? `${f.leftMin} min left` : `Ends ${f.until}`;
+    const line = done ? 'Open to collect your flower' : f.task ?? (isBreak ? 'Stand up and stretch' : f.paused ? 'Paused' : `${f.leftMin} of ${f.totalMin} min left`);
+    const ring = big ? 92 : 64;
     return (
-      <Shell p={p} uri={LINK.focus()}>
-        <Label text="Focus" p={p} />
-        <FlexWidget style={{ flex: 1, width: 'match_parent', alignItems: 'center', justifyContent: 'center' }}>
-          <SvgWidget svg={done ? flowerSvg({ ...GOLD_BUD }, 56) : iconSvg('clock', p.brand, 40)} style={{ height: done ? 56 : 40, width: done ? 56 : 40 }} />
+      <Shell p={p} padding={14}>
+        <FlexWidget style={{ flexDirection: 'row', alignItems: 'center', width: 'match_parent' }}>
+          <FlexWidget style={{ flex: 1 }} {...open(LINK.focus())}>
+            <Label text={isBreak ? 'Break' : f.paused ? 'Paused' : 'Focusing'} p={p} />
+          </FlexWidget>
+          {!done && (
+            <FlexWidget
+              clickAction={f.paused ? 'FOCUS_RESUME' : 'FOCUS_PAUSE'}
+              accessibilityLabel={f.paused ? 'Resume' : 'Pause'}
+              style={{ height: 30, width: 30, borderRadius: 15, backgroundColor: p.chip, alignItems: 'center', justifyContent: 'center' }}
+            >
+              <SvgWidget svg={iconSvg(f.paused ? 'play' : 'pause', p.ink, 15, f.paused ? p.ink : 'none')} style={{ height: 15, width: 15 }} />
+            </FlexWidget>
+          )}
+          <Spacer size={6} />
+          <FlexWidget
+            clickAction="FOCUS_STOP"
+            accessibilityLabel="Stop"
+            style={{ height: 30, width: 30, borderRadius: 15, backgroundColor: p.chip, alignItems: 'center', justifyContent: 'center' }}
+          >
+            <SvgWidget svg={iconSvg('stop', p.dim, 13)} style={{ height: 13, width: 13 }} />
+          </FlexWidget>
         </FlexWidget>
-        <TextWidget text={title} style={{ fontSize: 17, fontFamily: DISPLAY, color: p.ink }} />
-        <TextWidget text={f.task ?? line} style={{ fontSize: 11, fontFamily: BODY, color: p.dim }} maxLines={1} truncate="END" />
-        {f.task && <TextWidget text={line} style={{ fontSize: 11, fontFamily: BOLD, color: p.accent }} maxLines={1} />}
+        <FlexWidget style={{ flex: 1, width: 'match_parent', alignItems: 'center', justifyContent: 'center' }} {...open(LINK.focus())}>
+          <SvgWidget svg={done ? flowerSvg({ ...GOLD_BUD }, ring) : ringSvg(f.progress, color, p.line, ring, big ? 8 : 6, isBreak ? 'leaf' : 'bud')} style={{ height: ring, width: ring }} />
+        </FlexWidget>
+        <FlexWidget style={{ width: 'match_parent' }} {...open(LINK.focus())}>
+          <TextWidget text={title} style={{ fontSize: big ? 20 : 16, fontFamily: DISPLAY, color: p.ink }} maxLines={1} />
+          <TextWidget text={line} style={{ fontSize: 11, fontFamily: BODY, color: done ? p.accent : p.dim }} maxLines={1} truncate="END" />
+        </FlexWidget>
       </Shell>
     );
   }
@@ -393,35 +448,41 @@ export function FocusWidget({ s, p }: WidgetProps) {
     { id: 'deep', min: 50 },
   ];
   const suggested = s.low ? 'gentle' : 'classic';
+  const today = f.sessionsToday ? `${f.sessionsToday} today · ${f.minutesToday} min` : 'Tap a time to start';
   return (
-    <Shell p={p} uri={LINK.focus()}>
-      <FlexWidget style={{ flexDirection: 'row', alignItems: 'center', width: 'match_parent' }}>
-        <FlexWidget style={{ flex: 1 }}>
-          <Label text="Focus" p={p} />
+    <Shell p={p} padding={14}>
+      <FlexWidget style={{ flexDirection: 'row', alignItems: 'center', width: 'match_parent' }} {...open(LINK.focus())}>
+        <FlexWidget style={{ height: 26, width: 26, borderRadius: 13, backgroundColor: p.chip, alignItems: 'center', justifyContent: 'center' }}>
+          <SvgWidget svg={iconSvg('clock', p.accent, 15)} style={{ height: 15, width: 15 }} />
         </FlexWidget>
-        {f.sessionsToday > 0 && <TextWidget text={`${f.sessionsToday} today`} style={{ fontSize: 11, fontFamily: BOLD, color: p.accent }} />}
+        <Spacer size={6} />
+        <FlexWidget style={{ flex: 1 }}>
+          <Label text="Pomodoro" p={p} />
+        </FlexWidget>
       </FlexWidget>
-      <Grow />
-      <TextWidget text="Grow a flower" style={{ fontSize: 17, fontFamily: DISPLAY, color: p.ink }} />
-      <TextWidget text="Pick a session" style={{ fontSize: 11, fontFamily: BODY, color: p.dim }} />
-      <Spacer size={8} />
+      <FlexWidget style={{ flex: 1, width: 'match_parent', justifyContent: 'center' }} {...open(LINK.focus())}>
+        {big && <SvgWidget svg={budSvg(44)} style={{ height: 44, width: 44 }} />}
+        <TextWidget text="Grow a flower" style={{ fontSize: big ? 20 : 17, fontFamily: DISPLAY, color: p.ink }} />
+        <TextWidget text={today} style={{ fontSize: 11, fontFamily: BODY, color: f.sessionsToday ? p.accent : p.dim }} maxLines={1} truncate="END" />
+      </FlexWidget>
       <FlexWidget style={{ flexDirection: 'row', width: 'match_parent' }}>
         {presets.map((x, i) => (
           <FlexWidget key={x.id} style={{ flex: 1, flexDirection: 'row' }}>
             {i > 0 && <Spacer size={6} />}
             <FlexWidget
-              {...open(LINK.focus(x.id))}
-              accessibilityLabel={`${x.min} minute focus`}
+              clickAction="FOCUS_START"
+              clickActionData={{ preset: x.id }}
+              accessibilityLabel={`Start ${x.min} minute focus`}
               style={{
                 flex: 1,
-                height: 32,
-                borderRadius: 12,
+                height: big ? 40 : 34,
+                borderRadius: 14,
                 alignItems: 'center',
                 justifyContent: 'center',
                 backgroundColor: x.id === suggested ? p.brand : p.chip,
               }}
             >
-              <TextWidget text={String(x.min)} style={{ fontSize: 13, fontFamily: BOLD, color: x.id === suggested ? p.brandInk : p.ink }} />
+              <TextWidget text={`${x.min}′`} style={{ fontSize: big ? 15 : 13, fontFamily: BOLD, color: x.id === suggested ? p.brandInk : p.ink }} />
             </FlexWidget>
           </FlexWidget>
         ))}

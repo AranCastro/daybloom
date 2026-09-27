@@ -6,6 +6,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { HeatLegend, MonthCalendar } from '@/components/calendar';
 import { Icon } from '@/components/icons';
+import { MoodTagRow } from '@/components/mood-tags';
 import { MoodOrb } from '@/components/mood-orb';
 import { TaskRow, TaskSheet } from '@/components/tasks';
 import { Text } from '@/components/text';
@@ -38,6 +39,7 @@ export default function CalendarScreen() {
 
   // Past days are shaded by how much got done: tasks finished plus focus sessions.
   const cleared = useAppState((s) => s.clearedWork);
+  const moodTags = useAppState((s) => s.moodTags);
   const work = workByDay(tasks, sessions, cleared);
   const heat: Record<string, HeatLevel> = Object.fromEntries(Object.entries(work).map(([k, w]) => [k, levelOf(w.score)]));
 
@@ -81,6 +83,7 @@ export default function CalendarScreen() {
               .join(' · ')}
           </Text>
         )}
+        {day <= today && <MoodTagRow ids={moodTags[day]} />}
 
         {open.length === 0 && done.length === 0 && late.length === 0 && <Text variant="small">Nothing due on this day.</Text>}
         {late.length > 0 && (

@@ -6,6 +6,7 @@ import Animated, { FadeIn, FadeInDown, ZoomIn } from 'react-native-reanimated';
 
 import { NudgeReadyCard, useBuddy } from '@/components/buddy';
 import { Icon } from '@/components/icons';
+import { MoodTagPicker } from '@/components/mood-tags';
 import { MoodOrb } from '@/components/mood-orb';
 import { Avatar, ReachButtons } from '@/components/people';
 import { TaskRow, TaskSheet } from '@/components/tasks';
@@ -135,6 +136,7 @@ export default function Today() {
               <Text variant="quote" color="textSecondary" center style={{ paddingHorizontal: 12 }}>
                 {todayMood.line}
               </Text>
+              <MoodTagPicker day={today} mood={todayMood.value} />
               <Pressable
                 onPress={() => {
                   tap();

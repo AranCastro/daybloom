@@ -1,6 +1,6 @@
 # Daybloom: Publishing on Google Play (Guide v1)
 
-This guide takes Daybloom 1.8.2 from GitHub to Google Play. Work through it in order.
+This guide takes Daybloom 2.0.0 from GitHub to Google Play. Work through it in order.
 Texts for the store listing and the Data safety answers are in `docs/daybloom_store-listing_v1.md`.
 
 ## Step 1. Add the upload key to GitHub (once)
@@ -21,7 +21,7 @@ once (make a backup first: Settings → Backup and restore) before installing a 
 
 1. github.com/AranCastro/daybloom → **Actions → Build Play Store bundle → Run workflow → Run workflow**.
 2. Wait about 15 minutes for a green tick. Open the run and download **daybloom-play-bundle** under Artifacts.
-3. Unzip it. The file inside is `daybloom-1.8.2-vc15.aab`.
+3. Unzip it. The file inside is `daybloom-2.0.0-vc16.aab`.
 
 Every later upload needs a higher version code. Either raise `versionCode` in `app.json`, or type the next number
 (14, 15, …) in the **versionCode** box when you click Run workflow.
@@ -54,6 +54,7 @@ Complete each task on the dashboard:
 | Government app | No |
 | Financial features | None |
 | Health apps | Tick the mental and behavioural health / stress management option; state it is not a medical device |
+| Foreground service permissions | Media playback: the focus sounds keep playing during a focus session with the screen off, with a media notification to stop them. The user starts it by starting a focus session with a sound chosen. |
 
 ## Step 5. Store listing (Grow users → Store presence → Main store listing)
 
@@ -77,8 +78,8 @@ Dashboard; check the current numbers there.
 2. **Testers:** create an email list with at least 12 Gmail addresses (colleagues, students, family).
 3. **Create new release:**
    - Play App Signing: accept "Use Google-generated key" (recommended). Your key stays the upload key.
-   - Upload `daybloom-1.8.2-vc15.aab`.
-   - Release name: `1.8.2`. Release notes: "First release of Daybloom: mood check-in, Eisenhower Matrix, focus
+   - Upload `daybloom-2.0.0-vc16.aab`.
+   - Release name: `2.0.0`. Release notes: "First release of Daybloom: mood check-in, Eisenhower Matrix, focus
      timer, calm games, circle of people and a buddy nudge."
 4. **Countries:** India (add others later if wanted).
 5. **Review release → Start rollout.** Google's review of the first release can take several days.

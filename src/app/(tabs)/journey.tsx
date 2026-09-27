@@ -14,6 +14,7 @@ import { FLOWERS, flowerOf, GOLDEN_EVERY, RARITY_LABEL } from '@/lib/flowers';
 import { Flower } from '@/components/flower';
 import { GardenBed, SOURCES } from '@/components/garden';
 import { MOODS, moodOf } from '@/lib/moods';
+import { topTags } from '@/lib/mood-tags';
 import { BADGES, badgeOf, streakInfo } from '@/lib/badges';
 import { Medal } from '@/components/badge';
 import { router } from 'expo-router';
@@ -57,6 +58,8 @@ export default function Journey() {
 
   const monthKeys = cells.filter(Boolean).map((d) => dayKey(d as Date));
   const logged = monthKeys.filter((k) => checkins[k] !== undefined);
+  const moodTags = useAppState((s) => s.moodTags);
+  const top = topTags(moodTags, monthKeys, 5);
   const counts = MOODS.map((m) => ({ mood: m, n: logged.filter((k) => checkins[k] === m.value).length }));
   const streak = streakInfo(checkins, today).current;
   const earned = useAppState((s) => s.badges);
@@ -260,6 +263,28 @@ export default function Journey() {
           </>
         )}
       </Card>
+
+      {top.length > 0 && (
+        <Card>
+          <Text variant="label">Feelings this month</Text>
+          <View style={{ gap: 8 }}>
+            {top.map(({ tag, count }) => (
+              <View key={tag.id} style={styles.feelRow}>
+                <Text style={{ fontSize: 20 }}>{tag.emoji}</Text>
+                <Text variant="bodyStrong" style={{ width: 104 }}>
+                  {tag.label}
+                </Text>
+                <View style={[styles.feelTrack, { backgroundColor: t.surfaceAlt }]}>
+                  <View style={{ width: `${Math.round((count / top[0].count) * 100)}%`, height: '100%', borderRadius: 6, backgroundColor: tag.tone === 'light' ? '#E0A23A' : '#7E8FD0' }} />
+                </View>
+                <Text variant="small" style={{ width: 44, textAlign: 'right' }}>
+                  {count} {count === 1 ? 'day' : 'days'}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </Card>
+      )}
     </Screen>
   );
 }
@@ -279,6 +304,8 @@ function MiniStat({ label, value }: { label: string; value: string }) {
 }
 
 const styles = StyleSheet.create({
+  feelRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  feelTrack: { flex: 1, height: 12, borderRadius: 6, overflow: 'hidden' },
   gardenStats: { flexDirection: 'row', gap: 8 },
   miniStat: { flex: 1, borderRadius: 18, borderWidth: 1, paddingVertical: 10, alignItems: 'center' },
   wayRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 7 },

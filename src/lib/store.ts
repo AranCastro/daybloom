@@ -81,6 +81,8 @@ export type AppState = {
   reminder: { enabled: boolean; hour: number; minute: number };
   /** YYYY-MM-DD -> mood value (1..5). One entry per day, last tap wins. */
   checkins: Record<string, MoodValue>;
+  /** YYYY-MM-DD -> optional feeling tags chosen after the check-in (ids from lib/mood-tags). */
+  moodTags: Record<string, string[]>;
   nudges: NudgeLog[];
   /** False after a nudge fires; re-armed by a later day that is Okay or better. */
   armed: boolean;
@@ -105,7 +107,7 @@ export type AppState = {
   /** Pomodoro: completed sessions (newest first) and the running timer. */
   focus: { sessions: FocusSession[]; active: ActiveTimer | null };
   /** Look of the matrix-style home-screen widgets, set in Settings → Home screen widgets. */
-  widgetPrefs: Record<'Matrix' | 'Circle', WidgetPrefs>;
+  widgetPrefs: Record<WidgetKey, WidgetPrefs>;
   /** Home-screen task widgets that are locked: taps open the app instead of ticking tasks off. */
   widgetLocks: Partial<Record<TaskWidget, boolean>>;
   /** The last task ticked off from a widget, so the widget can offer Undo for a few minutes. */
@@ -131,9 +133,13 @@ export type Settings = {
   autoBackup: boolean;
   /** Light or dark for every home-screen widget; "system" follows the phone. */
   widgetTheme: 'system' | 'light' | 'dark';
+  /** Background sound during focus sessions (an id from lib/sounds), or "off". */
+  focusSound: string;
+  /** Focus sound volume, 0–1. */
+  focusVolume: number;
 };
 
-export const DEFAULT_SETTINGS: Settings = { appearance: 'system', haptics: true, reduceMotion: false, weekStart: 0, focusPreset: 'classic', autoBackup: true, widgetTheme: 'system' };
+export const DEFAULT_SETTINGS: Settings = { appearance: 'system', haptics: true, reduceMotion: false, weekStart: 0, focusPreset: 'classic', autoBackup: true, widgetTheme: 'system', focusSound: 'off', focusVolume: 0.6 };
 
 export type WidgetPrefs = {
   theme: 'auto' | 'light' | 'dark';
@@ -145,6 +151,10 @@ export type WidgetPrefs = {
   /** Matrix only: also list finished tasks. */
   completed: boolean;
 };
+
+/** Every home-screen widget; names match the widget plugin entry in app.json. */
+export type WidgetKey = 'Matrix' | 'Circle' | 'CheckIn' | 'Tasks' | 'Garden' | 'Focus' | 'Streak' | 'Reach';
+export const WIDGET_KEYS: readonly WidgetKey[] = ['Matrix', 'Circle', 'CheckIn', 'Tasks', 'Garden', 'Focus', 'Streak', 'Reach'];
 
 /** Widgets that can tick tasks off from the home screen. */
 export type TaskWidget = 'Tasks' | 'Matrix';
@@ -164,6 +174,7 @@ const initial: AppState = {
   streak: 3,
   reminder: { enabled: true, hour: 21, minute: 0 },
   checkins: {},
+  moodTags: {},
   nudges: [],
   armed: true,
   tasks: [],
@@ -172,7 +183,7 @@ const initial: AppState = {
   focus: { sessions: [], active: null },
   badges: {},
   garden: [],
-  widgetPrefs: { Matrix: DEFAULT_WIDGET_PREFS, Circle: DEFAULT_WIDGET_PREFS },
+  widgetPrefs: Object.fromEntries(WIDGET_KEYS.map((k) => [k, DEFAULT_WIDGET_PREFS])) as Record<WidgetKey, WidgetPrefs>,
   widgetLocks: {},
   widgetUndo: null,
   settings: DEFAULT_SETTINGS,
@@ -186,7 +197,10 @@ const initial: AppState = {
 /** Fills in anything a saved (or restored) state is missing, so older data keeps working. */
 function mergeSaved(saved: Partial<AppState>): AppState {
   const merged = { ...initial, ...saved };
-  merged.widgetPrefs = { ...initial.widgetPrefs, ...saved.widgetPrefs };
+  merged.widgetPrefs = Object.fromEntries(
+    WIDGET_KEYS.map((k) => [k, { ...DEFAULT_WIDGET_PREFS, ...saved.widgetPrefs?.[k] }]),
+  ) as Record<WidgetKey, WidgetPrefs>;
+  merged.moodTags = { ...saved.moodTags };
   merged.settings = { ...DEFAULT_SETTINGS, ...saved.settings };
   merged.backup = { ...initial.backup, ...saved.backup };
   // Nested objects are merged too, so fields added in later versions get their defaults.
@@ -273,6 +287,18 @@ export function setSettings(patch: Partial<Settings>) {
 /** Whether to vibrate (off on web and when switched off in Settings). */
 export function hapticsOn(): boolean {
   return Platform.OS !== 'web' && state.settings.haptics;
+}
+
+/** Adds or removes one feeling tag on a day (at most `max` tags per day). */
+export function toggleMoodTag(day: string, tag: string, max = 5) {
+  update((s) => {
+    const current = s.moodTags[day] ?? [];
+    const next = current.includes(tag) ? current.filter((x) => x !== tag) : current.length >= max ? current : [...current, tag];
+    const moodTags = { ...s.moodTags };
+    if (next.length) moodTags[day] = next;
+    else delete moodTags[day];
+    return { moodTags };
+  });
 }
 
 export function setWidgetPrefs(name: keyof AppState['widgetPrefs'], patch: Partial<WidgetPrefs>) {

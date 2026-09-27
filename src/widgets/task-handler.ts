@@ -6,9 +6,11 @@
  *   TASK_TOGGLE  tick or untick a task from the matrix widget (unticking takes its flower back)
  *   WIDGET_UNDO  put back the task last ticked off from this widget
  *   WIDGET_LOCK  lock or unlock ticking on this widget (locked, task taps open the app)
+ *   FOCUS_START / FOCUS_PAUSE / FOCUS_RESUME / FOCUS_STOP  the Pomodoro widget's buttons
  */
 import type { WidgetTaskHandlerProps } from 'react-native-android-widget';
 
+import { FocusPreset, pauseTimer, PRESETS, resumeTimer, startFocus, stopTimer } from '@/lib/focus';
 import { flowerOf } from '@/lib/flowers';
 import { moodOf, MoodValue } from '@/lib/moods';
 import { awardBadges, getState, recordMood, reloadState, TaskWidget, toggleWidgetLock, widgetTickTask, widgetUndo } from '@/lib/store';
@@ -42,6 +44,17 @@ export async function widgetTaskHandler({ widgetInfo, widgetAction, clickAction,
         if (task?.done) setFlash(name, b && b.ref === id ? `Done · ${flowerOf(b.flower).name} bloomed` : 'Done');
       }
     }
+
+    if (clickAction === 'FOCUS_START') {
+      const preset = String(clickActionData?.preset ?? 'classic') as FocusPreset;
+      if (preset in PRESETS && !getState().focus.active) {
+        startFocus(preset);
+        setFlash(name, `${PRESETS[preset].focus} minutes · go`);
+      }
+    }
+    if (clickAction === 'FOCUS_PAUSE') pauseTimer();
+    if (clickAction === 'FOCUS_RESUME') resumeTimer();
+    if (clickAction === 'FOCUS_STOP') stopTimer();
 
     if (clickAction === 'WIDGET_UNDO') {
       const widget: TaskWidget = clickActionData?.widget === 'Matrix' ? 'Matrix' : 'Tasks';
