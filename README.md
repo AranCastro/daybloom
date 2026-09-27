@@ -11,6 +11,31 @@ One calm app where everything you do grows the same garden.
 mood tags, a Configure option on every widget (touch and hold the widget) with theme and transparency,
 a richer Pomodoro widget you can start, pause and stop from the home screen, and a Credits card in Settings.
 
+**New in version 2.1:** Send a flower, the Jar of good days, places and "Where you feel best", a living garden
+(time of day, Indian seasons and optional live weather), tanpura and raga drones, and Thottam, the pookalam builder.
+
+- **Send a flower.** Garden tab or People tab → Send a flower: a card made from a flower you have grown, with a line
+  (Thinking of you, Stay strong, Happy Onam…) and who it is for, shared as a picture through the share menu (choose
+  WhatsApp and the person) or as a WhatsApp text. Sending it counts as reaching out.
+- **Jar of good days.** On a Good or Bright day, Today asks "What went well today?" (one line). On a Heavy day it
+  shows one of those lines back, with "Another from the jar". The jar is listed in the Garden tab.
+- **Places.** After the check-in, tag where you are (Home, Office, Campus, Parents' house or your own names and icons).
+  A place can be pinned with GPS; then Today suggests it when you are within 400 m. **Where you feel best** ranks places
+  by average mood (last 30 days or all time) and draws the pinned ones on a small map (WGS 84, EPSG:4326, local
+  equirectangular projection, north arrow and scale bar; circle size = days, colour = average mood). No map tiles are
+  loaded and coordinates stay on the phone.
+- **Living garden.** The garden's sky follows the time of day (dawn, day, dusk, night with moon and stars) and the
+  season (summer, monsoon with greener grass and puddles, after the rains, winter). Settings → Live weather in the
+  garden adds the real weather (clear, cloudy, mist, drizzle, rain, thunderstorm with lightning) and temperature from
+  Open-Meteo, sending only the location rounded to 0.1° (about 11 km); cached for 30 minutes. The check-in question
+  follows the season and weather.
+- **Tanpura and ragas.** Three more focus sounds: Tanpura (Pa–Sa–Sa–low Sa in C#), Morning raga (Bhairav) and Evening
+  raga (Yaman) over the tanpura; the Focus tab suggests the raga that suits the time of day.
+- **Thottam.** Garden tab → Thottam: build a pookalam from the flowers you have grown, ring by ring (up to six), each
+  ring Solid, Alternate, Petals or Dots, with an Onam (petals and leaves), Diwali (diyas) or Pongal (kolam) border.
+  Save designs, open or delete them from the gallery, share as a picture, or tap Surprise me. During the Onam, Diwali
+  and Pongal seasons Today invites you to make one.
+
 - **App lock.** Settings → App lock: a 4-digit PIN, with fingerprint or face unlock where the phone supports it,
   and a choice of when to lock again (immediately, after 1 minute or after 5 minutes away). Only a salted SHA-256
   hash of the PIN is stored, in its own storage key, so it never goes into a backup file. Five wrong PINs mean a

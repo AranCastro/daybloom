@@ -149,6 +149,78 @@ def gamma():
     return np.stack([normalise(left * 0.35 + bed, 0.45), normalise(right * 0.35 + bed, 0.45)], axis=1)
 
 
+# ── Indian classical drones ─────────────────────────────────────────────────
+SA = 138.59  # Sa at C#3, a common tanpura pitch
+
+
+def tanpura_pluck(freq, seconds=6.5, bright=1.0):
+    """One tanpura string: many harmonics with the 'jivari' buzz, a spectrum that brightens then fades."""
+    n = int(seconds * SR)
+    t = np.arange(n) / SR
+    out = np.zeros(n)
+    for k in range(1, 36):
+        # The buzz (jivari) lets upper harmonics bloom a moment after the pluck.
+        swell = 1 - np.exp(-t * (1.5 + 0.12 * k))
+        decay = np.exp(-t * (0.35 + 0.05 * k / bright))
+        detune = 1 + rng.uniform(-0.0006, 0.0006)
+        out += (1 / k**0.75) * swell * decay * np.sin(2 * np.pi * freq * k * detune * t + rng.uniform(0, 2 * np.pi))
+    return out * np.minimum(1, t / 0.01)
+
+
+def tanpura_cycle(level=1.0):
+    """Pa, Sa, Sa, low Sa, repeating every 5 s (twelve cycles make the loop)."""
+    track = np.zeros(N)
+    strings = [SA * 3 / 4, SA, SA, SA / 2]
+    for c in range(12):
+        for i, f in enumerate(strings):
+            place(track, tanpura_pluck(f, bright=0.8 if i == 3 else 1.0) * (0.8 if i == 3 else 1.0), int((c * 5.0 + i * 1.25) * SR))
+    return normalise(lowpass(track, 6000), level)
+
+
+def tanpura():
+    return normalise(tanpura_cycle() + shaped_noise(band(80, 3000, 1.0)) * 0.01, 0.6)
+
+
+def pluck_note(freq, seconds=3.5):
+    """A soft santoor-like note with a short echo."""
+    n = int(seconds * SR)
+    t = np.arange(n) / SR
+    tone = sum((1 / k**1.4) * np.exp(-t * (1.1 + 0.6 * k)) * np.sin(2 * np.pi * freq * k * t) for k in range(1, 7))
+    tone *= np.minimum(1, t / 0.004)
+    echo = np.zeros(n)
+    d = int(0.32 * SR)
+    echo[d:] = tone[:-d] * 0.35
+    return tone + echo
+
+
+def raga(ratios, phrase, seconds_per_note=1.6):
+    """Tanpura bed with a slow phrase of the raga played over it (and wrapped round the loop)."""
+    bed = tanpura_cycle(0.5)
+    melody = np.zeros(N)
+    t = 1.0
+    for step in phrase * 3:
+        if t > SECONDS - 1:
+            break
+        if step != '-':
+            octave = 2 if step.endswith("'") else 1
+            f = SA * 2 * ratios[step.rstrip("'")] * octave
+            place(melody, pluck_note(f) * 0.5, int(t * SR))
+        t += seconds_per_note
+    return normalise(bed + normalise(melody, 0.35), 0.62)
+
+
+def raga_bhairav():
+    # Morning raga: komal re and komal dha (flattened 2nd and 6th).
+    r = {'S': 1, 'r': 16 / 15, 'G': 5 / 4, 'm': 4 / 3, 'P': 3 / 2, 'd': 8 / 5, 'N': 15 / 8}
+    return raga(r, ['S', 'r', 'G', 'm', 'P', '-', 'd', 'P', 'm', 'G', 'r', 'S', '-', '-'])
+
+
+def raga_yaman():
+    # Evening raga: tivra Ma (raised 4th), all other notes natural.
+    r = {'S': 1, 'R': 9 / 8, 'G': 5 / 4, 'M': 45 / 32, 'P': 3 / 2, 'D': 5 / 3, 'N': 15 / 8}
+    return raga(r, ['N', 'R', 'G', '-', 'M', 'D', 'N', "S'", '-', 'N', 'D', 'P', 'M', 'G', 'R', 'S', '-', '-'])
+
+
 SOUNDS = {
     'white-noise': white_noise,
     'rain': rain,
@@ -157,6 +229,9 @@ SOUNDS = {
     'thunderstorm': thunderstorm,
     'birds': birds,
     'gamma': gamma,
+    'tanpura': tanpura,
+    'raga-bhairav': raga_bhairav,
+    'raga-yaman': raga_yaman,
 }
 
 
@@ -175,6 +250,11 @@ def encode(name, x):
 
 
 if __name__ == '__main__':
+    import sys
+
     os.makedirs(OUT, exist_ok=True)
+    # Optional names limit the run, for example: python scripts/make-focus-sounds.py tanpura
+    only = set(sys.argv[1:])
     for name, make in SOUNDS.items():
-        encode(name, make())
+        if not only or name in only:
+            encode(name, make())

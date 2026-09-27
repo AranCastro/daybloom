@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -5,7 +6,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { BuddyCard, useBuddy } from '@/components/buddy';
 import { Icon } from '@/components/icons';
 import { Text } from '@/components/text';
-import { Card, Divider, Screen, tap } from '@/components/ui';
+import { Card, Divider, Row, Screen, tap } from '@/components/ui';
 import { TabBarInset } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useCircleNames } from '@/lib/labels';
@@ -15,6 +16,7 @@ import { CIRCLE, circleOf } from '@/lib/circle';
 import { CircleQuadrant, Person, peopleIn, useAppState } from '@/lib/store';
 
 export default function Circle() {
+  const t = useTheme();
   const nudges = useAppState((s) => s.nudges);
   const streak = useAppState((s) => s.streak);
   const cName = useCircleNames();
@@ -30,6 +32,16 @@ export default function Circle() {
       </Animated.View>
 
       <CircleMatrix />
+
+      <Card>
+        <Row
+          icon="gift"
+          title="Send a flower"
+          detail="Turn a flower you grew into a card and send it on WhatsApp"
+          onPress={() => router.push('/send-flower')}
+          right={<Icon name="arrow" color={t.textMuted} size={18} />}
+        />
+      </Card>
 
       <View style={{ gap: 4, marginTop: 12 }}>
         <Text variant="label">Your buddy</Text>

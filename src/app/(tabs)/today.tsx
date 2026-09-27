@@ -7,6 +7,12 @@ import Animated, { FadeIn, FadeInDown, ZoomIn } from 'react-native-reanimated';
 import { NudgeReadyCard, useBuddy } from '@/components/buddy';
 import { Icon } from '@/components/icons';
 import { MoodTagPicker } from '@/components/mood-tags';
+import { PlacePicker } from '@/components/place-picker';
+import { useScene } from '@/components/garden-sky';
+import { checkInLine } from '@/lib/weather';
+import { festivalNear } from '@/lib/thottam';
+import { PookalamArt } from '@/components/pookalam';
+import { GoodDayMemory, GoodDayPrompt } from '@/components/good-days';
 import { MoodOrb } from '@/components/mood-orb';
 import { Avatar, ReachButtons } from '@/components/people';
 import { TaskRow, TaskSheet } from '@/components/tasks';
@@ -31,6 +37,7 @@ import { helpline } from '@/lib/region';
 import { Badge, streakInfo } from '@/lib/badges';
 
 export default function Today() {
+  const scene = useScene();
   const t = useTheme();
   const name = useAppState((s) => s.name);
   const checkins = useAppState((s) => s.checkins);
@@ -91,6 +98,7 @@ export default function Today() {
       </Animated.View>
 
       <TodayBlooms today={today} />
+      <FestivalCard today={today} />
       <WeeklyBackupCard />
 
       {showPicker ? (
@@ -100,7 +108,7 @@ export default function Today() {
               How does today feel?
             </Text>
             <Text variant="small" center>
-              One tap. No words needed.
+              {checkInLine(scene.season, scene.live ? scene.sky : undefined)}
             </Text>
             <View style={styles.moods}>
               {MOODS.map((m, i) => (
@@ -137,6 +145,7 @@ export default function Today() {
                 {todayMood.line}
               </Text>
               <MoodTagPicker day={today} mood={todayMood.value} />
+              <PlacePicker day={today} />
               <Pressable
                 onPress={() => {
                   tap();
@@ -152,7 +161,9 @@ export default function Today() {
         )
       )}
 
+      {todayMood?.value === 1 && !editing && <GoodDayMemory day={today} />}
       {todayMood?.value === 1 && !editing && <SupportCard />}
+      {todayMood && todayMood.value >= 4 && !editing && <GoodDayPrompt day={today} key={today} />}
 
       <NudgeReadyCard />
 
@@ -189,6 +200,24 @@ export default function Today() {
         </Pressable>
       </Card>
     </Screen>
+  );
+}
+
+/** In the Onam, Diwali or Pongal season: an invitation to make a pookalam in Thottam. */
+function FestivalCard({ today: day }: { today: string }) {
+  const t = useTheme();
+  const festival = festivalNear(fromKey(day));
+  if (!festival) return null;
+  const line = festival === 'onam' ? 'Onam is near. Make a pookalam from your flowers.' : festival === 'diwali' ? 'Diwali is near. Make a pookalam with diyas.' : 'Pongal is near. Make a pookalam with a kolam.';
+  return (
+    <Pressable onPress={() => (tap(), router.push('/thottam'))} accessibilityRole="button" style={[styles.festival, { backgroundColor: t.accentSoft }]}>
+      <PookalamArt design={{ center: 'marigold', rings: [{ flower: 'jasmine', pattern: 'petals' }, { flower: 'marigold', pattern: 'solid' }], festival }} size={48} />
+      <View style={{ flex: 1 }}>
+        <Text variant="bodyStrong">Thottam</Text>
+        <Text variant="small">{line}</Text>
+      </View>
+      <Icon name="arrow" color={t.textMuted} size={18} />
+    </Pressable>
   );
 }
 
@@ -453,6 +482,7 @@ function SupportCard() {
 }
 
 const styles = StyleSheet.create({
+  festival: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderRadius: 22 },
   header: { gap: 4, marginTop: 8 },
   hero: { paddingVertical: 28, alignItems: 'stretch', gap: 6 },
   moods: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 22 },

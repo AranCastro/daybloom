@@ -17,6 +17,9 @@ const FILES: Record<SoundId, number> = {
   thunderstorm: require('../../assets/sounds/thunderstorm.mp3'),
   birds: require('../../assets/sounds/birds.mp3'),
   gamma: require('../../assets/sounds/gamma.mp3'),
+  tanpura: require('../../assets/sounds/tanpura.mp3'),
+  'raga-bhairav': require('../../assets/sounds/raga-bhairav.mp3'),
+  'raga-yaman': require('../../assets/sounds/raga-yaman.mp3'),
 };
 
 let player: AudioPlayer | null = null;

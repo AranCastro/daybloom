@@ -17,6 +17,8 @@ import { prettyTime } from '@/lib/dates';
 import { cancelFocusAlarm, cancelReminders, scheduleDailyReminder } from '@/lib/reminders';
 import { helpline } from '@/lib/region';
 import { disableLock } from '@/lib/app-lock';
+import { currentCoords } from '@/lib/places';
+import { refreshWeather } from '@/lib/weather';
 import app from '../../app.json';
 import { AppState, resetAll, setLabel, setSettings, update, useAppState } from '@/lib/store';
 
@@ -114,6 +116,8 @@ export default function Settings() {
           {prefs.appearance === 'system' ? 'Follows your phone’s light or dark setting.' : `Always ${prefs.appearance}, whatever the phone is set to.`}
         </Text>
       </Card>
+
+      <LiveWeatherCard />
 
       <Card>
         <Text variant="label">Comfort</Text>
@@ -247,6 +251,37 @@ export default function Settings() {
 
       <AboutFooter />
     </Screen>
+  );
+}
+
+/** Live weather in the garden: asks for location once, then sends only rounded coordinates to Open-Meteo. */
+function LiveWeatherCard() {
+  const on = useAppState((s) => s.settings.liveWeather);
+  const [note, setNote] = useState<string | undefined>();
+  async function toggle(v: boolean) {
+    tap();
+    if (!v) {
+      setSettings({ liveWeather: false });
+      return;
+    }
+    setSettings({ liveWeather: true });
+    await refreshWeather(true);
+    const perm = await currentCoords(false);
+    if (!perm) {
+      setSettings({ liveWeather: false });
+      setNote('Location is off or not allowed, so the garden follows the clock and the season.');
+    } else setNote(undefined);
+  }
+  return (
+    <Card>
+      <SettingSwitch
+        title="Live weather in the garden"
+        detail="Rain, clouds, sun or stars as they are where you are. Uses your approximate location (about 11 km) and Open-Meteo, a free weather service. Off: the garden follows the clock and the season."
+        value={on}
+        onChange={toggle}
+      />
+      {!!note && <Text variant="small">{note}</Text>}
+    </Card>
   );
 }
 

@@ -15,6 +15,8 @@ import { Flower } from '@/components/flower';
 import { GardenBed, SOURCES } from '@/components/garden';
 import { MOODS, moodOf } from '@/lib/moods';
 import { topTags } from '@/lib/mood-tags';
+import { GoodDaysJar } from '@/components/good-days';
+import { GardenActions } from '@/components/garden-actions';
 import { BADGES, badgeOf, streakInfo } from '@/lib/badges';
 import { Medal } from '@/components/badge';
 import { router } from 'expo-router';
@@ -86,6 +88,8 @@ export default function Journey() {
         <MiniStat label="Kinds found" value={`${kinds.size}/${FLOWERS.length}`} />
         <MiniStat label="Next golden" value={`${GOLDEN_EVERY - (bloomCount % GOLDEN_EVERY)}`} />
       </View>
+
+      <GardenActions />
 
       <Card>
         <Text variant="label">Ways to grow today</Text>
@@ -263,6 +267,8 @@ export default function Journey() {
           </>
         )}
       </Card>
+
+      <GoodDaysJar />
 
       {top.length > 0 && (
         <Card>
