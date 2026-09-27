@@ -9,9 +9,12 @@ import { Appearance, AppState as RNAppState, Platform } from 'react-native';
 import { ReducedMotionConfig, ReduceMotion } from 'react-native-reanimated';
 
 import { BloomToast } from '@/components/garden';
+import { LockGate } from '@/components/lock-screen';
 import { useIsDark, useTheme } from '@/hooks/use-theme';
+import { startLockWatch } from '@/lib/app-lock';
 import { weeklyBackupIfDue } from '@/lib/backup';
-import { useAppState } from '@/lib/store';
+import { startFocusSoundSync } from '@/lib/focus-sound';
+import { getState, subscribe, useAppState } from '@/lib/store';
 import { startWidgetSync } from '@/widgets/sync';
 
 SplashScreen.preventAutoHideAsync();
@@ -52,6 +55,10 @@ export default function RootLayout() {
   // Home-screen widgets redraw whenever something changes in the app (Android).
   useEffect(() => startWidgetSync(), []);
 
+  // Focus sounds follow the focus timer; the app lock watches for returns from the background.
+  useEffect(() => startFocusSoundSync(getState, subscribe), []);
+  useEffect(() => startLockWatch(), []);
+
   if (!loaded && !error) return null;
 
   return (
@@ -70,6 +77,7 @@ export default function RootLayout() {
         <Stack.Screen name="game/[id]" options={{ animation: 'fade_from_bottom', gestureEnabled: false }} />
       </Stack>
       <BloomToast />
+      <LockGate />
     </>
   );
 }

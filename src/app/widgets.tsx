@@ -2,16 +2,18 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Linking, Platform, Pressable, StyleSheet, Switch, useWindowDimensions, View } from 'react-native';
+import { Alert, Linking, Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { requestPinWidget } from 'react-native-android-widget';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { Icon } from '@/components/icons';
 import { Text } from '@/components/text';
-import { Button, Card, Choice, Divider, Screen, tap } from '@/components/ui';
+import { Button, Card, Choice, Screen, tap } from '@/components/ui';
 import { WidgetMock } from '@/components/widget-mock';
+import { WidgetStyleControls } from '@/components/widget-style';
 import { useIsDark, useTheme } from '@/hooks/use-theme';
-import { DEFAULT_WIDGET_PREFS, setSettings, setWidgetPrefs, toggleWidgetLock, useAppState, widgetTickTask, widgetUndo } from '@/lib/store';
+import { FocusPreset, pauseTimer, PRESETS, resumeTimer, startFocus, stopTimer } from '@/lib/focus';
+import { getState, setSettings, toggleWidgetLock, useAppState, widgetTickTask, widgetUndo } from '@/lib/store';
 import { lookFor, WIDGETS, WidgetSpec } from '@/widgets/catalogue';
 import { snapshot } from '@/widgets/data';
 
@@ -59,6 +61,7 @@ function WidgetCard({ spec }: { spec: WidgetSpec }) {
   const { width: screen } = useWindowDimensions();
   const state = useAppState((s) => s);
   const [busy, setBusy] = useState(false);
+  const [styling, setStyling] = useState(false);
 
   // Fit wide widgets to the card; small ones keep their real size.
   const room = Math.min(screen, 520) - 32 - 2 * 20 - 2 * 14;
@@ -100,7 +103,14 @@ function WidgetCard({ spec }: { spec: WidgetSpec }) {
         </View>
       </LinearGradient>
 
-      {spec.custom && <Customise name={spec.custom} />}
+      <Pressable onPress={() => (tap(), setStyling(!styling))} style={styles.styleBtn} accessibilityRole="button" accessibilityState={{ expanded: styling }}>
+        <Icon name="settings" color={t.textSecondary} size={18} />
+        <Text variant="bodyStrong" style={{ flex: 1, fontSize: 14 }}>
+          Style: theme and transparency
+        </Text>
+        <Icon name={styling ? 'close' : 'arrow'} color={t.textMuted} size={16} />
+      </Pressable>
+      {styling && <WidgetStyleControls name={spec.name} />}
 
       {ANDROID ? (
         <Button title="Add to home screen" icon="plus" kind="secondary" loading={busy} onPress={add} />
@@ -129,60 +139,10 @@ function WidgetThemeCard() {
         onChange={(widgetTheme) => setSettings({ widgetTheme })}
       />
       <Text variant="small">
-        {theme === 'system' ? 'Widgets follow your phone’s light or dark mode.' : `All widgets stay ${theme}.`} The Matrix and People
-        widgets can also have their own theme below.
+        {theme === 'system' ? 'Widgets follow your phone’s light or dark mode.' : `All widgets stay ${theme}.`} Each widget can also have
+        its own theme and transparency: tap Style below, or touch and hold the widget on your home screen and choose Configure (the pencil).
       </Text>
     </Card>
-  );
-}
-
-/** Look settings for the matrix widgets. Changes show in the preview and on the home screen at once. */
-function Customise({ name }: { name: 'Matrix' | 'Circle' }) {
-  const t = useTheme();
-  const saved = useAppState((s) => s.widgetPrefs?.[name]);
-  const prefs = { ...DEFAULT_WIDGET_PREFS, ...saved };
-  const set = (patch: Parameters<typeof setWidgetPrefs>[1]) => setWidgetPrefs(name, patch);
-  const toggle = (label: string, value: boolean, onChange: (v: boolean) => void) => (
-    <View style={styles.toggle}>
-      <Text variant="body" style={{ flex: 1 }}>
-        {label}
-      </Text>
-      <Switch value={value} onValueChange={onChange} trackColor={{ true: t.brand, false: t.line }} thumbColor="#fff" accessibilityLabel={label} />
-    </View>
-  );
-
-  return (
-    <View style={{ gap: 10 }}>
-      <Text variant="label">Theme</Text>
-      <Choice
-        options={[
-          { label: 'Same as all', value: 'auto' },
-          { label: 'Light', value: 'light' },
-          { label: 'Dark', value: 'dark' },
-        ]}
-        value={prefs.theme}
-        onChange={(theme) => set({ theme })}
-      />
-      <Text variant="label">Opacity</Text>
-      <Choice
-        options={[100, 90, 75, 60, 40].map((v) => ({ label: `${v}%`, value: v }))}
-        value={prefs.opacity}
-        onChange={(opacity) => set({ opacity })}
-      />
-      <Text variant="label">Text size</Text>
-      <Choice
-        options={[
-          { label: 'Small', value: 'small' },
-          { label: 'Default', value: 'default' },
-          { label: 'Large', value: 'large' },
-        ]}
-        value={prefs.font}
-        onChange={(font) => set({ font })}
-      />
-      <Divider />
-      {toggle(name === 'Matrix' ? 'Show checkboxes' : 'Show call and WhatsApp buttons', prefs.checkbox, (checkbox) => set({ checkbox }))}
-      {name === 'Matrix' && toggle('Show completed tasks', prefs.completed, (completed) => set({ completed }))}
-    </View>
   );
 }
 
@@ -202,6 +162,15 @@ async function onWidgetClick(action: string, data: Record<string, unknown>) {
     widgetUndo(data.widget === 'Matrix' ? 'Matrix' : 'Tasks');
   } else if (action === 'WIDGET_LOCK') {
     toggleWidgetLock(data.widget === 'Matrix' ? 'Matrix' : 'Tasks');
+  } else if (action === 'FOCUS_START') {
+    const preset = String(data.preset ?? 'classic') as FocusPreset;
+    if (preset in PRESETS && !getState().focus.active) startFocus(preset);
+  } else if (action === 'FOCUS_PAUSE') {
+    pauseTimer();
+  } else if (action === 'FOCUS_RESUME') {
+    resumeTimer();
+  } else if (action === 'FOCUS_STOP') {
+    stopTimer();
   } else if (action === 'OPEN_APP') {
     router.navigate('/');
   } else if (action === 'OPEN_URI' && typeof data.uri === 'string') {
@@ -219,7 +188,7 @@ async function onWidgetClick(action: string, data: Record<string, unknown>) {
 const styles = StyleSheet.create({
   head: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
   cells: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
-  toggle: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 40 },
+  styleBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 40 },
   wall: { borderRadius: 22, padding: 14, alignItems: 'center', justifyContent: 'center' },
   shadow: {
     borderRadius: 24,

@@ -1,9 +1,10 @@
-import Constants from 'expo-constants';
+import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Linking, Platform, Pressable, Switch, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
+import { AppLockCard } from '@/components/app-lock-card';
 import { BackupCard } from '@/components/backup';
 import { Icon } from '@/components/icons';
 import { AvatarPicker, ProfileAvatar } from '@/components/profile';
@@ -15,6 +16,8 @@ import { CIRCLE } from '@/lib/circle';
 import { prettyTime } from '@/lib/dates';
 import { cancelFocusAlarm, cancelReminders, scheduleDailyReminder } from '@/lib/reminders';
 import { helpline } from '@/lib/region';
+import { disableLock } from '@/lib/app-lock';
+import app from '../../app.json';
 import { AppState, resetAll, setLabel, setSettings, update, useAppState } from '@/lib/store';
 
 const TIMES = [
@@ -60,6 +63,7 @@ export default function Settings() {
     const go = () => {
       cancelReminders();
       cancelFocusAlarm();
+      disableLock();
       resetAll();
       router.replace('/onboarding');
     };
@@ -82,6 +86,8 @@ export default function Settings() {
         <Text variant="label">Settings</Text>
         <Text variant="title">Made to fit you.</Text>
       </Animated.View>
+
+      <AppLockCard />
 
       <Card>
         <Row
@@ -174,7 +180,7 @@ export default function Settings() {
           placeholder="Shown in the nudge"
           autoCapitalize="words"
         />
-        <Text variant="small">Your buddy will see: “Call {draft.trim() || 'your friend'} today.”</Text>
+        <Text variant="small">Used in greetings and to sign the message to your buddy.</Text>
         <AvatarPicker visible={picking} onClose={() => setPicking(false)} />
       </Card>
 
@@ -237,11 +243,55 @@ export default function Settings() {
         <Row icon="spark" title="Erase all data" detail="Start fresh on this phone" onPress={wipe} />
       </Card>
 
-      <Text variant="small" color="textMuted" center style={{ marginTop: 4 }}>
-        Daybloom {Constants.expoConfig?.version ?? ''} · Designed by Dr Aran Castro{'\n'}Not a medical service. In an
-        emergency, call {help.emergency}.
-      </Text>
+      <Credits />
+
+      <AboutFooter />
     </Screen>
+  );
+}
+
+/** The app's name, version and where it was made, at the foot of Settings. */
+function AboutFooter() {
+  const t = useTheme();
+  return (
+    <View style={{ alignItems: 'center', gap: 6, paddingVertical: 18 }}>
+      <Image source={require('../../assets/images/icon.png')} style={{ width: 56, height: 56, borderRadius: 16 }} accessibilityIgnoresInvertColors />
+      <Text variant="heading">Daybloom</Text>
+      <View style={{ paddingHorizontal: 10, paddingVertical: 3, borderRadius: 999, backgroundColor: t.surfaceAlt }}>
+        <Text variant="small" style={{ fontSize: 12 }}>
+          Version {app.expo.version}
+        </Text>
+      </View>
+      <Text variant="quote" color="textSecondary" center style={{ fontSize: 16 }}>
+        Grow a little every day.
+      </Text>
+      <Text variant="small" color="textMuted" center style={{ fontSize: 12 }}>
+        Made with care in Kochi, India · © {new Date().getFullYear()} Dr Aran Castro
+      </Text>
+    </View>
+  );
+}
+
+/** Who made the app, with a way to get in touch. */
+function Credits() {
+  const t = useTheme();
+  return (
+    <Card>
+      <Text variant="label">Credits</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+        <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: t.brand, alignItems: 'center', justifyContent: 'center' }}>
+          <Text variant="bodyStrong" style={{ color: t.brandText }}>
+            AC
+          </Text>
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text variant="bodyStrong">Dr Aran Castro, PhD</Text>
+          <Text variant="small">Designed and developed Daybloom</Text>
+        </View>
+      </View>
+      <Row icon="chat" title="arancastro17@gmail.com" onPress={() => Linking.openURL('mailto:arancastro17@gmail.com?subject=Daybloom').catch(() => {})} />
+      <Row icon="phone" title="+91 74187 42406" onPress={() => Linking.openURL('tel:+917418742406').catch(() => {})} />
+    </Card>
   );
 }
 

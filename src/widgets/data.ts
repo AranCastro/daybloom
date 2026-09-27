@@ -36,7 +36,8 @@ export function snapshot(s: AppState, now: Date = new Date()) {
     streak: streak.current,
     best: streak.best,
     checkedToday: streak.checkedToday,
-    garden: { total, today: bloomsToday, latest, toGolden, recent: s.garden.slice(0, 5).map((b) => flowerOf(b.flower)) },
+    week: weekDots(s.checkins, now),
+    garden: { total, today: bloomsToday, latest, toGolden, golden: GOLDEN_EVERY, recent: s.garden.slice(0, 5).map((b) => flowerOf(b.flower)) },
     tasks: focusList(s.tasks, today, low),
     focus: focusState(s, now),
     reach: reachPicks(s.people),
@@ -101,7 +102,7 @@ function focusList(tasks: Task[], today: string, low: boolean) {
   const limit = low ? 1 : 4;
   const doneToday = tasks.filter((t) => t.done && t.doneAt && dayKey(new Date(t.doneAt)) === today).length;
   return {
-    items: all.slice(0, limit).map((t) => ({ id: t.id, title: t.title, due: dueText(t.due, today) })),
+    items: all.slice(0, limit).map((t) => ({ id: t.id, title: t.title, quadrant: t.quadrant, due: dueText(t.due, today) })),
     more: Math.max(0, all.length - limit),
     doneToday,
   };
@@ -117,15 +118,30 @@ function dueText(due: string | undefined, today: string): { text: string; late: 
 function focusState(s: AppState, now: Date) {
   const a = s.focus.active;
   const today = dayKey(now);
-  const sessionsToday = s.focus.sessions.filter((f) => dayKey(new Date(f.at)) === today).length;
-  if (!a) return { running: false as const, sessionsToday };
+  const todays = s.focus.sessions.filter((f) => dayKey(new Date(f.at)) === today);
+  const sessionsToday = todays.length;
+  const minutesToday = todays.reduce((n, f) => n + f.minutes, 0);
+  if (!a) return { running: false as const, sessionsToday, minutesToday };
   const paused = a.endAt === null;
   const endAt = a.endAt ?? now.getTime() + (a.pausedLeft ?? 0);
   const end = new Date(endAt);
   const until = `${String(end.getHours()).padStart(2, '0')}:${String(end.getMinutes()).padStart(2, '0')}`;
   const leftMin = Math.max(0, Math.ceil(((a.endAt ?? now.getTime() + (a.pausedLeft ?? 0)) - now.getTime()) / 60_000));
   const task = a.taskId ? s.tasks.find((t) => t.id === a.taskId)?.title : undefined;
-  return { running: true as const, kind: a.kind, paused, until, leftMin, task, sessionsToday };
+  const leftMs = a.endAt !== null ? Math.max(0, a.endAt - now.getTime()) : (a.pausedLeft ?? a.total);
+  const progress = a.total > 0 ? Math.min(1, Math.max(0, 1 - leftMs / a.total)) : 0;
+  const totalMin = Math.round(a.total / 60_000);
+  return { running: true as const, kind: a.kind, paused, until, leftMin, task, sessionsToday, minutesToday, progress, totalMin, sound: s.settings?.focusSound ?? 'off' };
+}
+
+/** The last seven days as mood colours (null when not checked in), oldest first. */
+function weekDots(checkins: Record<string, number>, now: Date) {
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(now);
+    d.setDate(d.getDate() - (6 - i));
+    const m = moodOf(checkins[dayKey(d)] as MoodValue | undefined);
+    return { letter: 'SMTWTFS'[d.getDay()], color: m ? m.colors[1] : null, today: i === 6 };
+  });
 }
 
 /** One person to call and one to message, least recently reached first (as on Today). */

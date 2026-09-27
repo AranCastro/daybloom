@@ -5,7 +5,25 @@
 Website, privacy policy and a live web demo: https://arancastro.github.io/ (source in
 [AranCastro/AranCastro.github.io](https://github.com/AranCastro/AranCastro.github.io)).
 
-One calm app where everything you do grows the same garden:
+One calm app where everything you do grows the same garden.
+
+**New in version 2.0:** app lock (PIN, with fingerprint or face), seven built-in focus sounds, 20 optional
+mood tags, a Configure option on every widget (touch and hold the widget) with theme and transparency,
+a richer Pomodoro widget you can start, pause and stop from the home screen, and a Credits card in Settings.
+
+- **App lock.** Settings → App lock: a 4-digit PIN, with fingerprint or face unlock where the phone supports it,
+  and a choice of when to lock again (immediately, after 1 minute or after 5 minutes away). Only a salted SHA-256
+  hash of the PIN is stored, in its own storage key, so it never goes into a backup file. Five wrong PINs mean a
+  30-second wait. A forgotten PIN cannot be recovered: the lock screen offers to erase everything and start again.
+- **Mood tags.** After the one-tap check-in, up to five of 20 everyday feelings in Indian English (Happy,
+  Peaceful, Grateful, Blessed, Excited, Proud, Loved, Fresh, Hopeful, Relaxed, Tension, Worried, Overthinking,
+  Irritated, Frustrated, Sad, Lonely, Homesick, Bored, Tired). Optional; they appear in the calendar and as
+  "Feelings this month" in the Garden tab.
+- **Focus sounds.** In the Focus tab: White noise, Rain, Fire, Wind, Thunderstorm, Birds and Gamma 40 Hz
+  (a binaural beat, for headphones), each with its own icon, plus Off and three volume levels. The sound plays
+  during focus sessions (not breaks), keeps playing with the screen off, and a tap on a tile plays an
+  8-second preview. The sounds are synthesised by `scripts/make-focus-sounds.py` (numpy/scipy, fixed seed),
+  so there are no recordings or licences; they are stored in the app (about 3.6 MB) and need no internet.
 
 - **Nudge a Friend.** Tap your mood once a day. After a set number of low days in a row (default three),
   the app offers to ask your buddy to call you. One tap opens SMS or WhatsApp with a short message ready;
@@ -51,10 +69,12 @@ One calm app where everything you do grows the same garden:
 - **Home-screen widgets (Android).** Eight widgets, each in light and dark: Eisenhower Matrix (4 × 3; all four
   quadrants, tick tasks off in place), People circle (4 × 3; tap a name to call or message, or use its call and WhatsApp buttons), Mood check-in (4 × 1; tap a mood to
   check in), Focus today (4 × 2; tick off tasks, each grows a flower), Garden (2 × 2), Focus timer (2 × 2; 15/25/50
-  minute presets open the timer), Streak (2 × 1) and Reach out (4 × 1; one tap to call or message). Settings →
-  Home screen widgets shows live previews and an **Add to home screen** button. The two matrix widgets have their
-  own settings there: theme (auto, light, dark), background opacity, text size, checkboxes or call and WhatsApp buttons, and
-  whether finished tasks are listed. Built with
+  minute buttons start a session straight from the home screen; while it runs, a ring shows progress with pause,
+  resume and stop), Streak (2 × 1, with this week's mood dots) and Reach out (4 × 1; one tap to call or message).
+  Settings → Home screen widgets shows live previews and an **Add to home screen** button. **Every widget has
+  its own style**: theme (same as all, light, dark) and transparency (solid to 60%), set under Style in the gallery or
+  by touching and holding the widget on the home screen and choosing Configure (the pencil). The two matrix widgets
+  also have text size, checkboxes or call and WhatsApp buttons, and whether finished tasks are listed. Built with
   [react-native-android-widget](https://github.com/sAleksovski/react-native-android-widget); the code is in
   `src/widgets/` and the widget list in the plugin entry of `app.json`. Widgets need the APK or a development
   build; they do not run in Expo Go.

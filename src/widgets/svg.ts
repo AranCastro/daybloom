@@ -15,12 +15,38 @@ const ICONS = {
   lock: 'M6.5 11h11a1 1 0 011 1v7a1 1 0 01-1 1h-11a1 1 0 01-1-1v-7a1 1 0 011-1zM8.5 11V8a3.5 3.5 0 017 0v3',
   unlock: 'M6.5 11h11a1 1 0 011 1v7a1 1 0 01-1 1h-11a1 1 0 01-1-1v-7a1 1 0 011-1zM8.5 11V8a3.5 3.5 0 016.9-.8',
   undo: 'M9 6.5L4.5 11 9 15.5M5 11h9.5a4.5 4.5 0 010 9H11',
+  pause: 'M8.5 6v12M15.5 6v12',
+  play: 'M8 5.5v13l10-6.5-10-6.5z',
+  stop: 'M7 7h10v10H7z',
+  leaf: 'M5 19c0-8 5.5-13.5 14-14 .2 8.8-5.5 14-14 14zM5 19l8-8',
 } as const;
 
 export type WidgetIcon = keyof typeof ICONS;
 
 export function iconSvg(name: WidgetIcon, color: string, size = 24, fill = 'none'): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24"><path d="${ICONS[name]}" fill="${fill}" stroke="${color}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+}
+
+/** A progress ring (0–1) with a soft track, drawn from the top clockwise. */
+export function ringSvg(progress: number, color: string, track: string, size: number, stroke = 6, inner?: 'bud' | 'leaf'): string {
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const p = Math.max(0, Math.min(1, progress));
+  // A bud that opens with progress (or a leaf for breaks), drawn in the middle of the ring.
+  const k = size / 100;
+  const glyph =
+    inner === 'leaf'
+      ? `<g transform="translate(${30 * k} ${30 * k}) scale(${(40 * k) / 24})"><path d="${ICONS.leaf}" fill="none" stroke="${color}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></g>`
+      : inner === 'bud'
+        ? `<path d="M${50 * k} ${74 * k}V${52 * k}" stroke="#5E9E4E" stroke-width="${3 * k}" stroke-linecap="round"/><path d="M${50 * k} ${60 * k}c${-7 * k} 0 ${-11 * k} ${-4 * k} ${-12 * k} ${-9 * k}c${6 * k} 0 ${10 * k} ${2 * k} ${12 * k} ${7 * k}z" fill="#8CC57A"/><ellipse cx="${50 * k}" cy="${(42 - 4 * p) * k}" rx="${(8 + 8 * p) * k}" ry="${(11 + 5 * p) * k}" fill="${color}" opacity="${0.55 + 0.45 * p}"/>`
+        : '';
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${track}" stroke-width="${stroke}"/><circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${color}" stroke-width="${stroke}" stroke-linecap="round" stroke-dasharray="${(c * p).toFixed(2)} ${c.toFixed(2)}" transform="rotate(-90 ${size / 2} ${size / 2})"/>${glyph}</svg>`;
+}
+
+/** A small filled dot (week strips). */
+export function dotSvg(color: string, size: number, ring?: string): string {
+  const r = size / 2 - (ring ? 1.5 : 0);
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="${color}"${ring ? ` stroke="${ring}" stroke-width="1.5"` : ''}/></svg>`;
 }
 
 /** A mood orb: soft gradient sphere, with a ring when it is today's mood. */
