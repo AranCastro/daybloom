@@ -14,8 +14,9 @@ The upload key signs every Play Store build. You received two files:
 3. Click **New repository secret** four times, copying each name and value from the `.txt` file:
    `ANDROID_KEY_ALIAS`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_PASSWORD`, `ANDROID_KEYSTORE_BASE64`.
 
-The test APKs are signed with this key from then on. Testers who installed an earlier test APK must uninstall it
-once (make a backup first: Settings → Backup and restore) before installing a new one.
+This key signs only the Play Store bundle. The APK on GitHub has its own sideload key (README, "Signing the APK
+with a sideload key"), because Google re-signs Play installs with its own key. Someone moving from the GitHub APK to
+the Play Store version must back up (Settings → Backup and restore), uninstall, install from Play, then restore.
 
 ## Step 2. Build the Play Store bundle (.aab)
 
