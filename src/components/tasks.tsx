@@ -15,7 +15,7 @@ import Animated, { FadeIn, useAnimatedStyle, useSharedValue, withSequence, withS
 
 import { MonthCalendar } from '@/components/calendar';
 import { Icon } from '@/components/icons';
-import { Effort, EFFORTS, effortInfo, rewardLine } from '@/lib/effort';
+import { Effort, EFFORTS, effortInfo, rewardLine, stepProgress } from '@/lib/effort';
 import { Text } from '@/components/text';
 import { Button, Input, tap } from '@/components/ui';
 import { Fonts, Radius } from '@/constants/theme';
@@ -25,7 +25,7 @@ import { useQuadrantNames } from '@/lib/labels';
 import { confirmThen } from '@/lib/confirm';
 import { addDays, dayKey, fromKey, prettyDate } from '@/lib/dates';
 import { dueBadge, QUADRANTS, quadrantOf } from '@/lib/quadrants';
-import { addTask, deleteTask, editTask, moveTask, openTasks, Quadrant, Task, toggleTask, useAppState, hapticsOn } from '@/lib/store';
+import { addStep, addTask, deleteStep, deleteTask, editTask, hapticsOn, logProgress, moveTask, openTasks, Quadrant, Task, toggleStep, toggleTask, useAppState } from '@/lib/store';
 
 export function useQuadrantColors(q: Quadrant) {
   const dark = useIsDark();
@@ -112,6 +112,7 @@ export function TaskRow({ task, today, onOpen, compact }: { task: Task; today: s
           style={[{ fontSize: compact ? 14.5 : 16, lineHeight: compact ? 19 : 22 }, task.done && styles.struck]}>
           {task.title}
         </Text>
+        <StepProgress task={task} compact={compact} />
         {!task.done && (task.due || task.effort) && (
           <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
             <DueBadge due={task.due} today={today} />
@@ -124,6 +125,113 @@ export function TaskRow({ task, today, onOpen, compact }: { task: Task; today: s
         )}
       </Pressable>
     </Animated.View>
+  );
+}
+
+/** "2 of 5 steps" with a thin bar and the next step, for tasks split into steps. */
+export function StepProgress({ task, compact }: { task: Task; compact?: boolean }) {
+  const t = useTheme();
+  const { color } = useQuadrantColors(task.quadrant);
+  const p = stepProgress(task);
+  if (!p || task.done) return null;
+  return (
+    <View style={{ gap: 3, marginTop: 2 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+        <View style={[styles.stepTrack, { backgroundColor: t.surfaceAlt, width: compact ? 44 : 64 }]}>
+          <View style={{ width: `${Math.round((p.done / p.total) * 100)}%`, height: '100%', borderRadius: 3, backgroundColor: color }} />
+        </View>
+        <Text variant="small" style={{ fontSize: 11.5 }}>
+          {p.done}/{p.total} steps
+        </Text>
+      </View>
+      {!!p.next && !compact && (
+        <Text variant="small" numberOfLines={1} style={{ fontSize: 12 }}>
+          Next: {p.next}
+        </Text>
+      )}
+    </View>
+  );
+}
+
+/** Steps for a task that takes more than one sitting, and "I worked on it today". */
+function StepsEditor({ task, big, draft, setDraft }: { task: Task | null; big: boolean; draft: string[]; setDraft: (s: string[]) => void }) {
+  const t = useTheme();
+  const today = useToday();
+  const live = useAppState((s) => (task ? s.tasks.find((x) => x.id === task.id) : undefined));
+  const [text, setText] = useState('');
+  const steps = live?.steps ?? [];
+  const worked = live?.workedOn ?? [];
+  const hasSteps = task ? steps.length > 0 : draft.length > 0;
+
+  function add() {
+    const clean = text.trim();
+    if (!clean) return;
+    tap();
+    if (task) addStep(task.id, clean);
+    else setDraft([...draft, clean]);
+    setText('');
+  }
+
+  return (
+    <View style={{ gap: 10 }}>
+      <Text variant="label">Steps{hasSteps ? '' : ' (optional)'}</Text>
+      {big && !hasSteps && (
+        <Text variant="small" style={{ fontSize: 12 }}>
+          A bigger task rarely fits in one day. Break it into steps you can finish in one sitting; each day you make
+          progress grows a flower.
+        </Text>
+      )}
+      {task
+        ? steps.map((st) => (
+            <View key={st.id} style={styles.stepRow}>
+              <Checkbox checked={st.done} color={t.brand} onPress={() => toggleStep(task.id, st.id)} size={20} label={st.title} />
+              <Text variant="body" style={[{ flex: 1, fontSize: 15 }, st.done && styles.struck]} color={st.done ? 'textMuted' : 'text'}>
+                {st.title}
+              </Text>
+              <Pressable onPress={() => (tap(), deleteStep(task.id, st.id))} hitSlop={8} accessibilityLabel={`Remove step ${st.title}`}>
+                <Icon name="close" color={t.textMuted} size={16} />
+              </Pressable>
+            </View>
+          ))
+        : draft.map((st, i) => (
+            <View key={i} style={styles.stepRow}>
+              <Text variant="small">{i + 1}.</Text>
+              <Text variant="body" style={{ flex: 1, fontSize: 15 }}>
+                {st}
+              </Text>
+              <Pressable onPress={() => (tap(), setDraft(draft.filter((_, j) => j !== i)))} hitSlop={8} accessibilityLabel={`Remove step ${st}`}>
+                <Icon name="close" color={t.textMuted} size={16} />
+              </Pressable>
+            </View>
+          ))}
+      <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+        <View style={{ flex: 1 }}>
+          <Input value={text} onChangeText={setText} placeholder="Add a step, e.g. Draft the introduction" onSubmitEditing={add} returnKeyType="done" maxLength={80} />
+        </View>
+        <Pressable onPress={add} accessibilityRole="button" accessibilityLabel="Add step" style={[styles.stepAdd, { backgroundColor: text.trim() ? t.brand : t.surfaceAlt }]}>
+          <Icon name="plus" color={text.trim() ? t.brandText : t.textMuted} size={20} />
+        </Pressable>
+      </View>
+      {task && live && !live.done && (
+        <Pressable
+          onPress={() => {
+            if (logProgress(task.id)) tap('medium');
+          }}
+          disabled={worked.includes(today)}
+          accessibilityRole="button"
+          style={[styles.worked, { borderColor: worked.includes(today) ? '#3A9477' : t.line, backgroundColor: worked.includes(today) ? '#3A947718' : 'transparent' }]}>
+          <Text style={{ fontSize: 18 }}>{worked.includes(today) ? '🌱' : '⏳'}</Text>
+          <View style={{ flex: 1 }}>
+            <Text variant="bodyStrong" style={{ fontSize: 14 }}>
+              {worked.includes(today) ? 'Progress noted today' : 'I worked on it today'}
+            </Text>
+            <Text variant="small" style={{ fontSize: 12 }}>
+              {worked.length ? `Worked on ${worked.length} ${worked.length === 1 ? 'day' : 'days'} so far. ` : ''}One flower for each day of progress.
+            </Text>
+          </View>
+        </Pressable>
+      )}
+    </View>
   );
 }
 
@@ -166,6 +274,8 @@ function SheetBody({ onClose, task, defaultQuadrant = 1, defaultDue }: SheetProp
   const [due, setDue] = useState<string | undefined>(task ? task.due : defaultDue);
   const [picking, setPicking] = useState(false);
   const [effort, setEffort] = useState<Effort | undefined>(task?.effort);
+  // Steps typed for a new task are kept here until it is added.
+  const [draftSteps, setDraftSteps] = useState<string[]>([]);
   const presets = DUE_CHOICES.map((c) => (c.days === null ? undefined : dayKey(addDays(fromKey(today), c.days))));
   const custom = !!due && !presets.includes(due);
   // Position of this task among the open tasks of its quadrant (for Move up / Move down).
@@ -177,7 +287,10 @@ function SheetBody({ onClose, task, defaultQuadrant = 1, defaultDue }: SheetProp
     const clean = title.trim();
     if (!clean) return;
     if (task) editTask(task.id, { title: clean, quadrant: q, due, effort });
-    else addTask(clean, q, due, effort);
+    else {
+      const created = addTask(clean, q, due, effort);
+      for (const st of draftSteps) addStep(created.id, st);
+    }
     if (hapticsOn()) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     onClose();
   }
@@ -284,6 +397,8 @@ function SheetBody({ onClose, task, defaultQuadrant = 1, defaultDue }: SheetProp
             </Text>
           </View>
 
+          <StepsEditor task={task ?? null} big={effort === 'moderate' || effort === 'deep'} draft={draftSteps} setDraft={setDraftSteps} />
+
           <Button title={task ? 'Save changes' : 'Add task'} icon={task ? 'check' : 'plus'} onPress={save} disabled={!title.trim()} />
           {index >= 0 && list.length > 1 && (
             <View style={{ flexDirection: 'row', gap: 10 }}>
@@ -348,6 +463,10 @@ function QuadrantOption({ q, selected, onPress }: { q: Quadrant; selected: boole
 }
 
 const styles = StyleSheet.create({
+  stepTrack: { height: 5, borderRadius: 3, overflow: 'hidden' },
+  stepRow: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 34 },
+  stepAdd: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  worked: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, borderRadius: 16, borderWidth: 1.5 },
   effortGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   effort: { width: '48%', flexGrow: 1, flexDirection: 'row', alignItems: 'center', gap: 8, padding: 10, borderRadius: 16, borderWidth: 1.5 },
   chip: { alignItems: 'center', justifyContent: 'center' },

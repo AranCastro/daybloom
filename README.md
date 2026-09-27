@@ -29,6 +29,11 @@ weather following the phone, and Thottam now says Poo Kolam.
   **Rewards follow effort:** finishing a Quick task grows 1 flower (8% rare), Light 1 (12%), Moderate 1 (18%) and Deep
   work 2 flowers (30% rare); Do first adds 5 points; a task with no level keeps 1 flower at 10% (15% in Do first).
   Unticking takes all of a task's flowers back. The Focus today and Matrix widgets show each task's effort symbol.
+  **Big tasks over several days (2.3):** a task can be split into steps (suggested for Moderate and Deep work). Rows
+  show "2 of 5 steps" with a bar and the next step; widgets show "2/5". The first progress on a task each day (a step
+  ticked, "I worked on it today", or a focus session on that task) grows one flower at the task's rare odds, and those
+  flowers stay even if the task is unticked later; the full effort reward still comes when the task is finished. On a
+  low- or medium-energy day, a big task with open steps stays in the matrix, because only its next step is asked.
 - **Weather that follows you.** With Live weather on, the garden refreshes every 10 minutes while it is on screen and
   whenever the phone has moved to another 0.1° cell (about 11 km); readings also set night and day from the real
   sun. The Garden tab offers a one-tap "Match the garden to your weather" while it is off.

@@ -6,7 +6,7 @@
 import { addDays, dayKey } from '@/lib/dates';
 import { FlowerKind } from '@/lib/flowers';
 import { cancelFocusAlarm, scheduleFocusAlarm } from '@/lib/reminders';
-import { bloom, getState, update } from '@/lib/store';
+import { bloom, getState, logProgress, update } from '@/lib/store';
 
 export type FocusPreset = 'gentle' | 'classic' | 'deep';
 
@@ -86,6 +86,8 @@ export function completeFocus(): { flower: FlowerKind; session: FocusSession } |
   // Dated when it ended, not when the flower was collected (it may be collected the next day).
   const session: FocusSession = { at: a.endAt ?? Date.now(), minutes, flower: flower.id, taskId: a.taskId };
   update((s) => ({ focus: { sessions: [session, ...s.focus.sessions].slice(0, 500), active: null } }));
+  // A session spent on a task counts as a day of progress on it.
+  if (a.taskId) logProgress(a.taskId);
   return { flower, session };
 }
 
