@@ -547,7 +547,7 @@ function FocusCard({ lowDay, today }: { lowDay: boolean; today: string }) {
   // Anything due today or late comes first (any quadrant), then the rest of "Do first".
   const dueNow = tasks
     .filter((x) => !x.done && x.due && x.due <= today)
-    .sort((a, b) => (a.due ?? '').localeCompare(b.due ?? '') || a.quadrant - b.quadrant);
+    .sort((a, b) => (a.due ?? '').localeCompare(b.due ?? '') || a.quadrant - b.quadrant || (a.at ?? '').localeCompare(b.at ?? ''));
   const focus = [...dueNow, ...openTasks(tasks, 1).filter((x) => !dueNow.includes(x))];
   const limit = lowDay ? 1 : 3;
   const shown = focus.slice(0, limit);

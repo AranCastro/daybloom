@@ -38,6 +38,7 @@ export default function Matrix() {
   const shown = filtering ? fitEnergy(tasks, energy) : tasks;
   const open = tasks.filter((x) => !x.done);
   const dueToday = open.filter((x) => x.due && x.due <= today).length;
+  const routineCount = useAppState((s) => s.routines.length);
 
   return (
     <View style={{ flex: 1 }}>
@@ -51,13 +52,27 @@ export default function Matrix() {
             style={[styles.calBtn, { backgroundColor: t.surface, borderColor: t.line }]}>
             <Icon name="calendar" color={t.text} size={20} />
           </Pressable>
+
           <Text variant="label">Priorities</Text>
           <Text variant="title">Eisenhower Matrix</Text>
-          <Text variant="small">
-            {open.length === 0
-              ? 'Sort what matters from what is merely loud.'
-              : `${open.length} open${dueToday ? ` · ${dueToday} due today or late` : ''}`}
-          </Text>
+          <View style={styles.subRow}>
+            <Text variant="small" style={{ flex: 1 }}>
+              {open.length === 0
+                ? 'Sort what matters from what is merely loud.'
+                : `${open.length} open${dueToday ? ` · ${dueToday} due today or late` : ''}`}
+            </Text>
+            <Pressable
+              onPress={() => (tap(), router.push('/routines'))}
+              accessibilityRole="button"
+              accessibilityLabel={`Routines${routineCount ? `: ${routineCount}` : ''}`}
+              hitSlop={6}
+              style={[styles.routineChip, { backgroundColor: t.surface, borderColor: t.line }]}>
+              <Icon name="repeat" color={t.text} size={14} />
+              <Text variant="caption" strong color="text">
+                Routines{routineCount ? ` · ${routineCount}` : ''}
+              </Text>
+            </Pressable>
+          </View>
         </Animated.View>
 
         {!!energy && (
@@ -177,6 +192,8 @@ const styles = StyleSheet.create({
   emptyAll: { borderRadius: Radius.lg, borderWidth: 1, paddingHorizontal: 20, paddingVertical: 10 },
   tabular: { fontVariant: ['tabular-nums'] },
   header: { gap: 2, marginTop: 8 },
+  routineChip: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: Radius.pill, borderWidth: 1 },
+  subRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   calBtn: { position: 'absolute', right: 0, top: 0, width: 42, height: 42, borderRadius: 21, borderWidth: 1, alignItems: 'center', justifyContent: 'center', zIndex: 1 },
   grid: { flex: 1, gap: 12, marginTop: 4 },
   gridRow: { flex: 1, flexDirection: 'row', gap: 12 },

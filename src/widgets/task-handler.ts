@@ -14,17 +14,20 @@ import { stepProgress } from '@/lib/effort';
 import { FocusPreset, pauseTimer, PRESETS, resumeTimer, startFocus, stopTimer } from '@/lib/focus';
 import { flowerOf } from '@/lib/flowers';
 import { moodOf, MoodValue } from '@/lib/moods';
-import { awardBadges, flushState, getState, recordMood, reloadState, TaskWidget, toggleWidgetLock, widgetTickTask, widgetUndo } from '@/lib/store';
+import { syncRoutineReminders } from '@/lib/reminders';
+import { awardBadges, ensureRoutines, flushState, getState, recordMood, reloadState, TaskWidget, toggleWidgetLock, widgetTickTask, widgetUndo } from '@/lib/store';
 import { renderFor, setFlash } from '@/widgets/catalogue';
 import { refreshWidgets } from '@/widgets/sync';
 
 export async function widgetTaskHandler({ widgetInfo, widgetAction, clickAction, clickActionData, renderWidget }: WidgetTaskHandlerProps) {
   if (widgetAction === 'WIDGET_DELETED') return;
   const name = widgetInfo.widgetName;
+  // Silent: this handler redraws the widgets itself below, so the reload need not trigger another redraw.
+  reloadState({ silent: true });
+  // A new day adds its routine tasks (and the next week of their reminders) even if the app is not opened.
+  let routinesChanged = ensureRoutines();
 
   if (widgetAction === 'WIDGET_CLICK') {
-    // Silent: this handler redraws the widgets itself below, so the reload need not trigger another redraw.
-    reloadState({ silent: true });
     const before = getState().garden.length;
 
     if (clickAction === 'MOOD') {
@@ -42,6 +45,8 @@ export async function widgetTaskHandler({ widgetInfo, widgetAction, clickAction,
       const widget: TaskWidget = clickAction === 'TASK_DONE' ? 'Tasks' : 'Matrix';
       const changed = widgetTickTask(widget, id, clickAction === 'TASK_DONE' ? 'done' : 'toggle');
       const task = getState().tasks.find((t) => t.id === id);
+      // A routine task ticked here must not be reminded about any more.
+      if (changed && task?.routineId) routinesChanged = true;
       const b = getState().garden[0];
       const grew = getState().garden.length - before;
       const bloomed = grew > 1 ? ` · ${grew} flowers bloomed` : grew === 1 && b ? ` · ${flowerOf(b.flower).name} bloomed` : '';
@@ -65,7 +70,10 @@ export async function widgetTaskHandler({ widgetInfo, widgetAction, clickAction,
 
     if (clickAction === 'WIDGET_UNDO') {
       const widget: TaskWidget = clickActionData?.widget === 'Matrix' ? 'Matrix' : 'Tasks';
-      if (widgetUndo(widget)) setFlash(name, 'Put back');
+      if (widgetUndo(widget)) {
+        setFlash(name, 'Put back');
+        routinesChanged = true;
+      }
     }
 
     if (clickAction === 'WIDGET_LOCK') {
@@ -75,9 +83,10 @@ export async function widgetTaskHandler({ widgetInfo, widgetAction, clickAction,
     }
   }
 
-  if (widgetAction !== 'WIDGET_CLICK') reloadState({ silent: true });
   // Android may stop this background task as soon as it returns: write the tap's changes now.
   flushState();
+
+  if (routinesChanged && getState().routines.length) await syncRoutineReminders(getState().routines, getState().tasks);
 
   const tree = renderFor(name, getState(), widgetInfo.width, widgetInfo.height);
   if (tree) renderWidget(tree);

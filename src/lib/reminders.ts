@@ -6,6 +6,8 @@ import * as Notifications from 'expo-notifications';
 import { AppState as RNAppState, Platform } from 'react-native';
 
 import { expectReturn } from '@/lib/app-lock';
+import { instanceId, nextDays, REMINDER_PREFIX, reminderId, toMinutes, type Routine } from '@/lib/routines';
+import { dayKey, fromKey } from '@/lib/dates';
 
 const CHANNEL = 'daily-checkin';
 const FOCUS_CHANNEL = 'focus-timer';
@@ -23,6 +25,10 @@ export const CHECKIN_ACTIONS: { id: string; mood: 2 | 3 | 4; title: string }[] =
   { id: 'mood-2', mood: 2, title: '🙁 Low' },
 ];
 const NOTED_ID = 'checkin-noted';
+/** Routine reminders: quiet (no sound or vibration), with a Done button that ticks the task. */
+const ROUTINE_CHANNEL = 'routine-gentle';
+export const ROUTINE_CATEGORY = 'daybloom-routine';
+export const ROUTINE_DONE = 'routine-done';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -75,6 +81,15 @@ export function prepareNotifications(): Promise<void> {
         importance: Notifications.AndroidImportance.DEFAULT,
         lockscreenVisibility: PRIVATE,
       });
+      await Notifications.setNotificationChannelAsync(ROUTINE_CHANNEL, {
+        name: 'Routine reminders',
+        description: 'A quiet reminder at the times you set for a routine task.',
+        importance: Notifications.AndroidImportance.DEFAULT,
+        sound: null,
+        enableVibrate: false,
+        vibrationPattern: [0],
+        lockscreenVisibility: PRIVATE,
+      });
       for (const id of OLD_CHANNELS) await Notifications.deleteNotificationChannelAsync(id).catch(() => undefined);
     }
     // Buttons on the reminder check in without opening the app (handled in lib/notification-checkin).
@@ -82,6 +97,9 @@ export function prepareNotifications(): Promise<void> {
       CHECKIN_CATEGORY,
       CHECKIN_ACTIONS.map((a) => ({ identifier: a.id, buttonTitle: a.title, options: { opensAppToForeground: false } })),
     ).catch(() => undefined);
+    await Notifications.setNotificationCategoryAsync(ROUTINE_CATEGORY, [
+      { identifier: ROUTINE_DONE, buttonTitle: '✓ Done', options: { opensAppToForeground: false } },
+    ]).catch(() => undefined);
   })().catch(() => {
     setup = null;
   });
@@ -192,4 +210,71 @@ export async function notifyCheckinNoted(label: string, bloomed?: string): Promi
   } catch {
     // The check-in is saved either way.
   }
+}
+
+// ── Routine reminders ───────────────────────────────────────────────────────
+
+/** How far ahead routine reminders are scheduled; opening the app or a widget update tops them up. */
+const ROUTINE_DAYS = 7;
+/** Android allows about 500 pending alarms per app; stay well below. */
+const ROUTINE_MAX = 120;
+const ROUTINE_LINES = ['A gentle reminder.', 'When you are ready.', 'One small thing.'];
+
+let routineChain: Promise<void> = Promise.resolve();
+
+/**
+ * Keeps the routine reminders in step with the routines: one quiet notification per time slot for
+ * the next week, skipping any whose task is already done. Identified as "routine:<task id>", so a
+ * reminder can tick its own task. Calls run one after another. `ask` may show the permission prompt
+ * (only when the user has just switched a reminder on).
+ */
+export function syncRoutineReminders(
+  routines: Routine[],
+  tasks: { id: string; done: boolean }[],
+  ask = false,
+  now: Date = new Date(),
+): Promise<void> {
+  if (Platform.OS === 'web') return Promise.resolve();
+  const job = async () => {
+    const wanted = routines.some((r) => r.remind);
+    const ready = wanted && (ask ? await ensureReady() : (await prepareNotifications(), (await Notifications.getPermissionsAsync()).granted));
+    const scheduled = await Notifications.getAllScheduledNotificationsAsync().catch(() => []);
+    for (const n of scheduled) if (n.identifier.startsWith(REMINDER_PREFIX)) await Notifications.cancelScheduledNotificationAsync(n.identifier).catch(() => {});
+    const done = new Set(tasks.filter((t) => t.done).map((t) => t.id));
+    // A reminder still showing for a task ticked since is taken away.
+    const shown = await Notifications.getPresentedNotificationsAsync().catch(() => []);
+    for (const n of shown) {
+      const id = n.request.identifier;
+      if (id.startsWith(REMINDER_PREFIX) && done.has(id.slice(REMINDER_PREFIX.length))) await Notifications.dismissNotificationAsync(id).catch(() => undefined);
+    }
+    if (!ready) return;
+    const today = dayKey(now);
+    const jobs: { id: string; at: Date; title: string }[] = [];
+    for (const r of routines) {
+      if (!r.remind) continue;
+      for (const day of nextDays(r, today, ROUTINE_DAYS)) {
+        r.times.forEach((time, slot) => {
+          const taskId = instanceId(r.id, day, slot);
+          const at = fromKey(day);
+          at.setHours(0, toMinutes(time), 0, 0);
+          if (at.getTime() > now.getTime() + 5_000 && !done.has(taskId)) jobs.push({ id: taskId, at, title: r.title });
+        });
+      }
+    }
+    jobs.sort((a, b) => a.at.getTime() - b.at.getTime());
+    for (const j of jobs.slice(0, ROUTINE_MAX)) {
+      await Notifications.scheduleNotificationAsync({
+        identifier: reminderId(j.id),
+        content: {
+          title: j.title,
+          body: `${ROUTINE_LINES[j.at.getDate() % ROUTINE_LINES.length]} Tap Done when it is finished.`,
+          categoryIdentifier: ROUTINE_CATEGORY,
+          sound: false,
+        },
+        trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: j.at, channelId: ROUTINE_CHANNEL },
+      }).catch(() => undefined);
+    }
+  };
+  routineChain = routineChain.then(job, job).catch(() => undefined);
+  return routineChain;
 }

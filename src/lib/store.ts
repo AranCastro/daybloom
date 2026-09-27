@@ -15,6 +15,7 @@ import { MoodValue } from '@/lib/moods';
 import { sortOpen } from '@/lib/quadrants';
 import { isLowStreak } from '@/lib/nudge-rule';
 import { rewardFor } from '@/lib/effort';
+import { instanceId, normaliseTimes, occursOn, Routine } from '@/lib/routines';
 import { sanitise } from '@/lib/sanitise';
 
 export type NudgeLog = {
@@ -49,7 +50,13 @@ export type Task = {
   steps?: TaskStep[];
   /** Days (YYYY-MM-DD) with progress on this task: a step ticked or "Worked on it today". */
   workedOn?: string[];
+  /** Set on a task added by a routine (lib/routines): the routine, which time slot, and its time. */
+  routineId?: string;
+  slot?: number;
+  at?: string;
 };
+
+export type { Routine } from '@/lib/routines';
 
 export type TaskStep = { id: string; title: string; done: boolean };
 
@@ -119,6 +126,10 @@ export type AppState = {
   clearedWork: Record<string, number>;
   /** Focus sessions per day that fell off the 500-session list, so shading and streaks keep them. */
   clearedFocus: Record<string, { sessions: number; minutes: number }>;
+  /** Routine tasks (every day, weekly, every few days), from which each day's tasks are added. */
+  routines: Routine[];
+  /** The last day each routine added its tasks, so a task deleted for today does not come back. */
+  routineMade: Record<string, string>;
   /** The user's own names for the matrix quadrants and circle sections (empty = the default name). */
   labels: { matrix: Partial<Record<Quadrant, string>>; circle: Partial<Record<CircleQuadrant, string>> };
   /** Profile picture: a photo saved in the app's storage, or one of the built-in avatars. */
@@ -241,6 +252,8 @@ const initial: AppState = {
   bloomsEver: 0,
   clearedWork: {},
   clearedFocus: {},
+  routines: [],
+  routineMade: {},
   labels: { matrix: {}, circle: {} },
   avatar: null,
 };
@@ -280,6 +293,8 @@ function mergeSaved(raw: Partial<AppState>): AppState {
   merged.bloomsEver = Math.max(saved.bloomsEver ?? 0, merged.bloomCount);
   merged.clearedWork = { ...saved.clearedWork };
   merged.clearedFocus = { ...saved.clearedFocus };
+  merged.routines = [...(saved.routines ?? [])];
+  merged.routineMade = { ...saved.routineMade };
   merged.labels = { matrix: { ...saved.labels?.matrix }, circle: { ...saved.labels?.circle } };
   // Older versions kept a separate ntfy buddy; now the buddy is a person in the circle.
   const legacy = (saved as { buddy?: { name?: string } | null }).buddy;
@@ -754,6 +769,117 @@ export function toggleWidgetLock(widget: TaskWidget) {
 
 export function deleteTask(id: string) {
   update((s) => ({ tasks: s.tasks.filter((t) => t.id !== id) }));
+}
+
+// ── Routines: tasks that come back on their own ─────────────────────────────
+
+export type RoutineInput = Omit<Routine, 'id' | 'createdAt' | 'start'> & { start?: string };
+
+/**
+ * Adds today's tasks for every routine due today, once a day. Also tidies up after earlier days:
+ * a routine task left unfinished is removed rather than piling up (it will come round again), and
+ * a finished one is cleared into `clearedWork`, so the calendar keeps its shading.
+ * Cheap when nothing is due: returns false without writing. Safe to call often (app start, return to the
+ * app, widget updates, notification buttons).
+ */
+export function ensureRoutines(today: string = dayKey()): boolean {
+  const s = state;
+  const stale = s.tasks.filter((t) => t.routineId && t.due && t.due < today);
+  const dueNow = s.routines.filter((r) => s.routineMade[r.id] !== today);
+  if (!stale.length && !dueNow.length) return false;
+  update((cur) => {
+    const clearedWork = { ...cur.clearedWork };
+    let tasks = cur.tasks.filter((t) => {
+      if (!(t.routineId && t.due && t.due < today)) return true;
+      if (t.done && t.doneAt) {
+        const k = dayKey(new Date(t.doneAt));
+        clearedWork[k] = (clearedWork[k] ?? 0) + 1;
+      }
+      return false;
+    });
+    const routineMade = { ...cur.routineMade };
+    for (const r of cur.routines) {
+      if (routineMade[r.id] === today) continue;
+      routineMade[r.id] = today;
+      if (!occursOn(r, today)) continue;
+      r.times.forEach((at, slot) => {
+        const id = instanceId(r.id, today, slot);
+        if (tasks.some((t) => t.id === id)) return;
+        tasks = [
+          ...tasks,
+          { id, title: r.title, quadrant: r.quadrant, due: today, done: false, createdAt: Date.now(), routineId: r.id, slot, at, ...(r.effort ? { effort: r.effort } : {}) },
+        ];
+      });
+    }
+    return { tasks, clearedWork, routineMade };
+  });
+  return true;
+}
+
+export function addRoutine(input: RoutineInput): Routine {
+  const r: Routine = { ...input, id: newId(), title: input.title.trim(), times: normaliseTimes(input.times), start: input.start ?? dayKey(), createdAt: Date.now() };
+  update((s) => ({ routines: [...s.routines, r] }));
+  ensureRoutines();
+  return r;
+}
+
+export function getRoutine(id: string | undefined): Routine | undefined {
+  return id ? state.routines.find((r) => r.id === id) : undefined;
+}
+
+/**
+ * Changes a routine. Today's unfinished tasks from it follow the change: their title, quadrant and
+ * effort are updated, and if the schedule or times changed they are added again to match.
+ */
+export function editRoutine(id: string, patch: Partial<RoutineInput>): void {
+  const old = getRoutine(id);
+  if (!old) return;
+  const next: Routine = { ...old, ...patch, title: (patch.title ?? old.title).trim(), times: normaliseTimes(patch.times ?? old.times) };
+  const today = dayKey();
+  const reschedule =
+    next.kind !== old.kind ||
+    next.every !== old.every ||
+    (next.weekdays ?? []).join() !== (old.weekdays ?? []).join() ||
+    next.times.join() !== old.times.join() ||
+    next.start !== old.start;
+  update((s) => {
+    const routines = s.routines.map((r) => (r.id === id ? next : r));
+    const mine = (t: Task) => t.routineId === id && t.due === today && !t.done;
+    if (reschedule) {
+      const routineMade = { ...s.routineMade };
+      delete routineMade[id];
+      return { routines, routineMade, tasks: s.tasks.filter((t) => !mine(t)) };
+    }
+    return {
+      routines,
+      tasks: s.tasks.map((t) => (mine(t) ? { ...t, title: next.title, quadrant: next.quadrant, effort: next.effort } : t)),
+    };
+  });
+  // A finished task for a slot stays finished: re-adding skips ids that already exist.
+  if (reschedule) ensureRoutines(today);
+}
+
+/** Stops a routine. Today's unfinished tasks from it become ordinary tasks unless `removeToday`. */
+export function deleteRoutine(id: string, removeToday = false): void {
+  update((s) => {
+    const routineMade = { ...s.routineMade };
+    delete routineMade[id];
+    const tasks = s.tasks
+      .filter((t) => !(removeToday && t.routineId === id && !t.done))
+      .map((t) => {
+        if (t.routineId !== id) return t;
+        const { routineId: _r, slot: _s, ...rest } = t;
+        return rest;
+      });
+    return { routines: s.routines.filter((r) => r.id !== id), routineMade, tasks };
+  });
+}
+
+/** Turns an existing one-time task into a routine: the routine takes its place from today. */
+export function makeRoutineFrom(taskId: string, input: RoutineInput): Routine {
+  const task = state.tasks.find((t) => t.id === taskId);
+  if (task && !task.done) update((s) => ({ tasks: s.tasks.filter((t) => t.id !== taskId) }));
+  return addRoutine(input);
 }
 
 /** Removes the finished tasks of one quadrant. Their days keep their calendar shading. */
