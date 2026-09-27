@@ -1,4 +1,4 @@
-/** Two big doors from the garden: Send a flower, and Thottam (the pookalam builder). */
+/** Two big doors from the garden: Send a flower, and Thottam (the Poo Kolam builder). */
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
@@ -21,7 +21,7 @@ export function GardenActions() {
       />
       <Tile
         title="Thottam"
-        sub="Make a pookalam from your flowers"
+        sub="Make a Poo Kolam from your flowers"
         icon="spark"
         colors={dark ? ['#4A3A1E', '#2E2A1C'] : ['#FCE3B8', '#F3F4DA']}
         onPress={() => router.push('/thottam')}

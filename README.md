@@ -11,8 +11,24 @@ One calm app where everything you do grows the same garden.
 mood tags, a Configure option on every widget (touch and hold the widget) with theme and transparency,
 a richer Pomodoro widget you can start, pause and stop from the home screen, and a Credits card in Settings.
 
+**New in version 2.2:** check in from the reminder, patterns you might not notice, the energy check, the garden's
+weather following the phone, and Thottam now says Poo Kolam.
+
+- **Check in from the notification.** The daily reminder carries three mood buttons (Good, Okay, Low; Android shows
+  at most three). A button saves the check-in in the background (expo-task-manager) without opening the app, grows
+  the day's flower and shows a short "Noted" confirmation. Tapping the reminder itself opens the app with all five.
+- **Patterns you might not notice.** Garden tab, after 14 check-ins, from the last 90 days, worked out on the phone:
+  the heaviest and brightest weekday, days you reached out, days with two or more finished tasks, focus sessions on
+  days with a heavy feeling tag (for example Tension), morning energy, and places. Each needs at least three days on
+  both sides and a clear gap (0.5 mood points, or 0.5 sessions a day). Described as patterns, not causes.
+- **Energy check.** Today asks for your energy (low, medium or high). Tasks can be marked "Quick and easy"; on a
+  low-energy day the matrix shows only those (with "Show all"), and the Focus tab suggests the 15-minute session.
+- **Weather that follows you.** With Live weather on, the garden refreshes every 10 minutes while it is on screen and
+  whenever the phone has moved to another 0.1° cell (about 11 km); readings also set night and day from the real
+  sun. The Garden tab offers a one-tap "Match the garden to your weather" while it is off.
+
 **New in version 2.1:** Send a flower, the Jar of good days, places and "Where you feel best", a living garden
-(time of day, Indian seasons and optional live weather), tanpura and raga drones, and Thottam, the pookalam builder.
+(time of day, Indian seasons and optional live weather), tanpura and raga drones, and Thottam, the Poo Kolam builder.
 
 - **Send a flower.** Garden tab or People tab → Send a flower: a card made from a flower you have grown, with a line
   (Thinking of you, Stay strong, Happy Onam…) and who it is for, shared as a picture through the share menu (choose
@@ -31,7 +47,7 @@ a richer Pomodoro widget you can start, pause and stop from the home screen, and
   follows the season and weather.
 - **Tanpura and ragas.** Three more focus sounds: Tanpura (Pa–Sa–Sa–low Sa in C#), Morning raga (Bhairav) and Evening
   raga (Yaman) over the tanpura; the Focus tab suggests the raga that suits the time of day.
-- **Thottam.** Garden tab → Thottam: build a pookalam from the flowers you have grown, ring by ring (up to six), each
+- **Thottam.** Garden tab → Thottam: build a Poo Kolam from the flowers you have grown, ring by ring (up to six), each
   ring Solid, Alternate, Petals or Dots, with an Onam (petals and leaves), Diwali (diyas) or Pongal (kolam) border.
   Save designs, open or delete them from the gallery, share as a picture, or tap Surprise me. During the Onam, Diwali
   and Pongal seasons Today invites you to make one.

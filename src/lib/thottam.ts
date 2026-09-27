@@ -1,4 +1,4 @@
-/** Thottam helpers: which festival is near, starter designs, and a "surprise me" pookalam. */
+/** Thottam helpers: which festival is near, starter designs, and a "surprise me" Poo Kolam. */
 import type { Pookalam, PookalamRing } from '@/lib/store';
 
 export type Festival = Pookalam['festival'];

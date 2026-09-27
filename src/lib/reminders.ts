@@ -11,6 +11,14 @@ const DAILY_ID = 'daily-checkin';
 const FOCUS_ID = 'focus-timer';
 const NUDGE_CHANNEL = 'buddy-nudge';
 const NUDGE_ID = 'buddy-nudge';
+/** The daily reminder carries mood buttons (Android shows at most three). */
+export const CHECKIN_CATEGORY = 'daybloom-checkin';
+export const CHECKIN_ACTIONS: { id: string; mood: 2 | 3 | 4; title: string }[] = [
+  { id: 'mood-4', mood: 4, title: '🙂 Good' },
+  { id: 'mood-3', mood: 3, title: '😐 Okay' },
+  { id: 'mood-2', mood: 2, title: '🙁 Low' },
+];
+const NOTED_ID = 'checkin-noted';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -44,6 +52,11 @@ async function ensureReady(): Promise<boolean> {
       importance: Notifications.AndroidImportance.DEFAULT,
     });
   }
+  // Buttons on the reminder check in without opening the app (handled in lib/notification-checkin).
+  await Notifications.setNotificationCategoryAsync(
+    CHECKIN_CATEGORY,
+    CHECKIN_ACTIONS.map((a) => ({ identifier: a.id, buttonTitle: a.title, options: { opensAppToForeground: false } })),
+  ).catch(() => undefined);
   const current = await Notifications.getPermissionsAsync();
   return current.granted || (await Notifications.requestPermissionsAsync()).granted;
 }
@@ -53,7 +66,11 @@ export async function scheduleDailyReminder(hour: number, minute: number): Promi
   await Notifications.cancelScheduledNotificationAsync(DAILY_ID).catch(() => {});
   await Notifications.scheduleNotificationAsync({
     identifier: DAILY_ID,
-    content: { title: 'Daybloom', body: LINES[new Date().getDate() % LINES.length] },
+    content: {
+      title: 'Daybloom',
+      body: `${LINES[new Date().getDate() % LINES.length]} Tap a mood below, or open Daybloom for all five.`,
+      categoryIdentifier: CHECKIN_CATEGORY,
+    },
     trigger: { type: Notifications.SchedulableTriggerInputTypes.DAILY, hour, minute, channelId: CHANNEL },
   });
   return true;
@@ -102,5 +119,18 @@ export async function notifyNudgeReady(buddyName: string): Promise<void> {
     });
   } catch {
     // Notifications off: the card on Today still offers it.
+  }
+}
+
+/** A quiet confirmation after checking in from the reminder's buttons. */
+export async function notifyCheckinNoted(label: string, bloomed?: string): Promise<void> {
+  try {
+    await Notifications.scheduleNotificationAsync({
+      identifier: NOTED_ID,
+      content: { title: `Noted: ${label}`, body: bloomed ? `A ${bloomed} bloomed in your garden.` : 'Thank you for checking in.' },
+      trigger: Platform.OS === 'android' ? { channelId: CHANNEL } : null,
+    });
+  } catch {
+    // The check-in is saved either way.
   }
 }

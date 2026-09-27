@@ -1,5 +1,5 @@
 /**
- * Turns a view (a flower card, a pookalam) into a PNG and opens the share menu, where the user
+ * Turns a view (a flower card, a Poo Kolam) into a PNG and opens the share menu, where the user
  * can pick WhatsApp and a contact, or save it to Photos or Drive. Nothing is uploaded by the app.
  */
 import * as Sharing from 'expo-sharing';

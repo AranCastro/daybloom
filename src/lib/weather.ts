@@ -12,7 +12,8 @@ import { currentCoords } from '@/lib/places';
 export type Sky = 'clear' | 'cloudy' | 'fog' | 'drizzle' | 'rain' | 'storm';
 export type Phase = 'dawn' | 'day' | 'dusk' | 'night';
 export type Season = 'summer' | 'monsoon' | 'autumn' | 'winter';
-export type Weather = { sky: Sky; temp: number; isDay: boolean; at: number };
+/** `lat`/`lon` are the rounded grid cell the reading is for, so moving to another town fetches again. */
+export type Weather = { sky: Sky; temp: number; isDay: boolean; at: number; lat?: number; lon?: number };
 
 const KEY = 'daybloom.weather.v1';
 const FRESH_MS = 30 * 60_000;
@@ -86,9 +87,12 @@ export function useWeather(enabled: boolean): Weather | null {
   return enabled ? w : null;
 }
 
-/** Fetches fresh weather if the cached one is older than 30 minutes. `ask` may show the location prompt. */
+/**
+ * Keeps the garden's weather in step with where the phone is: fetches when the reading is older
+ * than 30 minutes or the phone has moved to another 0.1° cell (about 11 km). `ask` may show the
+ * location prompt.
+ */
 export function refreshWeather(ask = false): Promise<void> {
-  if (current && Date.now() - current.at < FRESH_MS && !ask) return Promise.resolve();
   if (inFlight) return inFlight;
   inFlight = (async () => {
     try {
@@ -96,6 +100,8 @@ export function refreshWeather(ask = false): Promise<void> {
       if (!here) return;
       const lat = Math.round(here.lat * 10) / 10;
       const lon = Math.round(here.lon * 10) / 10;
+      const sameCell = current?.lat === lat && current?.lon === lon;
+      if (current && sameCell && Date.now() - current.at < FRESH_MS && !ask) return;
       const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,is_day&timezone=auto`;
       const ctrl = new AbortController();
       const timer = setTimeout(() => ctrl.abort(), 10_000);
@@ -104,7 +110,7 @@ export function refreshWeather(ask = false): Promise<void> {
       const data = (await res.json()) as { current?: { temperature_2m?: number; weather_code?: number; is_day?: number } };
       const c = data.current;
       if (!c || typeof c.weather_code !== 'number') return;
-      current = { sky: skyOf(c.weather_code), temp: Math.round(c.temperature_2m ?? 0), isDay: c.is_day === 1, at: Date.now() };
+      current = { sky: skyOf(c.weather_code), temp: Math.round(c.temperature_2m ?? 0), isDay: c.is_day === 1, at: Date.now(), lat, lon };
       writeItem(KEY, JSON.stringify(current));
       listeners.forEach((l) => l());
     } catch {
@@ -114,4 +120,22 @@ export function refreshWeather(ask = false): Promise<void> {
     }
   })();
   return inFlight;
+}
+
+/** Turns live weather on: asks for location, fetches once. Returns false (and leaves it off) if location is refused. */
+export async function enableLiveWeather(setOn: (on: boolean) => void): Promise<boolean> {
+  const here = await currentCoords(true);
+  if (!here) {
+    setOn(false);
+    return false;
+  }
+  setOn(true);
+  await refreshWeather(false);
+  return true;
+}
+
+/** How long ago the reading was taken, for the garden's label. */
+export function ageLabel(at: number, now: number): string {
+  const min = Math.max(0, Math.round((now - at) / 60_000));
+  return min < 2 ? 'just now' : min < 60 ? `${min} min ago` : `${Math.round(min / 60)} h ago`;
 }

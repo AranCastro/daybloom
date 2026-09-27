@@ -5,30 +5,41 @@
  */
 import { LinearGradient } from 'expo-linear-gradient';
 import { useIsFocused } from 'expo-router';
-import { useEffect } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, { cancelAnimation, Easing, useAnimatedStyle, useSharedValue, withDelay, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
 
 import { Icon, IconName } from '@/components/icons';
 import { Text } from '@/components/text';
 import { Fonts } from '@/constants/theme';
 import { useClock } from '@/hooks/use-today';
-import { useAppState } from '@/lib/store';
-import { Phase, phaseOf, Season, seasonOf, Sky, useWeather } from '@/lib/weather';
+import { setSettings, useAppState } from '@/lib/store';
+import { enableLiveWeather, Phase, phaseOf, refreshWeather, Season, seasonOf, Sky, useWeather } from '@/lib/weather';
 
-type Scene = { phase: Phase; season: Season; sky: Sky; temp?: number; live: boolean };
+type Scene = { phase: Phase; season: Season; sky: Sky; temp?: number; live: boolean; at?: number };
 
 /** What the garden should look like right now. */
 export function useScene(): Scene {
   const { hour, today } = useClock();
   const live = useAppState((s) => s.settings.liveWeather);
   const w = useWeather(live);
+  // While the garden is on screen, keep the weather in step with where the phone is.
+  const focused = useIsFocused();
+  useEffect(() => {
+    if (!live || !focused) return;
+    void refreshWeather(false);
+    const id = setInterval(() => void refreshWeather(false), 10 * 60_000);
+    return () => clearInterval(id);
+  }, [live, focused]);
   const month = Number(today.slice(5, 7)) - 1;
   const season = seasonOf(month);
   // Without live weather, the monsoon still brings a soft grey sky on some afternoons.
   const day = Number(today.slice(8, 10));
   const sky: Sky = w ? w.sky : season === 'monsoon' && hour >= 14 && hour < 19 && day % 3 === 0 ? 'drizzle' : 'clear';
-  return { phase: phaseOf(hour), season, sky, temp: w?.temp, live: !!w };
+  // Live readings also know whether the sun is up there, which beats the clock near dawn and dusk.
+  const clock = phaseOf(hour);
+  const phase: Phase = w && !w.isDay && (clock === 'day' || clock === 'dawn') ? 'night' : w && w.isDay && clock === 'night' ? 'dawn' : clock;
+  return { phase, season, sky, temp: w?.temp, live: !!w, at: w?.at };
 }
 
 const SKY: Record<Phase, [string, string]> = {
@@ -107,7 +118,7 @@ export function GardenSky({ height }: { height: number }) {
 
 function SceneChip({ scene }: { scene: Scene }) {
   const sky = SKY_LABEL[scene.sky];
-  const label = scene.live ? `${sky.label}${scene.temp !== undefined ? ` · ${scene.temp}°` : ''}` : SEASON_LABEL[scene.season];
+  const label = scene.live ? `Live · ${sky.label}${scene.temp !== undefined ? ` · ${scene.temp}°` : ''}` : SEASON_LABEL[scene.season];
   const night = scene.phase === 'night';
   return (
     <View style={[styles.chip, { backgroundColor: night ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.6)' }]}>
@@ -185,5 +196,31 @@ const styles = StyleSheet.create({
   moon: { position: 'absolute', right: '14%', width: 30, height: 30, borderRadius: 15, backgroundColor: '#F4EFD8', overflow: 'hidden' },
   moonBite: { position: 'absolute', left: 9, top: -5, width: 30, height: 30, borderRadius: 15 },
   puddle: { position: 'absolute', height: 10, borderRadius: 999, backgroundColor: 'rgba(190,220,240,0.7)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.6)' },
+  prompt: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, borderRadius: 18, backgroundColor: '#DCEBF3' },
   chip: { position: 'absolute', left: 10, top: 10, flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999 },
 });
+
+/** Under the garden, while live weather is off: one tap to match the garden to the real sky. */
+export function LiveWeatherPrompt() {
+  const live = useAppState((s) => s.settings.liveWeather);
+  const [note, setNote] = useState<string | undefined>();
+  if (live) return null;
+  return (
+    <Pressable
+      onPress={async () => {
+        const ok = await enableLiveWeather((liveWeather) => setSettings({ liveWeather }));
+        setNote(ok ? undefined : 'Location is off or not allowed. You can turn it on later in Settings.');
+      }}
+      accessibilityRole="button"
+      style={styles.prompt}>
+      <Icon name="rain" color="#2F4A3F" size={20} />
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontFamily: Fonts.bodyStrong, fontSize: 14, color: '#1D1B18' }}>Match the garden to your weather</Text>
+        <Text style={{ fontFamily: Fonts.body, fontSize: 12, color: '#4A554F' }}>
+          {note ?? 'Rain, sun or stars as they are where you are. Uses your approximate location.'}
+        </Text>
+      </View>
+      <Text style={{ fontFamily: Fonts.bodyStrong, fontSize: 13, color: '#A94E2B' }}>Turn on</Text>
+    </Pressable>
+  );
+}

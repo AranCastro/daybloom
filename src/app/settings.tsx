@@ -17,8 +17,7 @@ import { prettyTime } from '@/lib/dates';
 import { cancelFocusAlarm, cancelReminders, scheduleDailyReminder } from '@/lib/reminders';
 import { helpline } from '@/lib/region';
 import { disableLock } from '@/lib/app-lock';
-import { currentCoords } from '@/lib/places';
-import { refreshWeather } from '@/lib/weather';
+import { enableLiveWeather } from '@/lib/weather';
 import app from '../../app.json';
 import { AppState, resetAll, setLabel, setSettings, update, useAppState } from '@/lib/store';
 
@@ -264,13 +263,8 @@ function LiveWeatherCard() {
       setSettings({ liveWeather: false });
       return;
     }
-    setSettings({ liveWeather: true });
-    await refreshWeather(true);
-    const perm = await currentCoords(false);
-    if (!perm) {
-      setSettings({ liveWeather: false });
-      setNote('Location is off or not allowed, so the garden follows the clock and the season.');
-    } else setNote(undefined);
+    const ok = await enableLiveWeather((liveWeather) => setSettings({ liveWeather }));
+    setNote(ok ? undefined : 'Location is off or not allowed, so the garden follows the clock and the season.');
   }
   return (
     <Card>

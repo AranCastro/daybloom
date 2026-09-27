@@ -26,8 +26,11 @@ Choose how today feels, from Bright to Heavy. No writing, no journaling. Your st
 **A garden that grows with you**
 Checking in, finishing a task, a focus session, a short game, reaching out to someone and earning a badge each grow a flower. Collect twelve kinds, including rare finds such as Neelakurinji, and a Golden Lotus every twentieth bloom.
 
+**New in 2.2**
+Check in straight from the evening reminder. Patterns you might not notice, worked out on your phone. A morning energy check that trims your task list on low days. The garden's weather now follows you wherever you are.
+
 **New in 2.1**
-Thottam: make your own pookalam from the flowers you grow, with Onam, Diwali and Pongal borders. Send a flower card to someone on WhatsApp. A jar of good days that gives your own words back on a heavy day. See where you feel best on a small map of your places. A garden with day, night, monsoon and live weather. Tanpura and raga drones for focus.
+Thottam: make your own Poo Kolam from the flowers you grow, with Onam, Diwali and Pongal borders. Send a flower card to someone on WhatsApp. A jar of good days that gives your own words back on a heavy day. See where you feel best on a small map of your places. A garden with day, night, monsoon and live weather. Tanpura and raga drones for focus.
 
 **New in 2.0**
 App lock with PIN or fingerprint. Seven focus sounds: white noise, rain, fire, wind, thunderstorm, birds and a 40 Hz gamma beat. Twenty optional feeling tags after your check-in. Style any widget: light or dark, and as transparent as you like. Start, pause and stop a Pomodoro right from your home screen.
