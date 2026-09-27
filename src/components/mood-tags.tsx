@@ -5,7 +5,7 @@ import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
 
 import { Text } from '@/components/text';
 import { tap } from '@/components/ui';
-import { Fonts } from '@/constants/theme';
+import { Radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { MAX_TAGS_PER_DAY, MOOD_TAGS, tagOf } from '@/lib/mood-tags';
 import { toggleMoodTag, useAppState } from '@/lib/store';
@@ -25,7 +25,7 @@ export function MoodTagPicker({ day, mood }: { day: string; mood: number }) {
         onPress={() => (tap(), setOpen(true))}
         accessibilityRole="button"
         style={[styles.add, { borderColor: t.line, backgroundColor: t.surfaceAlt }]}>
-        <Text variant="bodyStrong" style={{ fontSize: 13.5 }}>
+        <Text variant="small" strong color="text">
           ＋ Add how you feel (optional)
         </Text>
       </Pressable>
@@ -52,13 +52,15 @@ export function MoodTagPicker({ day, mood }: { day: string; mood: number }) {
               style={[
                 styles.chip,
                 {
-                  borderColor: on ? (warm ? '#E0A23A' : '#7E8FD0') : t.line,
-                  backgroundColor: on ? (warm ? '#FBE9C8' : '#E1E6F8') : t.surface,
+                  borderColor: on ? (warm ? t.tagWarm : t.tagCool) : t.line,
+                  backgroundColor: on ? (warm ? t.tagWarmSoft : t.tagCoolSoft) : t.surface,
                   opacity: !on && full ? 0.45 : 1,
                 },
               ]}>
-              <Text style={{ fontSize: 15 }}>{tag.emoji}</Text>
-              <Text style={{ fontFamily: Fonts.bodyStrong, fontSize: 13, color: on ? '#1D1B18' : t.text }}>{tag.label}</Text>
+              <Text variant="bodySm">{tag.emoji}</Text>
+              <Text variant="small" strong color="text">
+                {tag.label}
+              </Text>
             </Pressable>
           );
         })}
@@ -76,8 +78,11 @@ export function MoodTagRow({ ids, size = 'small' }: { ids: string[] | undefined;
     <View style={styles.wrap}>
       {tags.map((tag) => (
         <View key={tag.id} style={[styles.pill, { backgroundColor: t.surfaceAlt }]}>
-          <Text style={{ fontSize: size === 'tiny' ? 11 : 13 }}>
-            {tag.emoji} <Text style={{ fontFamily: Fonts.bodyStrong, fontSize: size === 'tiny' ? 11 : 12.5, color: t.text }}>{tag.label}</Text>
+          <Text variant={size === 'tiny' ? 'micro' : 'caption'} color="text">
+            {tag.emoji}{' '}
+            <Text variant={size === 'tiny' ? 'micro' : 'caption'} strong color="text">
+              {tag.label}
+            </Text>
           </Text>
         </View>
       ))}
@@ -87,7 +92,7 @@ export function MoodTagRow({ ids, size = 'small' }: { ids: string[] | undefined;
 
 const styles = StyleSheet.create({
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, justifyContent: 'center' },
-  chip: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 11, paddingVertical: 7, borderRadius: 999, borderWidth: 1 },
-  pill: { paddingHorizontal: 9, paddingVertical: 4, borderRadius: 999 },
-  add: { alignSelf: 'center', paddingHorizontal: 16, paddingVertical: 9, borderRadius: 999, borderWidth: 1 },
+  chip: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 11, paddingVertical: 7, borderRadius: Radius.pill, borderWidth: 1 },
+  pill: { paddingHorizontal: 9, paddingVertical: 4, borderRadius: Radius.pill },
+  add: { alignSelf: 'center', paddingHorizontal: 16, paddingVertical: 9, borderRadius: Radius.pill, borderWidth: 1 },
 });

@@ -4,7 +4,7 @@
  */
 import { router } from 'expo-router';
 import { useRef, useState } from 'react';
-import { Alert, Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Alert, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { Flower } from '@/components/flower';
@@ -12,7 +12,7 @@ import { Icon } from '@/components/icons';
 import { PookalamArt } from '@/components/pookalam';
 import { Text } from '@/components/text';
 import { Button, Card, Input, Screen, tap } from '@/components/ui';
-import { Fonts } from '@/constants/theme';
+import { Radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useToday } from '@/hooks/use-today';
 import { fromKey } from '@/lib/dates';
@@ -26,7 +26,6 @@ const MAX_RINGS = 6;
 export default function Thottam() {
   const t = useTheme();
   const today = useToday();
-  const { width: screen } = useWindowDimensions();
   const garden = useAppState((s) => s.garden);
   const saved = useAppState((s) => s.pookalams);
   const kinds: string[] = [];
@@ -43,7 +42,9 @@ export default function Thottam() {
   const [sel, setSel] = useState<number>(-1); // -1 = centre
   const [busy, setBusy] = useState(false);
   const art = useRef<View>(null);
-  const size = Math.min(screen - 32, 420);
+  // Measured from the column, so the art sits inside the screen gutter.
+  const [avail, setAvail] = useState(0);
+  const size = Math.min(avail, 420);
 
   if (!kinds.length) {
     return (
@@ -131,10 +132,12 @@ export default function Thottam() {
         </Card>
       )}
 
-      <View style={{ alignItems: 'center' }}>
-        <View ref={art} collapsable={false} style={{ borderRadius: size * 0.08, overflow: 'hidden' }}>
-          <PookalamArt design={{ center, rings, festival }} size={size} />
-        </View>
+      <View style={{ alignItems: 'center', minHeight: size || 300 }} onLayout={(e) => setAvail(Math.floor(e.nativeEvent.layout.width))}>
+        {size > 0 && (
+          <View ref={art} collapsable={false} style={{ borderRadius: size * 0.08, overflow: 'hidden' }}>
+            <PookalamArt design={{ center, rings, festival }} size={size} />
+          </View>
+        )}
       </View>
 
       <Card>
@@ -144,8 +147,12 @@ export default function Thottam() {
             const on = f.id === festival;
             return (
               <Pressable key={f.id} onPress={() => (tap(), setFestival(f.id))} style={[styles.chip, { borderColor: on ? t.brand : t.line, backgroundColor: on ? t.brand : t.surface }]}>
-                <Text style={{ fontFamily: Fonts.bodyStrong, fontSize: 13, color: on ? t.brandText : t.text }}>{f.label}</Text>
-                <Text style={{ fontFamily: Fonts.body, fontSize: 11, color: on ? t.brandText : t.textSecondary }}>{f.blurb}</Text>
+                <Text variant="small" strong style={{ color: on ? t.brandText : t.text }}>
+                  {f.label}
+                </Text>
+                <Text variant="micro" style={{ color: on ? t.brandText : t.textSecondary }}>
+                  {f.blurb}
+                </Text>
               </Pressable>
             );
           })}
@@ -159,7 +166,9 @@ export default function Thottam() {
             return (
               <Pressable key={i} onPress={() => (tap(), setSel(i))} style={[styles.ringChip, { borderColor: on ? t.brand : t.line, backgroundColor: on ? t.surfaceAlt : t.surface }]}>
                 <View style={[styles.swatch, { backgroundColor: f.petal }]} />
-                <Text style={{ fontFamily: Fonts.bodyStrong, fontSize: 13, color: t.text }}>{i === -1 ? 'Centre' : `Ring ${i + 1}`}</Text>
+                <Text variant="small" strong color="text">
+                  {i === -1 ? 'Centre' : `Ring ${i + 1}`}
+                </Text>
               </Pressable>
             );
           })}
@@ -170,7 +179,7 @@ export default function Thottam() {
           )}
           {rings.length > 1 && (
             <Pressable onPress={removeRing} accessibilityLabel="Remove the outer ring" style={[styles.ringChip, { borderColor: t.line, backgroundColor: t.surfaceAlt }]}>
-              <Text style={{ fontFamily: Fonts.bodyStrong, fontSize: 16, color: t.text }}>−</Text>
+              <Text variant="bodyStrong">−</Text>
             </Pressable>
           )}
         </ScrollView>
@@ -183,7 +192,7 @@ export default function Thottam() {
             return (
               <Pressable key={k} onPress={() => setFlower(k)} accessibilityRole="radio" accessibilityState={{ selected: on }} accessibilityLabel={f.name} style={[styles.kind, { borderColor: on ? t.brand : t.line, backgroundColor: t.surface }]}>
                 <Flower kind={f} size={36} />
-                <Text style={{ fontFamily: Fonts.bodyStrong, fontSize: 11, color: t.text }} numberOfLines={1}>
+                <Text variant="micro" strong color="text" numberOfLines={1}>
                   {f.name}
                 </Text>
               </Pressable>
@@ -199,7 +208,9 @@ export default function Thottam() {
                 const on = rings[sel]?.pattern === p.id;
                 return (
                   <Pressable key={p.id} onPress={() => setPattern(p.id)} style={[styles.chip, { borderColor: on ? t.brand : t.line, backgroundColor: on ? t.brand : t.surface }]}>
-                    <Text style={{ fontFamily: Fonts.bodyStrong, fontSize: 13, color: on ? t.brandText : t.text }}>{p.label}</Text>
+                    <Text variant="small" strong style={{ color: on ? t.brandText : t.text }}>
+                      {p.label}
+                    </Text>
                   </Pressable>
                 );
               })}
@@ -232,14 +243,15 @@ export default function Thottam() {
                 accessibilityRole="button"
                 accessibilityLabel={`${p.name}. Tap to open, hold to delete`}
                 style={[styles.thumb, { borderColor: p.id === id ? t.brand : 'transparent' }]}>
-                <PookalamArt design={p} size={96} />
-                <Text style={{ fontFamily: Fonts.bodyStrong, fontSize: 11, color: t.text, maxWidth: 96 }} numberOfLines={1}>
+                {/* Thumbnails skip the petal detail: up to 60 full designs would be thousands of SVG nodes. */}
+                <PookalamArt design={p} size={96} thumb />
+                <Text variant="micro" strong color="text" style={{ maxWidth: 96 }} numberOfLines={1}>
                   {p.name}
                 </Text>
               </Pressable>
             ))}
           </View>
-          <Text variant="small" style={{ fontSize: 12 }}>
+          <Text variant="caption">
             Tap to open, hold to delete.
           </Text>
         </Card>
@@ -259,10 +271,10 @@ function Back() {
 
 const styles = StyleSheet.create({
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
-  chip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 16, borderWidth: 1 },
-  ringChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, height: 38, borderRadius: 999, borderWidth: 1.5 },
+  chip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: Radius.md, borderWidth: 1 },
+  ringChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, height: 38, borderRadius: Radius.pill, borderWidth: 1.5 },
   swatch: { width: 14, height: 14, borderRadius: 7 },
-  kind: { width: 68, alignItems: 'center', gap: 4, paddingVertical: 8, borderRadius: 16, borderWidth: 1.5 },
+  kind: { width: 68, alignItems: 'center', gap: 4, paddingVertical: 8, borderRadius: Radius.md, borderWidth: 1.5 },
   gallery: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  thumb: { alignItems: 'center', gap: 4, borderWidth: 2, borderRadius: 12, padding: 2 },
+  thumb: { alignItems: 'center', gap: 4, borderWidth: 2, borderRadius: Radius.sm, padding: 2 },
 });

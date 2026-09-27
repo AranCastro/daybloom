@@ -11,12 +11,14 @@ import Animated, { cancelAnimation, Easing, useAnimatedStyle, useSharedValue, wi
 
 import { Icon, IconName } from '@/components/icons';
 import { Text } from '@/components/text';
-import { Fonts } from '@/constants/theme';
+import { Skeleton } from '@/components/ui';
+import { Radius } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 import { useClock } from '@/hooks/use-today';
 import { setSettings, useAppState } from '@/lib/store';
 import { enableLiveWeather, Phase, phaseOf, refreshWeather, Season, seasonOf, Sky, useWeather } from '@/lib/weather';
 
-type Scene = { phase: Phase; season: Season; sky: Sky; temp?: number; live: boolean; at?: number };
+type Scene = { phase: Phase; season: Season; sky: Sky; temp?: number; live: boolean; at?: number; waiting: boolean };
 
 /** What the garden should look like right now. */
 export function useScene(): Scene {
@@ -39,7 +41,8 @@ export function useScene(): Scene {
   // Live readings also know whether the sun is up there, which beats the clock near dawn and dusk.
   const clock = phaseOf(hour);
   const phase: Phase = w && !w.isDay && (clock === 'day' || clock === 'dawn') ? 'night' : w && w.isDay && clock === 'night' ? 'dawn' : clock;
-  return { phase, season, sky, temp: w?.temp, live: !!w, at: w?.at };
+  // Live weather is on but no reading has arrived yet: the chip shows a placeholder.
+  return { phase, season, sky, temp: w?.temp, live: !!w, at: w?.at, waiting: live && !w };
 }
 
 const SKY: Record<Phase, [string, string]> = {
@@ -92,7 +95,12 @@ export function GardenSky({ height }: { height: number }) {
             <View style={[styles.moonBite, { backgroundColor: (overcast ? OVERCAST : SKY).night[0] }]} />
           </View>
         ) : (
-          <View style={[styles.sun, { top: phase === 'day' ? height * 0.08 : height * 0.3, backgroundColor: phase === 'day' ? '#FFD66B' : '#FFB36B', opacity: sky === 'cloudy' ? 0.6 : 1 }]} />
+          // The glow is drawn as soft rings rather than a shadow, which Android does not draw.
+          <View style={[styles.sunBox, { top: (phase === 'day' ? height * 0.08 : height * 0.3) - 14, opacity: sky === 'cloudy' ? 0.6 : 1 }]}>
+            <View style={[styles.sunGlow, { width: 66, height: 66, opacity: 0.18, backgroundColor: phase === 'day' ? '#FFD66B' : '#FFB36B' }]} />
+            <View style={[styles.sunGlow, { width: 52, height: 52, opacity: 0.3, backgroundColor: phase === 'day' ? '#FFD66B' : '#FFB36B' }]} />
+            <View style={[styles.sun, { backgroundColor: phase === 'day' ? '#FFD66B' : '#FFB36B' }]} />
+          </View>
         )
       ) : null}
       {Array.from({ length: clouds }, (_, i) => (
@@ -120,10 +128,27 @@ function SceneChip({ scene }: { scene: Scene }) {
   const sky = SKY_LABEL[scene.sky];
   const label = scene.live ? `Live · ${sky.label}${scene.temp !== undefined ? ` · ${scene.temp}°` : ''}` : SEASON_LABEL[scene.season];
   const night = scene.phase === 'night';
+  // A placeholder while the first reading loads; after a few seconds without one (location
+  // off, no network) the chip falls back to the season.
+  const [gaveUp, setGaveUp] = useState(false);
+  useEffect(() => {
+    if (!scene.waiting) return;
+    const id = setTimeout(() => setGaveUp(true), 8000);
+    return () => clearTimeout(id);
+  }, [scene.waiting]);
+  if (scene.waiting && !gaveUp) {
+    return (
+      <View style={[styles.chip, { backgroundColor: night ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.6)' }]} accessibilityLabel="Loading the weather">
+        <Skeleton width={96} height={12} style={{ backgroundColor: night ? 'rgba(255,255,255,0.3)' : 'rgba(47,74,63,0.18)', marginVertical: 1 }} />
+      </View>
+    );
+  }
   return (
     <View style={[styles.chip, { backgroundColor: night ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.6)' }]}>
       <Icon name={scene.live ? sky.icon : scene.season === 'monsoon' ? 'rain' : 'leaf'} color={night ? '#F3EEE7' : '#2F4A3F'} size={13} />
-      <Text style={{ fontFamily: Fonts.bodyStrong, fontSize: 11, color: night ? '#F3EEE7' : '#2F4A3F' }}>{label}</Text>
+      <Text variant="micro" strong style={{ color: night ? '#F3EEE7' : '#2F4A3F' }}>
+        {label}
+      </Text>
     </View>
   );
 }
@@ -192,16 +217,19 @@ function Lightning() {
 const styles = StyleSheet.create({
   hill: { position: 'absolute', bottom: '32%', height: '55%', borderTopLeftRadius: 999, borderTopRightRadius: 999 },
   grass: { position: 'absolute', left: 0, right: 0, bottom: 0 },
-  sun: { position: 'absolute', right: '12%', width: 38, height: 38, borderRadius: 19, shadowColor: '#FFB300', shadowOpacity: 0.6, shadowRadius: 18, elevation: 0 },
+  sunBox: { position: 'absolute', right: '12%', width: 66, height: 66, marginRight: -14, alignItems: 'center', justifyContent: 'center' },
+  sunGlow: { position: 'absolute', borderRadius: 999 },
+  sun: { width: 38, height: 38, borderRadius: 19 },
   moon: { position: 'absolute', right: '14%', width: 30, height: 30, borderRadius: 15, backgroundColor: '#F4EFD8', overflow: 'hidden' },
   moonBite: { position: 'absolute', left: 9, top: -5, width: 30, height: 30, borderRadius: 15 },
   puddle: { position: 'absolute', height: 10, borderRadius: 999, backgroundColor: 'rgba(190,220,240,0.7)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.6)' },
-  prompt: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, borderRadius: 18, backgroundColor: '#DCEBF3' },
-  chip: { position: 'absolute', left: 10, top: 10, flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999 },
+  prompt: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, borderRadius: Radius.md, borderWidth: 1 },
+  chip: { position: 'absolute', left: 10, top: 10, flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: Radius.pill },
 });
 
 /** Under the garden, while live weather is off: one tap to match the garden to the real sky. */
 export function LiveWeatherPrompt() {
+  const t = useTheme();
   const live = useAppState((s) => s.settings.liveWeather);
   const [note, setNote] = useState<string | undefined>();
   if (live) return null;
@@ -212,15 +240,17 @@ export function LiveWeatherPrompt() {
         setNote(ok ? undefined : 'Location is off or not allowed. You can turn it on later in Settings.');
       }}
       accessibilityRole="button"
-      style={styles.prompt}>
-      <Icon name="rain" color="#2F4A3F" size={20} />
+      style={[styles.prompt, { backgroundColor: t.tagCoolSoft, borderColor: t.line }]}>
+      <Icon name="rain" color={t.brand} size={20} />
       <View style={{ flex: 1 }}>
-        <Text style={{ fontFamily: Fonts.bodyStrong, fontSize: 14, color: '#1D1B18' }}>Match the garden to your weather</Text>
-        <Text style={{ fontFamily: Fonts.body, fontSize: 12, color: '#4A554F' }}>
-          {note ?? 'Rain, sun or stars as they are where you are. Uses your approximate location.'}
+        <Text variant="bodySm" strong>
+          Match the garden to your weather
         </Text>
+        <Text variant="caption">{note ?? 'Rain, sun or stars as they are where you are. Uses your approximate location.'}</Text>
       </View>
-      <Text style={{ fontFamily: Fonts.bodyStrong, fontSize: 13, color: '#A94E2B' }}>Turn on</Text>
+      <Text variant="small" strong color="accent">
+        Turn on
+      </Text>
     </Pressable>
   );
 }

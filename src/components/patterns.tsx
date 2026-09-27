@@ -32,18 +32,18 @@ export function PatternsCard({ today }: { today: string }) {
         patterns.map((p) => (
           <View key={p.id} style={styles.row}>
             <View style={[styles.emoji, { backgroundColor: t.surfaceAlt }]}>
-              <Text style={{ fontSize: 20 }}>{p.emoji}</Text>
+              <Text variant="heading">{p.emoji}</Text>
             </View>
             <View style={{ flex: 1, gap: 2 }}>
               <Text variant="bodyStrong">{p.title}</Text>
-              <Text variant="small" style={{ fontSize: 12.5 }}>
+              <Text variant="caption">
                 {p.detail}
               </Text>
             </View>
           </View>
         ))
       )}
-      <Text variant="small" color="textMuted" style={{ fontSize: 11.5 }}>
+      <Text variant="caption" color="textMuted">
         Worked out on this phone from the last 90 days. Patterns, not causes.
       </Text>
     </Card>

@@ -50,7 +50,7 @@ export function WidgetStyleControls({ name }: { name: WidgetKey }) {
       />
       <Text variant="label">Transparency</Text>
       <Choice options={TRANSPARENCY} value={opacity} onChange={(v) => set({ opacity: v })} />
-      <Text variant="small" style={{ fontSize: 12 }}>
+      <Text variant="caption">
         More transparent lets your wallpaper show through the widget.
       </Text>
       {matrixLike && (

@@ -22,7 +22,8 @@ import { GameShell, StatPill } from '@/components/games/shell';
 import { Icon } from '@/components/icons';
 import { Text } from '@/components/text';
 import { Button, Card } from '@/components/ui';
-import { useIsDark } from '@/hooks/use-theme';
+import { Radius } from '@/constants/theme';
+import { useIsDark, useTheme } from '@/hooks/use-theme';
 import { gameOf } from '@/lib/games';
 import { recordGame, useAppState } from '@/lib/store';
 import { useAppActive } from '@/hooks/use-app-active';
@@ -242,6 +243,7 @@ function ModeCard({ title, line, icon, record, onPress }: { title: string; line:
 }
 
 function BubbleView({ bubble, travel, onPop, onGone }: { bubble: Bubble; travel: number; onPop: () => void; onGone: () => void }) {
+  const t = useTheme();
   const y = useSharedValue(0);
   const sway = useSharedValue(0);
   const scale = useSharedValue(0.5);
@@ -295,7 +297,7 @@ function BubbleView({ bubble, travel, onPop, onGone }: { bubble: Bubble; travel:
       {popped && (
         <View pointerEvents="none" style={[styles.fxOrigin, { left: bubble.size / 2, top: bubble.size / 2 }]}>
           <Burst color={bubble.colors[1]} count={bubble.golden ? 14 : 9} dist={bubble.golden ? 70 : 46} />
-          <FloatText text={bubble.golden ? '+5' : '+1'} color={bubble.golden ? '#C98A1E' : bubble.colors[1]} />
+          <FloatText text={bubble.golden ? '+5' : '+1'} color={bubble.golden ? t.legendary : bubble.colors[1]} />
         </View>
       )}
     </Animated.View>
@@ -308,7 +310,7 @@ const styles = StyleSheet.create({
   introArt: { width: 300, height: 210, marginBottom: 10 },
   introBubble: { position: 'absolute', borderRadius: 999, overflow: 'hidden', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.8)' },
   modeRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  field: { flex: 1, overflow: 'hidden', borderRadius: 28 },
+  field: { flex: 1, overflow: 'hidden', borderRadius: Radius.lg },
   bubbleWrap: { position: 'absolute', top: '100%' },
   hit: { flex: 1 },
   bubble: { flex: 1, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.85)', overflow: 'hidden' },

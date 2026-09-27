@@ -5,12 +5,12 @@
  */
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Alert, Platform, Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import Svg, { Circle, G, Line, Path, Rect, Text as SvgText } from 'react-native-svg';
 
 import { Icon } from '@/components/icons';
-import { MoodOrb } from '@/components/mood-orb';
+import { MoodDot } from '@/components/mood-orb';
 import { AddPlace } from '@/components/place-picker';
 import { Text } from '@/components/text';
 import { Card, Choice, Screen, tap } from '@/components/ui';
@@ -112,29 +112,29 @@ function PlaceRow({ x }: { x: PlaceStats }) {
 
   return (
     <View style={[styles.row, { borderColor: t.line }]}>
-      <Text style={{ fontSize: 24 }}>{x.place.emoji}</Text>
+      <Text variant="heading">{x.place.emoji}</Text>
       <View style={{ flex: 1, gap: 1 }}>
         <Text variant="bodyStrong">{x.place.name}</Text>
-        <Text variant="small" style={{ fontSize: 12 }}>
+        <Text variant="caption">
           {x.days ? `${x.days} ${x.days === 1 ? 'day' : 'days'} · ${x.best} good` : 'No check-ins here yet'}
           {x.top ? ` · ${tagOf(x.top)?.emoji} ${tagOf(x.top)?.label}` : ''}
         </Text>
         <View style={{ flexDirection: 'row', gap: 14, marginTop: 2 }}>
           {!pinned && (
             <Pressable onPress={pin} hitSlop={6} accessibilityRole="button">
-              <Text variant="small" color="accent" style={{ fontSize: 12 }}>
+              <Text variant="caption" strong color="accent">
                 Pin with GPS
               </Text>
             </Pressable>
           )}
           <Pressable onPress={remove} hitSlop={6} accessibilityRole="button">
-            <Text variant="small" style={{ fontSize: 12, color: t.textMuted }}>
+            <Text variant="caption" color="textMuted">
               Remove
             </Text>
           </Pressable>
         </View>
       </View>
-      {mood ? <MoodOrb mood={mood} size={34} face={false} /> : <View style={{ width: 34 }} />}
+      {mood ? <MoodDot mood={mood} size={34} /> : <View style={{ width: 34 }} />}
     </View>
   );
 }
@@ -143,8 +143,8 @@ function PlaceRow({ x }: { x: PlaceStats }) {
 function PlaceMap({ stats }: { stats: PlaceStats[] }) {
   const t = useTheme();
   const dark = useIsDark();
-  const { width: screen } = useWindowDimensions();
-  const W = Math.min(screen, 520) - 32 - 40;
+  // Measured inside the card, so the map fits its padding on every screen width.
+  const [W, setW] = useState(0);
   const H = Math.round(W * 0.72);
   const pts = stats.filter((x) => x.place.lat !== undefined && x.place.lon !== undefined);
 
@@ -157,6 +157,15 @@ function PlaceMap({ stats }: { stats: PlaceStats[] }) {
             Pin a place with GPS to see it on your map. Places without a pin still count in the list below.
           </Text>
         </View>
+      </Card>
+    );
+  }
+
+  if (!W) {
+    return (
+      <Card>
+        <Text variant="label">Your map</Text>
+        <View style={{ height: 180 }} onLayout={(e) => setW(Math.floor(e.nativeEvent.layout.width))} />
       </Card>
     );
   }
@@ -183,7 +192,7 @@ function PlaceMap({ stats }: { stats: PlaceStats[] }) {
   return (
     <Card>
       <Text variant="label">Your map</Text>
-      <View style={{ alignItems: 'center' }}>
+      <View style={{ alignItems: 'center' }} onLayout={(e) => setW(Math.floor(e.nativeEvent.layout.width))}>
         <Svg width={W} height={H}>
           <Rect x={0} y={0} width={W} height={H} rx={18} fill={land} />
           {Array.from({ length: 5 }, (_, i) => (
@@ -227,7 +236,7 @@ function PlaceMap({ stats }: { stats: PlaceStats[] }) {
           </G>
         </Svg>
       </View>
-      <Text variant="small" style={{ fontSize: 11.5 }}>
+      <Text variant="caption">
         Circle size: days checked in there. Colour: average mood. WGS 84 (EPSG:4326), drawn with a local equirectangular
         projection; north is up.
       </Text>

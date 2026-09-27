@@ -6,7 +6,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Icon } from '@/components/icons';
 import { Text } from '@/components/text';
 import { Backdrop, Button, Input, tap } from '@/components/ui';
-import { Fonts } from '@/constants/theme';
+import { Radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { Coords, currentCoords, nearestPlace, PLACE_EMOJI, PLACE_IDEAS } from '@/lib/places';
 import { addPlace, setCheckinPlace, useAppState } from '@/lib/store';
@@ -41,7 +41,7 @@ export function PlacePicker({ day }: { day: string }) {
         </Text>
         {places.length > 0 && (
           <Pressable onPress={() => (tap(), router.push('/places'))} hitSlop={8} accessibilityRole="button">
-            <Text variant="small" color="accent" style={{ fontSize: 12.5 }}>
+            <Text variant="caption" color="accent">
               Where you feel best
             </Text>
           </Pressable>
@@ -62,15 +62,15 @@ export function PlacePicker({ day }: { day: string }) {
                 styles.chip,
                 { borderColor: on ? t.brand : hint ? t.accent : t.line, backgroundColor: on ? t.brand : t.surface, borderStyle: hint ? 'dashed' : 'solid' },
               ]}>
-              <Text style={{ fontSize: 15 }}>{p.emoji}</Text>
-              <Text style={{ fontFamily: Fonts.bodyStrong, fontSize: 13, color: on ? t.brandText : t.text }}>
+              <Text variant="bodySm">{p.emoji}</Text>
+              <Text variant="small" strong style={{ color: on ? t.brandText : t.text }}>
                 {hint ? `Near ${p.name}?` : p.name}
               </Text>
             </Pressable>
           );
         })}
         <Pressable onPress={() => (tap(), setAdding(true))} accessibilityRole="button" style={[styles.chip, { borderColor: t.line, backgroundColor: t.surfaceAlt }]}>
-          <Text style={{ fontFamily: Fonts.bodyStrong, fontSize: 13, color: t.text }}>＋ {places.length ? 'Place' : 'Add a place'}</Text>
+          <Text variant="small" strong style={{ color: t.text }}>＋ {places.length ? 'Place' : 'Add a place'}</Text>
         </Pressable>
       </View>
       {adding && <AddPlace onClose={() => setAdding(false)} onAdded={(id) => setCheckinPlace(day, id)} />}
@@ -116,8 +116,8 @@ export function AddPlace({ onClose, onAdded }: { onClose: () => void; onAdded?: 
             <View style={styles.wrap}>
               {ideas.map((i) => (
                 <Pressable key={i.name} onPress={() => (tap(), setName(i.name), setEmoji(i.emoji))} style={[styles.chip, { borderColor: t.line, backgroundColor: t.surface }]}>
-                  <Text style={{ fontSize: 15 }}>{i.emoji}</Text>
-                  <Text style={{ fontFamily: Fonts.bodyStrong, fontSize: 13, color: t.text }}>{i.name}</Text>
+                  <Text variant="bodySm">{i.emoji}</Text>
+                  <Text variant="small" strong style={{ color: t.text }}>{i.name}</Text>
                 </Pressable>
               ))}
             </View>
@@ -131,7 +131,7 @@ export function AddPlace({ onClose, onAdded }: { onClose: () => void; onAdded?: 
                 accessibilityRole="radio"
                 accessibilityState={{ selected: emoji === e }}
                 style={[styles.emoji, { borderColor: emoji === e ? t.brand : t.line, backgroundColor: emoji === e ? t.surfaceAlt : t.surface }]}>
-                <Text style={{ fontSize: 20 }}>{e}</Text>
+                <Text variant="heading">{e}</Text>
               </Pressable>
             ))}
           </View>
@@ -139,7 +139,7 @@ export function AddPlace({ onClose, onAdded }: { onClose: () => void; onAdded?: 
             <Icon name="pin" color={coords ? t.brand : t.textSecondary} size={20} />
             <View style={{ flex: 1 }}>
               <Text variant="bodyStrong">{coords ? 'Pinned here' : locating ? 'Finding you…' : 'Pin with GPS (optional)'}</Text>
-              <Text variant="small" style={{ fontSize: 12 }}>
+              <Text variant="caption">
                 {coords
                   ? `${coords.lat.toFixed(4)}, ${coords.lon.toFixed(4)} (WGS 84) · kept on this phone`
                   : 'Lets Daybloom suggest this place when you are near it, and draw it on your map.'}
@@ -158,9 +158,9 @@ export function AddPlace({ onClose, onAdded }: { onClose: () => void; onAdded?: 
 const styles = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
-  chip: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 11, paddingVertical: 7, borderRadius: 999, borderWidth: 1 },
-  emoji: { width: 44, height: 44, borderRadius: 14, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
-  pin: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderRadius: 16, borderWidth: 1.5 },
+  chip: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 11, paddingVertical: 7, borderRadius: Radius.pill, borderWidth: 1 },
+  emoji: { width: 44, height: 44, borderRadius: Radius.sm, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
+  pin: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderRadius: Radius.md, borderWidth: 1.5 },
   scrim: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)' },
   sheet: { maxHeight: '88%', borderTopLeftRadius: 28, borderTopRightRadius: 28, overflow: 'hidden' },
 });
