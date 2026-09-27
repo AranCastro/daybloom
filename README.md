@@ -35,10 +35,12 @@ weather following the phone, and Thottam now says Poo Kolam.
   flowers stay even if the task is unticked later; the full effort reward still comes when the task is finished. On a
   low- or medium-energy day, a big task with open steps stays in the matrix, because only its next step is asked.
 - **Routines (3.1).** When adding a task, "How often?" offers One time, Every day, Weekly (chosen weekdays) or Every
-  few days (2–30), and Once, Twice or Three times a day, each at its own time. On each day it is due, the routine adds
-  one task per time to its quadrant with its effort level, so ticking, flowers, widgets and the energy filter work as
-  for any task; rows and widgets show 🔁 and the time. An unfinished routine task is removed the next day rather than
-  carried over; finished ones are cleared with their calendar shading kept. An optional gentle reminder (a quiet
+  few days (2–30), and Once, Twice or Three times a day, each at its own time. On each day it is due, the routine keeps
+  exactly one task in its quadrant (3.1.1): the one for the current time of day. When the next time arrives, it takes
+  the earlier task's place (an unfinished one is dropped, a finished one is cleared with its calendar shading and
+  flowers kept), so a routine never shows more than once in the app or the widgets. Ticking, flowers, widgets and the
+  energy filter work as for any task; rows and widgets show 🔁 and the time. The Matrix and Focus today widgets update
+  every 30 minutes (Android's shortest period), so they move to the next time even with the app closed. An optional gentle reminder (a quiet
   notification without sound or vibration) comes at each time, with a Done button that ticks the task without opening
   the app; reminders are scheduled a week ahead and topped up whenever the app or a widget runs. Matrix → Routines lists
   them; tap one to change it or stop it (`src/lib/routines.ts`, `ensureRoutines` in `src/lib/store.ts`).

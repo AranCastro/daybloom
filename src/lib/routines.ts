@@ -1,8 +1,9 @@
 /**
  * Routine tasks: a task that comes back on its own (every day, on chosen weekdays, or every few
- * days), up to three times a day. The routine itself is a template; each day it is due, the store
- * adds one task per time of day to its quadrant (see ensureRoutines in store.ts), so ticking,
- * flowers, widgets and the energy filter work exactly as for any other task.
+ * days), up to three times a day. The routine itself is a template; on each day it is due the store
+ * keeps exactly one task of it in its quadrant (see ensureRoutines in store.ts): the one for the
+ * current time of day. When the next time arrives, that task replaces the earlier one, so a routine
+ * never shows more than once. Ticking, flowers, widgets and the energy filter work as for any task.
  * Pure helpers only: no store or notification imports, so both can use this file.
  */
 import { addDays, daysBetween, dayKey, fromKey } from '@/lib/dates';
@@ -118,6 +119,28 @@ export function repeatLabel(r: Pick<Routine, 'kind' | 'weekdays' | 'every' | 'ti
         : `Every ${r.every ?? MIN_EVERY} days`;
   const n = r.times.length;
   return n === 1 ? base : `${base} · ${n === 2 ? 'twice' : 'three times'} a day`;
+}
+
+/**
+ * Which of the day's times is current at `minutes` after midnight: the latest one that has arrived,
+ * or the first one before any has.
+ */
+export function currentSlot(times: string[], minutes: number): number {
+  let slot = 0;
+  times.forEach((t, i) => {
+    if (toMinutes(t) <= minutes) slot = i;
+  });
+  return slot;
+}
+
+/** Slot number meaning "skipped for the rest of the day" in routineMade. */
+export const SKIPPED_SLOT = 9;
+
+/** routineMade holds "YYYY-MM-DD#slot": the day and the last slot added (older data: a bare day). */
+export function parseMade(v: string | undefined): { day: string; slot: number } | null {
+  if (!v) return null;
+  const [day, slot] = v.split('#');
+  return { day, slot: slot === undefined ? -1 : Number(slot) };
 }
 
 /** The id of the task a routine adds for one day and time slot. Stable, so adding is idempotent. */

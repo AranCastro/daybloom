@@ -1,6 +1,6 @@
 /**
- * Keeps routines running while the app is in use: adds each day's routine tasks (at start-up, on
- * returning to the app and just after midnight) and keeps their quiet reminders in step with the
+ * Keeps routines running while the app is in use: keeps each routine's current task in the matrix
+ * (at start-up, on returning to the app and every minute, so the next time of day takes over) and keeps their quiet reminders in step with the
  * routines and with what has been ticked. Widgets and notification buttons call ensureRoutines
  * themselves, so routine tasks also appear when the app has not been opened.
  */
@@ -36,7 +36,7 @@ export function startRoutineSync(): () => void {
   };
   const refresh = () => {
     day = dayKey();
-    ensureRoutines(day);
+    ensureRoutines();
     // The week of reminders moves forward each day even when nothing else changed.
     last = '';
     schedule();
@@ -44,8 +44,10 @@ export function startRoutineSync(): () => void {
   refresh();
   const unsub = subscribe(schedule);
   const app = RNAppState.addEventListener('change', (st) => st === 'active' && refresh());
+  // Each minute: a routine's next time of day replaces its earlier task, and a new day starts afresh.
   const tick = setInterval(() => {
     if (dayKey() !== day) refresh();
+    else ensureRoutines();
   }, 60_000);
   return () => {
     unsub();

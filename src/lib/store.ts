@@ -15,7 +15,7 @@ import { MoodValue } from '@/lib/moods';
 import { sortOpen } from '@/lib/quadrants';
 import { isLowStreak } from '@/lib/nudge-rule';
 import { rewardFor } from '@/lib/effort';
-import { instanceId, normaliseTimes, occursOn, Routine } from '@/lib/routines';
+import { currentSlot, instanceId, normaliseTimes, occursOn, parseMade, Routine, SKIPPED_SLOT } from '@/lib/routines';
 import { sanitise } from '@/lib/sanitise';
 
 export type NudgeLog = {
@@ -768,7 +768,12 @@ export function toggleWidgetLock(widget: TaskWidget) {
 }
 
 export function deleteTask(id: string) {
-  update((s) => ({ tasks: s.tasks.filter((t) => t.id !== id) }));
+  const task = state.tasks.find((t) => t.id === id);
+  update((s) => ({
+    tasks: s.tasks.filter((t) => t.id !== id),
+    // Skipping a routine's task skips the rest of that day, so a later time does not bring it back.
+    ...(task?.routineId && task.due ? { routineMade: { ...s.routineMade, [task.routineId]: `${task.due}#${SKIPPED_SLOT}` } } : {}),
+  }));
 }
 
 // ── Routines: tasks that come back on their own ─────────────────────────────
@@ -776,40 +781,62 @@ export function deleteTask(id: string) {
 export type RoutineInput = Omit<Routine, 'id' | 'createdAt' | 'start'> & { start?: string };
 
 /**
- * Adds today's tasks for every routine due today, once a day. Also tidies up after earlier days:
- * a routine task left unfinished is removed rather than piling up (it will come round again), and
- * a finished one is cleared into `clearedWork`, so the calendar keeps its shading.
- * Cheap when nothing is due: returns false without writing. Safe to call often (app start, return to the
- * app, widget updates, notification buttons).
+ * Keeps one task per routine in the matrix: the one for the current time of day. A routine due
+ * three times a day shows once; when its next time arrives, the earlier task makes way for the new
+ * one (an unfinished one is dropped, a finished one is cleared into `clearedWork`, so the calendar
+ * keeps its shading and the flowers stay). Tasks from earlier days are tidied the same way, so
+ * nothing piles up. Cheap when nothing is due: returns false without writing. Safe to call often
+ * (app start, every minute while open, widget updates, notification buttons).
  */
-export function ensureRoutines(today: string = dayKey()): boolean {
+export function ensureRoutines(now: Date = new Date()): boolean {
+  const today = dayKey(now);
+  const minutes = now.getHours() * 60 + now.getMinutes();
   const s = state;
-  const stale = s.tasks.filter((t) => t.routineId && t.due && t.due < today);
-  const dueNow = s.routines.filter((r) => s.routineMade[r.id] !== today);
-  if (!stale.length && !dueNow.length) return false;
+  // Routines whose current slot has not been added yet today.
+  const due = s.routines.filter((r) => {
+    if (!occursOn(r, today)) return false;
+    const made = parseMade(s.routineMade[r.id]);
+    return !(made && made.day === today && made.slot >= currentSlot(r.times, minutes));
+  });
+  const stale = s.tasks.some((t) => t.routineId && t.due && t.due < today);
+  if (!due.length && !stale) return false;
   update((cur) => {
     const clearedWork = { ...cur.clearedWork };
-    let tasks = cur.tasks.filter((t) => {
-      if (!(t.routineId && t.due && t.due < today)) return true;
+    const routineMade = { ...cur.routineMade };
+    const clear = (t: Task) => {
       if (t.done && t.doneAt) {
         const k = dayKey(new Date(t.doneAt));
         clearedWork[k] = (clearedWork[k] ?? 0) + 1;
       }
-      return false;
+    };
+    // The task each due routine should show now; one already there (say, finished before an edit) is kept.
+    const target = new Map(due.map((r) => [r.id, instanceId(r.id, today, currentSlot(r.times, minutes))]));
+    let tasks = cur.tasks.filter((t) => {
+      if (!t.routineId) return true;
+      // Earlier days, and any other task of a routine whose new time has come.
+      const old = (t.due && t.due < today) || (target.has(t.routineId) && t.due === today && t.id !== target.get(t.routineId));
+      if (old) clear(t);
+      return !old;
     });
-    const routineMade = { ...cur.routineMade };
-    for (const r of cur.routines) {
-      if (routineMade[r.id] === today) continue;
-      routineMade[r.id] = today;
-      if (!occursOn(r, today)) continue;
-      r.times.forEach((at, slot) => {
-        const id = instanceId(r.id, today, slot);
-        if (tasks.some((t) => t.id === id)) return;
-        tasks = [
-          ...tasks,
-          { id, title: r.title, quadrant: r.quadrant, due: today, done: false, createdAt: Date.now(), routineId: r.id, slot, at, ...(r.effort ? { effort: r.effort } : {}) },
-        ];
-      });
+    for (const r of due) {
+      const slot = currentSlot(r.times, minutes);
+      routineMade[r.id] = `${today}#${slot}`;
+      if (tasks.some((t) => t.id === target.get(r.id))) continue;
+      tasks = [
+        ...tasks,
+        {
+          id: instanceId(r.id, today, slot),
+          title: r.title,
+          quadrant: r.quadrant,
+          due: today,
+          done: false,
+          createdAt: Date.now(),
+          routineId: r.id,
+          slot,
+          at: r.times[slot],
+          ...(r.effort ? { effort: r.effort } : {}),
+        },
+      ];
     }
     return { tasks, clearedWork, routineMade };
   });
@@ -828,8 +855,8 @@ export function getRoutine(id: string | undefined): Routine | undefined {
 }
 
 /**
- * Changes a routine. Today's unfinished tasks from it follow the change: their title, quadrant and
- * effort are updated, and if the schedule or times changed they are added again to match.
+ * Changes a routine. Today's unfinished task from it follows the change: its title, quadrant and
+ * effort are updated, and if the schedule or times changed it is added again to match.
  */
 export function editRoutine(id: string, patch: Partial<RoutineInput>): void {
   const old = getRoutine(id);
@@ -855,8 +882,7 @@ export function editRoutine(id: string, patch: Partial<RoutineInput>): void {
       tasks: s.tasks.map((t) => (mine(t) ? { ...t, title: next.title, quadrant: next.quadrant, effort: next.effort } : t)),
     };
   });
-  // A finished task for a slot stays finished: re-adding skips ids that already exist.
-  if (reschedule) ensureRoutines(today);
+  if (reschedule) ensureRoutines();
 }
 
 /** Stops a routine. Today's unfinished tasks from it become ordinary tasks unless `removeToday`. */
