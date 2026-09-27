@@ -26,6 +26,9 @@ Choose how today feels, from Bright to Heavy. No writing, no journaling. Your st
 **A garden that grows with you**
 Checking in, finishing a task, a focus session, a short game, reaching out to someone and earning a badge each grow a flower. Collect twelve kinds, including rare finds such as Neelakurinji, and a Golden Lotus every twentieth bloom.
 
+**New in 2.1**
+Thottam: make your own pookalam from the flowers you grow, with Onam, Diwali and Pongal borders. Send a flower card to someone on WhatsApp. A jar of good days that gives your own words back on a heavy day. See where you feel best on a small map of your places. A garden with day, night, monsoon and live weather. Tanpura and raga drones for focus.
+
 **New in 2.0**
 App lock with PIN or fingerprint. Seven focus sounds: white noise, rain, fire, wind, thunderstorm, birds and a 40 Hz gamma beat. Twenty optional feeling tags after your check-in. Style any widget: light or dark, and as transparent as you like. Start, pause and stop a Pomodoro right from your home screen.
 
@@ -61,10 +64,10 @@ Daybloom is not a medical or emergency service. If you are in distress in India,
 
 | Question | Answer |
 |---|---|
-| Does the app collect or share user data? | No data collected or shared. Contacts: only the contacts the user picks, stored on device. |
+| Does the app collect or share user data? | Only if the user turns on Live weather: approximate location (rounded to about 11 km) is sent to Open-Meteo to get the weather; not stored by the app off the phone, not linked to an identity, optional. Contacts and precise location (for pinned places) are used on the device only. |
 | Is data encrypted in transit? | Not applicable: the app transmits no user data. |
 | Can users request deletion? | Yes: Settings → Erase all data, or uninstall. |
-| Data shared with third parties | None. The buddy message is sent by the user through their own SMS or WhatsApp app. |
+| Data shared with third parties | Approximate location, only with Live weather on, to Open-Meteo (open-meteo.com) for app functionality. Declare: Location → Approximate location, shared, optional, for app functionality (check Play's current Data safety help for the exact wording). The buddy message and flower cards are sent by the user through their own apps. |
 | Backups | The app writes a backup file only when the user asks (or weekly, kept in the app's own storage) and hands it to the share menu; it uploads nothing itself. Android's own Google backup (`allowBackup`) may copy app data to the user's Google account. Check Play's current Data safety help on how to declare Android backup before submitting; the privacy policy already describes it. |
 
 ## Other Play Console declarations (before any release, including testing tracks)

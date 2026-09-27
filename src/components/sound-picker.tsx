@@ -8,7 +8,8 @@ import { Card, Choice, tap } from '@/components/ui';
 import { Fonts } from '@/constants/theme';
 import { useIsDark, useTheme } from '@/hooks/use-theme';
 import { previewSound, stopSound } from '@/lib/focus-sound';
-import { SOUNDS } from '@/lib/sounds';
+import { ragaForHour, soundOf, SOUNDS } from '@/lib/sounds';
+import { useClock } from '@/hooks/use-today';
 import { setSettings, useAppState } from '@/lib/store';
 
 const VOLUMES = [
@@ -42,6 +43,8 @@ export function SoundPicker({ running }: { running: boolean }) {
   const sound = useAppState((s) => s.settings.focusSound);
   const volume = useAppState((s) => s.settings.focusVolume);
   const current = SOUNDS.find((x) => x.id === sound);
+  const { hour } = useClock();
+  const suits = soundOf(ragaForHour(hour) ?? undefined);
 
   function choose(id: string) {
     tap();
@@ -67,6 +70,14 @@ export function SoundPicker({ running }: { running: boolean }) {
           <Tile key={x.id} label={x.label} blurb={x.blurb} icon={x.icon} tint={x.tint} on={x.id === sound} onPress={() => choose(x.id)} dark={dark} />
         ))}
       </View>
+      {suits && suits.id !== sound && (
+        <Pressable onPress={() => choose(suits.id)} accessibilityRole="button" style={[styles.suggest, { backgroundColor: suits.tint + '1A' }]}>
+          <Icon name={suits.icon} color={suits.tint} size={16} />
+          <Text variant="small" style={{ flex: 1, fontSize: 12.5 }}>
+            {suits.id === 'raga-bhairav' ? 'Morning is the time for Raga Bhairav.' : 'Evening is the time for Raga Yaman.'} Tap to try it.
+          </Text>
+        </Pressable>
+      )}
       {current && (
         <Animated.View entering={FadeIn.duration(250)} style={{ gap: 8 }}>
           <Text variant="small" center>
@@ -117,6 +128,7 @@ const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'space-between' },
   tile: { width: '23%', minWidth: 72, minHeight: 96, alignItems: 'center', gap: 6, paddingVertical: 10, paddingHorizontal: 3, borderRadius: 18, borderWidth: 1.5 },
   iconBubble: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center' },
+  suggest: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 10, borderRadius: 14 },
   now: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'center', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, borderWidth: 1 },
   volHead: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
 });

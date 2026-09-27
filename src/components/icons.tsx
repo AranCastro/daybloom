@@ -40,7 +40,15 @@ export type IconName =
   | 'mute'
   | 'fingerprint'
   | 'tag'
-  | 'info';
+  | 'info'
+  | 'tanpura'
+  | 'sunrise'
+  | 'dusk'
+  | 'jar'
+  | 'pin'
+  | 'map'
+  | 'gift'
+  | 'image';
 
 type Props = { name: IconName; size?: number; color: string; strokeWidth?: number; fill?: string };
 
@@ -191,6 +199,47 @@ export function Icon({ name, size = 22, color, strokeWidth = 1.8, fill = 'none' 
         <>
           <Circle cx={12} cy={12} r={8.5} {...p} />
           <Path d="M12 11v5.5M12 7.8v.2" {...p} />
+        </>
+      )}
+      {name === 'tanpura' && (
+        <>
+          <Path d="M12 2.5v11.5" {...p} />
+          <Path d="M10.3 3.5h3.4" {...p} />
+          <Path d="M12 13c-3.6 0-5.5 2.1-5.5 4.4S8.7 21.5 12 21.5s5.5-1.8 5.5-4.1S15.6 13 12 13z" {...p} />
+          <Path d="M10.5 18.5h3" {...p} />
+        </>
+      )}
+      {name === 'sunrise' && <Path d="M4 18.5h16M7 18.5a5 5 0 0110 0M12 7v2.5M5.8 11.3l1.6 1.2M18.2 11.3l-1.6 1.2M9.5 4.5L12 2.5l2.5 2" {...p} />}
+      {name === 'dusk' && (
+        <>
+          <Path d="M4 18.5h16M8 21h8" {...p} />
+          <Path d="M17.5 13.5A6 6 0 0110.5 6.5a5.5 5.5 0 107 7z" {...p} />
+        </>
+      )}
+      {name === 'jar' && (
+        <>
+          <Path d="M8 3.5h8M8.5 3.5v2.5c-2 1-3 2.8-3 5v7a2 2 0 002 2h9a2 2 0 002-2v-7c0-2.2-1-4-3-5V3.5" {...p} />
+          <Path d="M12 16.5s-2.8-1.6-2.8-3.5a1.5 1.5 0 012.8-.8 1.5 1.5 0 012.8.8c0 1.9-2.8 3.5-2.8 3.5z" {...p} />
+        </>
+      )}
+      {name === 'pin' && (
+        <>
+          <Path d="M12 21s-6.5-6-6.5-11a6.5 6.5 0 0113 0c0 5-6.5 11-6.5 11z" {...p} />
+          <Circle cx={12} cy={10} r={2.3} {...p} />
+        </>
+      )}
+      {name === 'map' && <Path d="M3.5 6.5l5.5-2.5 6 2.5 5.5-2.5v13.5l-5.5 2.5-6-2.5-5.5 2.5V6.5zM9 4v13.5M15 6.5V20" {...p} />}
+      {name === 'gift' && (
+        <>
+          <Path d="M4 10h16v3H4zM5.5 13h13v7.5h-13zM12 10v10.5" {...p} />
+          <Path d="M12 10c-1.5-3.5-5.5-3.8-5.5-1.5S10 10 12 10zM12 10c1.5-3.5 5.5-3.8 5.5-1.5S14 10 12 10z" {...p} />
+        </>
+      )}
+      {name === 'image' && (
+        <>
+          <Path d="M5 4.5h14A1.5 1.5 0 0120.5 6v12a1.5 1.5 0 01-1.5 1.5H5A1.5 1.5 0 013.5 18V6A1.5 1.5 0 015 4.5z" {...p} />
+          <Path d="M3.5 16l5-4.5 4 3.5 3-2.5 5 4" {...p} />
+          <Circle cx={15.5} cy={9} r={1.4} {...p} />
         </>
       )}
       {name === 'close' && <Path d="M6 6l12 12M18 6L6 18" {...p} />}

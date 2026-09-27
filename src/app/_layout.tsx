@@ -14,6 +14,7 @@ import { useIsDark, useTheme } from '@/hooks/use-theme';
 import { startLockWatch } from '@/lib/app-lock';
 import { weeklyBackupIfDue } from '@/lib/backup';
 import { startFocusSoundSync } from '@/lib/focus-sound';
+import { refreshWeather } from '@/lib/weather';
 import { getState, subscribe, useAppState } from '@/lib/store';
 import { startWidgetSync } from '@/widgets/sync';
 
@@ -38,6 +39,8 @@ export default function RootLayout() {
   useEffect(() => {
     const sync = () => {
       weeklyBackupIfDue();
+      // Live weather for the garden, if switched on (cached for 30 minutes).
+      if (getState().settings.liveWeather) void refreshWeather(false);
     };
     sync();
     const sub = RNAppState.addEventListener('change', (s) => s === 'active' && sync());
@@ -74,6 +77,9 @@ export default function RootLayout() {
         <Stack.Screen name="badges" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="widgets" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="calendar" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="places" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="thottam" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="send-flower" options={{ animation: 'slide_from_bottom' }} />
         <Stack.Screen name="game/[id]" options={{ animation: 'fade_from_bottom', gestureEnabled: false }} />
       </Stack>
       <BloomToast />

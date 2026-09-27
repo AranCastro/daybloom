@@ -4,7 +4,7 @@
  */
 import type { IconName } from '@/components/icons';
 
-export type SoundId = 'white-noise' | 'rain' | 'fire' | 'wind' | 'thunderstorm' | 'birds' | 'gamma';
+export type SoundId = 'white-noise' | 'rain' | 'fire' | 'wind' | 'thunderstorm' | 'birds' | 'gamma' | 'tanpura' | 'raga-bhairav' | 'raga-yaman';
 
 export type FocusSound = { id: SoundId; label: string; icon: IconName; blurb: string; tint: string };
 
@@ -16,7 +16,17 @@ export const SOUNDS: readonly FocusSound[] = [
   { id: 'thunderstorm', label: 'Thunderstorm', icon: 'storm', blurb: 'Rain and far thunder', tint: '#6C63B5' },
   { id: 'birds', label: 'Birds', icon: 'bird', blurb: 'Morning birdsong', tint: '#5E9E4E' },
   { id: 'gamma', label: 'Gamma 40 Hz', icon: 'wave', blurb: 'Binaural beat · headphones', tint: '#B0578D' },
+  { id: 'tanpura', label: 'Tanpura', icon: 'tanpura', blurb: 'Pa–Sa–Sa–Sa drone in C#', tint: '#A0662E' },
+  { id: 'raga-bhairav', label: 'Morning raga', icon: 'sunrise', blurb: 'Bhairav over tanpura', tint: '#D08A2E' },
+  { id: 'raga-yaman', label: 'Evening raga', icon: 'dusk', blurb: 'Yaman over tanpura', tint: '#5B5FA8' },
 ];
+
+/** The raga that suits the time of day: Bhairav before noon, Yaman from late afternoon. */
+export function ragaForHour(hour: number): SoundId | null {
+  if (hour >= 4 && hour < 12) return 'raga-bhairav';
+  if (hour >= 16 || hour < 1) return 'raga-yaman';
+  return null;
+}
 
 export function soundOf(id: string | undefined): FocusSound | undefined {
   return SOUNDS.find((s) => s.id === id);

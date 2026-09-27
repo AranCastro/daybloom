@@ -2,7 +2,7 @@
   "expo": {
     "name": "Daybloom",
     "slug": "daybloom",
-    "version": "2.0.0",
+    "version": "2.1.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "daybloom",
@@ -14,7 +14,7 @@
     },
     "android": {
       "package": "online.draran.daybloom",
-      "versionCode": 16,
+      "versionCode": 17,
       "adaptiveIcon": {
         "backgroundColor": "#F6F2EC",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -31,7 +31,8 @@
         "android.permission.SYSTEM_ALERT_WINDOW",
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_BACKGROUND_LOCATION"
       ],
       "allowBackup": true
     },
@@ -220,6 +221,14 @@
         "expo-local-authentication",
         {
           "faceIDPermission": "Allow Daybloom to use Face ID to unlock the app."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Daybloom uses your location only if you pin a place or turn on live weather in the garden. It stays on your phone; for weather, only a rounded location (about 11 km) is sent to Open-Meteo.",
+          "isAndroidBackgroundLocationEnabled": false,
+          "isAndroidForegroundServiceEnabled": false
         }
       ]
     ],

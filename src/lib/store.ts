@@ -83,6 +83,14 @@ export type AppState = {
   checkins: Record<string, MoodValue>;
   /** YYYY-MM-DD -> optional feeling tags chosen after the check-in (ids from lib/mood-tags). */
   moodTags: Record<string, string[]>;
+  /** Jar of good days: YYYY-MM-DD -> one line about what went well (bright days). */
+  goodNotes: Record<string, string>;
+  /** Places the user named (Home, Office…), optionally with coordinates from the phone's GPS. */
+  places: Place[];
+  /** YYYY-MM-DD -> id of the place where that day's check-in was made. */
+  checkinPlace: Record<string, string>;
+  /** Thottam: pookalam designs made from the flowers grown. */
+  pookalams: Pookalam[];
   nudges: NudgeLog[];
   /** False after a nudge fires; re-armed by a later day that is Okay or better. */
   armed: boolean;
@@ -137,9 +145,25 @@ export type Settings = {
   focusSound: string;
   /** Focus sound volume, 0–1. */
   focusVolume: number;
+  /** Live weather and day/night in the garden, from the phone's approximate location (open-meteo.com). */
+  liveWeather: boolean;
 };
 
-export const DEFAULT_SETTINGS: Settings = { appearance: 'system', haptics: true, reduceMotion: false, weekStart: 0, focusPreset: 'classic', autoBackup: true, widgetTheme: 'system', focusSound: 'off', focusVolume: 0.6 };
+export type Place = { id: string; name: string; emoji: string; lat?: number; lon?: number; createdAt: number };
+
+export type PookalamRing = { flower: string; pattern: 'solid' | 'alternate' | 'petals' | 'dots' };
+export type Pookalam = {
+  id: string;
+  name: string;
+  /** Centre first, then rings outward. */
+  center: string;
+  rings: PookalamRing[];
+  /** Border decoration: Onam (plain petals), Diwali (diyas), Pongal (kolam dots). */
+  festival: 'onam' | 'diwali' | 'pongal';
+  createdAt: number;
+};
+
+export const DEFAULT_SETTINGS: Settings = { appearance: 'system', haptics: true, reduceMotion: false, weekStart: 0, focusPreset: 'classic', autoBackup: true, widgetTheme: 'system', focusSound: 'off', focusVolume: 0.6, liveWeather: false };
 
 export type WidgetPrefs = {
   theme: 'auto' | 'light' | 'dark';
@@ -175,6 +199,10 @@ const initial: AppState = {
   reminder: { enabled: true, hour: 21, minute: 0 },
   checkins: {},
   moodTags: {},
+  goodNotes: {},
+  places: [],
+  checkinPlace: {},
+  pookalams: [],
   nudges: [],
   armed: true,
   tasks: [],
@@ -201,6 +229,10 @@ function mergeSaved(saved: Partial<AppState>): AppState {
     WIDGET_KEYS.map((k) => [k, { ...DEFAULT_WIDGET_PREFS, ...saved.widgetPrefs?.[k] }]),
   ) as Record<WidgetKey, WidgetPrefs>;
   merged.moodTags = { ...saved.moodTags };
+  merged.goodNotes = { ...saved.goodNotes };
+  merged.places = [...(saved.places ?? [])];
+  merged.checkinPlace = { ...saved.checkinPlace };
+  merged.pookalams = [...(saved.pookalams ?? [])];
   merged.settings = { ...DEFAULT_SETTINGS, ...saved.settings };
   merged.backup = { ...initial.backup, ...saved.backup };
   // Nested objects are merged too, so fields added in later versions get their defaults.
@@ -299,6 +331,55 @@ export function toggleMoodTag(day: string, tag: string, max = 5) {
     else delete moodTags[day];
     return { moodTags };
   });
+}
+
+/** Saves (or, when empty, removes) the good-day note for a day. */
+export function setGoodNote(day: string, text: string) {
+  const clean = text.trim().slice(0, 160);
+  update((s) => {
+    const goodNotes = { ...s.goodNotes };
+    if (clean) goodNotes[day] = clean;
+    else delete goodNotes[day];
+    return { goodNotes };
+  });
+}
+
+export function addPlace(name: string, emoji: string, coords?: { lat: number; lon: number }): Place {
+  const place: Place = { id: newId(), name: name.trim().slice(0, 24), emoji, createdAt: Date.now(), ...(coords ? { lat: coords.lat, lon: coords.lon } : {}) };
+  update((s) => ({ places: [...s.places, place] }));
+  return place;
+}
+
+export function updatePlace(id: string, patch: Partial<Omit<Place, 'id'>>) {
+  update((s) => ({ places: s.places.map((p) => (p.id === id ? { ...p, ...patch } : p)) }));
+}
+
+export function deletePlace(id: string) {
+  update((s) => ({
+    places: s.places.filter((p) => p.id !== id),
+    checkinPlace: Object.fromEntries(Object.entries(s.checkinPlace).filter(([, v]) => v !== id)),
+  }));
+}
+
+/** Where today's check-in was made (tap again to clear). */
+export function setCheckinPlace(day: string, placeId: string | null) {
+  update((s) => {
+    const checkinPlace = { ...s.checkinPlace };
+    if (placeId && checkinPlace[day] !== placeId) checkinPlace[day] = placeId;
+    else delete checkinPlace[day];
+    return { checkinPlace };
+  });
+}
+
+export function savePookalam(p: Omit<Pookalam, 'id' | 'createdAt'> & { id?: string }): Pookalam {
+  const existing = p.id ? state.pookalams.find((x) => x.id === p.id) : undefined;
+  const next: Pookalam = { ...p, id: existing?.id ?? newId(), createdAt: existing?.createdAt ?? Date.now() };
+  update((s) => ({ pookalams: existing ? s.pookalams.map((x) => (x.id === next.id ? next : x)) : [next, ...s.pookalams].slice(0, 60) }));
+  return next;
+}
+
+export function deletePookalam(id: string) {
+  update((s) => ({ pookalams: s.pookalams.filter((x) => x.id !== id) }));
 }
 
 export function setWidgetPrefs(name: keyof AppState['widgetPrefs'], patch: Partial<WidgetPrefs>) {

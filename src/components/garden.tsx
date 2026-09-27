@@ -1,5 +1,4 @@
 /** Shared garden visuals: the illustrated bed, the "a flower bloomed" toast and the ways to grow. */
-import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
@@ -7,10 +6,11 @@ import Animated, { FadeInUp, FadeOutUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Flower } from '@/components/flower';
+import { GardenSky } from '@/components/garden-sky';
 import { haptic } from '@/components/games/fx';
 import { Icon, IconName } from '@/components/icons';
 import { Text } from '@/components/text';
-import { useIsDark, useTheme } from '@/hooks/use-theme';
+import { useTheme } from '@/hooks/use-theme';
 import { FlowerKind, flowerOf, RARITY_LABEL } from '@/lib/flowers';
 import { Bloom, BloomSource, onBloom } from '@/lib/store';
 
@@ -25,20 +25,16 @@ export const SOURCES: Record<BloomSource, { label: string; icon: IconName; rule:
 
 /** A small landscape: sky, hills and grass, with flowers planted in staggered rows (newest in front). */
 export function GardenBed({ blooms, max = 24, height = 220 }: { blooms: Bloom[]; max?: number; height?: number }) {
-  const dark = useIsDark();
   const shown = blooms.slice(0, max);
   const perRow = 6;
   const rows = Math.max(1, Math.ceil(shown.length / perRow));
   const size = Math.min(58, (height - 40) / Math.max(rows, 2) + 18);
   return (
     <View style={[styles.bed, { height }]}>
-      <LinearGradient colors={dark ? ['#1E2B3A', '#2A3B34'] : ['#E4F0F6', '#F4EEDC']} style={StyleSheet.absoluteFill} />
-      <View style={[styles.hill, { backgroundColor: dark ? '#23382E' : '#CFE3C3', left: -40, width: '70%' }]} />
-      <View style={[styles.hill, { backgroundColor: dark ? '#1F3329' : '#BFD9B0', right: -50, width: '75%', height: height * 0.62 }]} />
-      <LinearGradient colors={dark ? ['#294536', '#1B2E24'] : ['#A9D39A', '#7FB872']} style={[styles.grass, { height: height * 0.5 }]} />
+      <GardenSky height={height} />
       {shown.length === 0 ? (
         <View style={styles.empty}>
-          <Text variant="small" center style={{ color: dark ? '#CFE3C3' : '#3F6B45' }}>
+          <Text variant="small" center style={{ color: '#2F4A3F', fontFamily: 'Manrope_700Bold' }}>
             Your garden is waiting for its first flower.
           </Text>
         </View>
