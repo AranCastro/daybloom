@@ -14,6 +14,7 @@ import type { ActiveTimer, FocusSession } from '@/lib/focus';
 import { MoodValue } from '@/lib/moods';
 import { sortOpen } from '@/lib/quadrants';
 import { isLowStreak } from '@/lib/nudge-rule';
+import { rewardFor } from '@/lib/effort';
 
 export type NudgeLog = {
   at: number;
@@ -540,7 +541,11 @@ export function toggleTask(id: string) {
     tasks: s.tasks.map((t) => (t.id === id ? { ...t, done: !t.done, doneAt: t.done ? undefined : Date.now() } : t)),
   }));
   // A finished task grows a flower; un-finishing it takes that flower back.
-  if (!task.done) bloom('task', { ref: id, note: task.title, rareChance: task.quadrant === 1 ? 0.15 : 0.1 });
+  // Harder tasks grow more: a Deep work task grows two flowers, with better odds of a rare one (lib/effort).
+  if (!task.done) {
+    const reward = rewardFor(task);
+    for (let i = 0; i < reward.flowers; i++) bloom('task', { ref: id, note: task.title, rareChance: reward.rare });
+  }
   else
     update((s) => {
       const garden = s.garden.filter((b) => !(b.source === 'task' && b.ref === id));
