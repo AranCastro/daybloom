@@ -9,8 +9,9 @@ import * as DocumentPicker from 'expo-document-picker';
 import { Directory, File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 
-import { backupFileName, makeBackup, parseBackup } from '@/lib/backup-core';
-import { getState, setBackupInfo } from '@/lib/store';
+import { expectReturn } from '@/lib/app-lock';
+import { BACKUP_TYPES, backupFileName, checkBackupSize, makeBackup, parseBackup } from '@/lib/backup-core';
+import { getState, onErase, setBackupInfo } from '@/lib/store';
 
 const WEEK = 7 * 24 * 60 * 60 * 1000;
 const KEEP = 4;
@@ -31,6 +32,7 @@ function writeBackup(dir: Directory): File {
 
 async function share(file: File): Promise<boolean> {
   if (!(await Sharing.isAvailableAsync())) return false;
+  expectReturn();
   await Sharing.shareAsync(file.uri, { mimeType: 'application/json', dialogTitle: 'Save your Daybloom backup', UTI: 'public.json' });
   return true;
 }
@@ -52,11 +54,29 @@ export async function saveLatestWeekly(): Promise<boolean> {
 
 /** Lets the user choose a backup file and checks it. Nothing is changed until they confirm. */
 export async function pickBackup() {
-  const result = await DocumentPicker.getDocumentAsync({ type: ['application/json', 'text/plain', '*/*'], copyToCacheDirectory: true });
+  expectReturn();
+  const result = await DocumentPicker.getDocumentAsync({ type: BACKUP_TYPES, copyToCacheDirectory: true });
   if (result.canceled || !result.assets?.length) return null;
-  const text = await new File(result.assets[0].uri).text();
-  return parseBackup(text);
+  const asset = result.assets[0];
+  const file = new File(asset.uri);
+  const tooBig = checkBackupSize(asset.size ?? file.size);
+  if (tooBig) return tooBig;
+  return parseBackup(await file.text());
 }
+
+/**
+ * Removes the weekly backup files kept on the phone (they hold moods, notes and phone numbers).
+ * Part of "Erase everything", including the forgotten-PIN route: both go through resetAll().
+ */
+export function deleteLocalBackups(): void {
+  const dir = new Directory(Paths.document, 'backups');
+  if (dir.exists) dir.delete();
+  // "Back up now" leaves its copy in the cache until Android clears it.
+  const cache = new Directory(Paths.cache);
+  if (cache.exists) cache.list().forEach((f) => f instanceof File && f.name.startsWith('daybloom-backup-') && f.delete());
+}
+
+onErase(deleteLocalBackups);
 
 function listWeekly(): File[] {
   return backupsDir()

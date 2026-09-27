@@ -7,11 +7,14 @@ import type { RefObject } from 'react';
 import { Platform, View } from 'react-native';
 import { captureRef } from 'react-native-view-shot';
 
+import { expectReturn } from '@/lib/app-lock';
+
 export async function shareViewAsImage(ref: RefObject<View | null>, dialogTitle: string): Promise<boolean> {
   if (!ref.current || Platform.OS === 'web') return false;
   try {
     const uri = await captureRef(ref, { format: 'png', quality: 1, result: 'tmpfile' });
     if (!(await Sharing.isAvailableAsync())) return false;
+    expectReturn();
     await Sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle, UTI: 'public.png' });
     return true;
   } catch {

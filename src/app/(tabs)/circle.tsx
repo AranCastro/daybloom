@@ -6,8 +6,8 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { BuddyCard, useBuddy } from '@/components/buddy';
 import { Icon } from '@/components/icons';
 import { Text } from '@/components/text';
-import { Card, Divider, Row, Screen, tap } from '@/components/ui';
-import { TabBarInset } from '@/constants/theme';
+import { Card, Divider, Row, Screen, Tappable, tap } from '@/components/ui';
+import { Radius, Spacing, TabBarInset } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useCircleNames } from '@/lib/labels';
 import { prettyDate } from '@/lib/dates';
@@ -137,25 +137,25 @@ function CircleCard({
       <View style={styles.circleHead}>
         <View style={styles.circleTitle}>
           <CircleChip q={q} size={22} />
-          <Text variant="heading" style={{ color, fontSize: 15.5, lineHeight: 20, flex: 1 }} numberOfLines={1} adjustsFontSizeToFit>
+          <Text variant="headingSm" style={{ color, flex: 1 }} numberOfLines={1} adjustsFontSizeToFit>
             {name}
           </Text>
         </View>
         <View style={styles.circleMode}>
           <Icon name={info.mode === 'call' ? 'phone' : 'chat'} color={t.textSecondary} size={13} />
-          <Text variant="small" style={{ fontSize: 11.5, lineHeight: 15 }}>
+          <Text variant="caption">
             {info.mode === 'call' ? 'Call' : 'Message'}
           </Text>
         </View>
       </View>
       <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
         {people.map((person) => (
-          <Pressable key={person.id} onPress={() => (tap(), onPerson(person))} style={styles.personRow}>
+          <Tappable key={person.id} onPress={() => onPerson(person)} radius={Radius.xs} style={styles.personRow} accessibilityLabel={person.name}>
             <Avatar person={person} size={30} />
-            <Text variant="body" numberOfLines={1} style={{ flex: 1, fontSize: 14.5 }}>
+            <Text variant="bodySm" color="text" numberOfLines={1} style={{ flex: 1 }}>
               {person.name}
             </Text>
-          </Pressable>
+          </Tappable>
         ))}
         <Pressable
           accessibilityRole="button"
@@ -179,7 +179,7 @@ function Step({ icon, text }: { icon: 'sun' | 'bell' | 'lock' | 'heart'; text: s
       <View style={[styles.stepIcon, { backgroundColor: t.surfaceAlt }]}>
         <Icon name={icon} color={t.text} size={18} />
       </View>
-      <Text variant="body" color="textSecondary" style={{ flex: 1, fontSize: 15 }}>
+      <Text variant="bodySm" color="textSecondary" style={{ flex: 1 }}>
         {text}
       </Text>
     </View>
@@ -189,12 +189,12 @@ function Step({ icon, text }: { icon: 'sun' | 'bell' | 'lock' | 'heart'; text: s
 const styles = StyleSheet.create({
   axisRow: { flexDirection: 'row', gap: 12 },
   circleRow: { flexDirection: 'row', gap: 12, height: 206 },
-  circleCard: { flex: 1, borderRadius: 22, borderWidth: 1, padding: 12, overflow: 'hidden' },
+  circleCard: { flex: 1, borderRadius: Radius.lg, borderWidth: 1, padding: Spacing.cardCompact, overflow: 'hidden' },
   circleTint: { position: 'absolute', top: 0, left: 0, right: 0, height: 60 },
   circleHead: { gap: 2, marginBottom: 8 },
   circleTitle: { flexDirection: 'row', alignItems: 'center', gap: 7 },
   circleMode: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingLeft: 29 },
-  personRow: { flexDirection: 'row', alignItems: 'center', gap: 9, paddingVertical: 5 },
+  personRow: { flexDirection: 'row', alignItems: 'center', gap: 9, paddingVertical: 5, paddingHorizontal: 2 },
   addRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -202,14 +202,15 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: 8,
     marginTop: 4,
-    borderRadius: 12,
+    // Concentric with the card: 26 − 14 padding = 12.
+    borderRadius: Radius.sm,
     borderWidth: 1,
     borderStyle: 'dashed',
   },
   bigAvatar: { width: 92, height: 92, borderRadius: 46, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
-  pill: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 999 },
+  pill: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14, paddingVertical: 6, borderRadius: Radius.pill },
   dot: { width: 8, height: 8, borderRadius: 4 },
   step: { flexDirection: 'row', gap: 14, alignItems: 'center', paddingVertical: 4 },
-  stepIcon: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  stepIcon: { width: 36, height: 36, borderRadius: Radius.sm, alignItems: 'center', justifyContent: 'center' },
   history: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 6 },
 });

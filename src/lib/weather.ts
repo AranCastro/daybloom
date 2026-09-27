@@ -96,18 +96,27 @@ export function refreshWeather(ask = false): Promise<void> {
   if (inFlight) return inFlight;
   inFlight = (async () => {
     try {
-      const here = await currentCoords(ask);
+      // A fresh reading only needs to know whether the phone has moved: use a position the phone
+      // already has (no new GPS fix, no prompt); without one, keep the reading.
+      const fresh = !!current && Date.now() - current.at < FRESH_MS && !ask;
+      const here = await currentCoords(ask, fresh);
       if (!here) return;
       const lat = Math.round(here.lat * 10) / 10;
       const lon = Math.round(here.lon * 10) / 10;
-      const sameCell = current?.lat === lat && current?.lon === lon;
-      if (current && sameCell && Date.now() - current.at < FRESH_MS && !ask) return;
+      if (fresh && current?.lat === lat && current?.lon === lon) return;
       const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,is_day&timezone=auto`;
       const ctrl = new AbortController();
       const timer = setTimeout(() => ctrl.abort(), 10_000);
-      const res = await fetch(url, { signal: ctrl.signal }).finally(() => clearTimeout(timer));
-      if (!res.ok) return;
-      const data = (await res.json()) as { current?: { temperature_2m?: number; weather_code?: number; is_day?: number } };
+      type Reply = { current?: { temperature_2m?: number; weather_code?: number; is_day?: number } };
+      let data: Reply;
+      try {
+        // The time limit covers reading the body too, which can stall on a poor connection.
+        const res = await fetch(url, { signal: ctrl.signal });
+        if (!res.ok) return;
+        data = (await res.json()) as Reply;
+      } finally {
+        clearTimeout(timer);
+      }
       const c = data.current;
       if (!c || typeof c.weather_code !== 'number') return;
       current = { sky: skyOf(c.weather_code), temp: Math.round(c.temperature_2m ?? 0), isDay: c.is_day === 1, at: Date.now(), lat, lon };

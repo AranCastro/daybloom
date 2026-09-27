@@ -217,7 +217,7 @@ export function CheckInWidget({ s, p, width, height, flash }: WidgetProps) {
   return (
     <Shell p={p} padding={12}>
       <FlexWidget style={{ flexDirection: 'row', alignItems: 'center', width: 'match_parent', paddingHorizontal: 2 }} {...open(LINK.today)}>
-        <TextWidget text={title} style={{ fontSize: 14, fontFamily: DISPLAY, color: p.ink }} maxLines={1} />
+        <TextWidget text={title} style={{ fontSize: 14, fontFamily: DISPLAY, color: p.ink }} maxLines={1} truncate="END" />
         <FlexWidget style={{ flex: 1 }} />
         <TextWidget text={status} style={{ fontSize: 11, fontFamily: BODY, color: p.dim }} maxLines={1} truncate="END" />
       </FlexWidget>
@@ -319,6 +319,7 @@ export function StreakWidget({ s, p, height }: WidgetProps) {
             text={`${s.streak} ${s.streak === 1 ? 'day' : 'days'}`}
             style={{ fontSize: 20, fontFamily: DISPLAY, color: p.ink }}
             maxLines={1}
+            truncate="END"
           />
           {height >= 70 ? (
             // This week at a glance: one dot per day in that day's mood colour.
@@ -342,14 +343,41 @@ export function StreakWidget({ s, p, height }: WidgetProps) {
 
 // ── 4. Focus list (tasks) ────────────────────────────────────────────────────
 
+/** Heights in dp, as drawn below: padding 16 + 16, header row 30 (the 30 dp buttons), spacer 8. */
+const TASKS_CHROME = 70;
+export const TASK_ROW = 32;
+export const TASK_ROW_NEXT = 42;
+/** The "+n more in your matrix" line (11 sp text). */
+const MORE_LINE = 16;
+
+/**
+ * How many task rows fit a Tasks widget of this height. Rows with a next step are taller (two lines),
+ * so they are fitted by height rather than count, leaving room for the "+n more" line when some are
+ * left out. The first task always shows; if even that leaves no room for the line, the count moves
+ * into the header instead.
+ */
+export function fitTaskRows(rows: { next?: string | null }[], hidden: number, height: number): { show: number; more: number; moreInHeader: boolean } {
+  const heights = rows.map((r) => (r.next ? TASK_ROW_NEXT : TASK_ROW));
+  const room = height - TASKS_CHROME;
+  const total = heights.reduce((a, b) => a + b, 0);
+  if (hidden === 0 && total <= room) return { show: rows.length, more: 0, moreInHeader: false };
+  let show = 0;
+  let used = 0;
+  while (show < rows.length && used + heights[show] <= room - MORE_LINE) used += heights[show++];
+  if (rows.length && show === 0) show = 1;
+  const more = hidden + rows.length - show;
+  const fitsLine = heights.slice(0, show).reduce((a, b) => a + b, 0) + MORE_LINE <= room;
+  return { show, more, moreInHeader: more > 0 && !fitsLine };
+}
+
 export function TasksWidget({ s, p, height, flash }: WidgetProps) {
   if (!s.onboarded) return <Welcome p={p} />;
-  // Rows with a next step are taller (two lines), so fit them by height rather than count.
-  const used = s.tasks.items.map((t, i, all) => all.slice(0, i + 1).reduce((n, x) => n + (x.next ? 40 : 30), 0));
-  const items = s.tasks.items.filter((_, i) => i === 0 || used[i] <= height - 84);
-  const more = s.tasks.more + (s.tasks.items.length - items.length);
+  const fit = fitTaskRows(s.tasks.items, s.tasks.more, height);
+  const items = s.tasks.items.slice(0, fit.show);
+  const more = fit.moreInHeader ? 0 : fit.more;
   const locked = s.locks.Tasks;
-  const sub = flash ?? (locked ? 'Locked' : s.tasks.doneToday ? `${s.tasks.doneToday} done today` : s.low && items.length ? 'One thing is enough' : '');
+  const status = flash ?? (locked ? 'Locked' : s.tasks.doneToday ? `${s.tasks.doneToday} done today` : s.low && items.length ? 'One thing is enough' : '');
+  const sub = fit.moreInHeader && !flash ? [status, `+${fit.more} more`].filter(Boolean).join(' · ') : status;
 
   return (
     <Shell p={p} padding={16}>
@@ -367,7 +395,7 @@ export function TasksWidget({ s, p, height, flash }: WidgetProps) {
       {items.length === 0 ? (
         <FlexWidget style={{ flex: 1, width: 'match_parent', justifyContent: 'center' }} {...open(LINK.matrix)}>
           <TextWidget text="Nothing urgent." style={{ fontSize: 15, fontFamily: DISPLAY, color: p.ink }} />
-          <TextWidget text="A good day to plan something that matters." style={{ fontSize: 12, fontFamily: BODY, color: p.dim }} maxLines={2} />
+          <TextWidget text="A good day to plan something that matters." style={{ fontSize: 12, fontFamily: BODY, color: p.dim }} maxLines={2} truncate="END" />
         </FlexWidget>
       ) : (
         items.map((t) => (
@@ -411,7 +439,8 @@ export function FocusWidget({ s, p, width, height }: WidgetProps) {
     const isBreak = f.kind === 'break';
     const color = isBreak ? '#3A9477' : p.accent;
     const title = done ? 'Time is up' : f.paused ? `${f.leftMin} min left` : `Ends ${f.until}`;
-    const line = done ? 'Open to collect your flower' : f.task ?? (isBreak ? 'Stand up and stretch' : f.paused ? 'Paused' : `${f.leftMin} of ${f.totalMin} min left`);
+    // Minutes left would go stale between redraws (widgets cannot count down), so a running session shows its length.
+    const line = done ? 'Open to collect your flower' : f.task ?? (isBreak ? 'Stand up and stretch' : f.paused ? 'Paused' : `${f.totalMin} min session`);
     const ring = big ? 92 : 64;
     return (
       <Shell p={p} padding={14}>
@@ -441,7 +470,7 @@ export function FocusWidget({ s, p, width, height }: WidgetProps) {
           <SvgWidget svg={done ? flowerSvg({ ...GOLD_BUD }, ring) : ringSvg(f.progress, color, p.line, ring, big ? 8 : 6, isBreak ? 'leaf' : 'bud')} style={{ height: ring, width: ring }} />
         </FlexWidget>
         <FlexWidget style={{ width: 'match_parent' }} {...open(LINK.focus())}>
-          <TextWidget text={title} style={{ fontSize: big ? 20 : 16, fontFamily: DISPLAY, color: p.ink }} maxLines={1} />
+          <TextWidget text={title} style={{ fontSize: big ? 20 : 16, fontFamily: DISPLAY, color: p.ink }} maxLines={1} truncate="END" />
           <TextWidget text={line} style={{ fontSize: 11, fontFamily: BODY, color: done ? p.accent : p.dim }} maxLines={1} truncate="END" />
         </FlexWidget>
       </Shell>
@@ -547,7 +576,7 @@ export function ReachWidget({ s, p }: WidgetProps) {
                 <Spacer size={8} />
                 <FlexWidget style={{ flex: 1 }}>
                   <TextWidget text={x.name} style={{ fontSize: 13, fontFamily: BOLD, color: p.ink }} maxLines={1} truncate="END" />
-                  <TextWidget text={x.mode === 'call' ? 'Call' : 'Message'} style={{ fontSize: 11, fontFamily: BODY, color: p.dim }} maxLines={1} />
+                  <TextWidget text={x.mode === 'call' ? 'Call' : 'Message'} style={{ fontSize: 11, fontFamily: BODY, color: p.dim }} maxLines={1} truncate="END" />
                 </FlexWidget>
                 <SvgWidget svg={iconSvg(x.mode === 'call' ? 'phone' : 'chat', p.accent, 18)} style={{ height: 18, width: 18 }} />
               </FlexWidget>

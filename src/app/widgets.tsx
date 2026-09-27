@@ -11,6 +11,7 @@ import { Text } from '@/components/text';
 import { Button, Card, Choice, Screen, tap } from '@/components/ui';
 import { WidgetMock } from '@/components/widget-mock';
 import { WidgetStyleControls } from '@/components/widget-style';
+import { Radius } from '@/constants/theme';
 import { useIsDark, useTheme } from '@/hooks/use-theme';
 import { FocusPreset, pauseTimer, PRESETS, resumeTimer, startFocus, stopTimer } from '@/lib/focus';
 import { getState, setSettings, toggleWidgetLock, useAppState, widgetTickTask, widgetUndo } from '@/lib/store';
@@ -86,7 +87,7 @@ function WidgetCard({ spec }: { spec: WidgetSpec }) {
           <Text variant="small">{spec.blurb}</Text>
         </View>
         <View style={[styles.cells, { backgroundColor: t.surfaceAlt }]}>
-          <Text variant="small" style={{ fontSize: 11.5 }}>
+          <Text variant="caption">
             {spec.cells}
           </Text>
         </View>
@@ -105,7 +106,7 @@ function WidgetCard({ spec }: { spec: WidgetSpec }) {
 
       <Pressable onPress={() => (tap(), setStyling(!styling))} style={styles.styleBtn} accessibilityRole="button" accessibilityState={{ expanded: styling }}>
         <Icon name="settings" color={t.textSecondary} size={18} />
-        <Text variant="bodyStrong" style={{ flex: 1, fontSize: 14 }}>
+        <Text variant="bodySm" strong style={{ flex: 1 }}>
           Style: theme and transparency
         </Text>
         <Icon name={styling ? 'close' : 'arrow'} color={t.textMuted} size={16} />
@@ -187,11 +188,11 @@ async function onWidgetClick(action: string, data: Record<string, unknown>) {
 
 const styles = StyleSheet.create({
   head: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
-  cells: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
+  cells: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: Radius.pill },
   styleBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 40 },
-  wall: { borderRadius: 22, padding: 14, alignItems: 'center', justifyContent: 'center' },
+  wall: { borderRadius: Radius.md, padding: 14, alignItems: 'center', justifyContent: 'center' },
   shadow: {
-    borderRadius: 24,
+    borderRadius: Radius.lg,
     shadowColor: '#000',
     shadowOpacity: 0.12,
     shadowRadius: 14,

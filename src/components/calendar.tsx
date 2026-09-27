@@ -106,10 +106,9 @@ export function MonthCalendar({ selected, onSelect, marks = {}, onMonth, compact
                     !isSel && isToday && { borderWidth: 1.5, borderColor: t.accent },
                   ]}>
                   <Text
-                    variant="body"
+                    variant="bodySm"
+                    strong={isSel || isToday}
                     style={{
-                      fontSize: 15,
-                      fontFamily: isSel || isToday ? Fonts.bodyStrong : Fonts.body,
                       color: isSel && !heat ? t.brandText : level === 4 ? '#FFFFFF' : inMonth ? t.text : t.textMuted,
                       opacity: inMonth ? 1 : 0.55,
                     }}>
@@ -149,13 +148,13 @@ export function HeatLegend() {
   const shades = HEAT[useIsDark() ? 'dark' : 'light'];
   return (
     <View style={styles.legend} accessibilityLabel="Shading: lighter is less finished, deeper green is more">
-      <Text variant="small" color="textMuted" style={{ fontSize: 12 }}>
+      <Text variant="caption" color="textMuted">
         Less
       </Text>
       {shades.map((c, i) => (
         <View key={i} style={[styles.swatch, { backgroundColor: i === 0 ? t.surfaceAlt : c }]} />
       ))}
-      <Text variant="small" color="textMuted" style={{ fontSize: 12 }}>
+      <Text variant="caption" color="textMuted">
         More
       </Text>
     </View>

@@ -144,7 +144,8 @@ weather following the phone, and Thottam now says Poo Kolam.
 
 - **Backup and restore.** Settings → Backup and restore: **Back up to Google Drive** writes a backup file
   (JSON) and opens the share menu, where Drive can be chosen; **Restore from a backup** opens a backup file
-  from Drive or the phone, shows what it contains and asks before replacing anything. **Weekly backup** (on
+  from Drive or the phone (JSON or text, up to 25 MB), shows what it contains and asks before replacing
+  anything; damaged entries in the file are left out rather than restored. **Weekly backup** (on
   by default) keeps a fresh backup in the app's storage every week (the last four are kept) and shows a
   "Save to Drive" card on Today. Android's own Google backup (`allowBackup`) also includes the app's data.
   Code: `src/lib/backup-core.ts` (file format and checks), `src/lib/backup.ts` / `backup.web.ts`,
@@ -178,7 +179,7 @@ WhatsApp links need an international number. A bare 10-digit number gets the cou
 `src/lib/region.ts`). The Heavy-day helpline also follows the region: Tele-MANAS 14416 in India, findahelpline.com
 elsewhere.
 
-## Download a test APK (no setup needed)
+## Download the APK (no setup needed)
 
 Every change to the app on `main` is built automatically by GitHub Actions
 (`.github/workflows/android-apk.yml`) and published as a release:
@@ -189,8 +190,9 @@ Builds up to 1.3.3 were published from the website repository and remain at
 https://github.com/AranCastro/AranCastro.github.io/releases.
 
 Open that page on an Android phone, tap the `.apk`, and allow installing from the browser when asked.
-To rebuild by hand: GitHub → **Actions** → **Build Android APK** → **Run workflow**. These test builds
-are signed with a debug key; Play Store bundles (`.aab`) come from the **Build Play Store bundle** workflow (Actions → Run workflow), signed
+To rebuild by hand: GitHub → **Actions** → **Build Android APK** → **Run workflow**. A manual run on a
+branch other than `main` is published as a *preview* (a pre-release, never marked latest). The APK has its own
+sideload key, separate from the Play upload key (see below); Play Store bundles (`.aab`) come from the **Build Play Store bundle** workflow (Actions → Run workflow), signed
 with the upload key; see `docs/daybloom_play-release-guide_v1.md`. `eas build --profile production` (below) also works.
 
 ## Web demo on the website
@@ -280,17 +282,20 @@ npm test          # unit tests (jest-expo): nudge rule and sequences, flowers, s
 
 The same three run on every pull request (`.github/workflows/checks.yml`).
 
-## Signing the test APK with your own key
+## Signing the APK with a sideload key
 
-Until these repository secrets exist, the APK workflow signs with Expo's public debug key, which is fine for
-trying the app but lets anyone build an APK that installs over a tester's copy. To use a private key:
+The APK on GitHub and the Play Store app are signed with different keys: Google re-signs Play installs with its own
+app signing key, so the Play upload key would not make the two interchangeable anyway, and keeping it off the APK
+workflow keeps that key out of every public build. Until the secrets below exist, the APK workflow signs with
+Expo's public debug key, which is fine for trying the app but lets anyone build an APK that installs over a copy.
+To use a private sideload key:
 
 ```powershell
-keytool -genkeypair -v -keystore daybloom-release.jks -alias daybloom -keyalg RSA -keysize 2048 -validity 10000
-[Convert]::ToBase64String([IO.File]::ReadAllBytes("daybloom-release.jks")) | Set-Clipboard
+keytool -genkeypair -v -keystore daybloom-sideload.jks -alias daybloom -keyalg RSA -keysize 2048 -validity 10000
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("daybloom-sideload.jks")) | Set-Clipboard
 ```
 
-Then in GitHub → daybloom → Settings → Secrets and variables → Actions, add `ANDROID_KEYSTORE_BASE64` (paste),
-`ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` (`daybloom`) and `ANDROID_KEY_PASSWORD`. Keep the `.jks` file and
-passwords safe: losing them means testers must uninstall to update. Testers on a debug-signed build must uninstall
+Then in GitHub → daybloom → Settings → Secrets and variables → Actions, add `SIDELOAD_KEYSTORE_BASE64` (paste),
+`SIDELOAD_KEYSTORE_PASSWORD`, `SIDELOAD_KEY_ALIAS` (`daybloom`) and `SIDELOAD_KEY_PASSWORD`. Keep the `.jks` file
+and passwords safe. Changing the key, or moving between the APK and the Play Store version, needs an uninstall
 once (make a backup first: Settings → Backup and restore).

@@ -87,7 +87,7 @@ export function ReachButtons({ person, compact }: { person: Person; compact?: bo
               { backgroundColor: primary ? color : 'transparent', borderColor: primary ? color : t.line, opacity: pressed ? 0.7 : 1 },
             ]}>
             <Icon name={a.icon} color={primary ? '#fff' : t.text} size={17} />
-            <Text variant="bodyStrong" style={{ color: primary ? '#fff' : t.text, fontSize: 13.5 }}>
+            <Text variant="small" strong style={{ color: primary ? '#fff' : t.text }}>
               {a.label}
             </Text>
           </Pressable>
@@ -200,10 +200,10 @@ function CircleOption({ q, selected, onPress }: { q: CircleQuadrant; selected: b
       style={[styles.qOption, { backgroundColor: selected ? soft : t.background, borderColor: selected ? color : t.line }]}>
       <CircleChip q={q} size={24} />
       <View style={{ flex: 1 }}>
-        <Text variant="bodyStrong" style={{ color: selected ? color : t.text, fontSize: 14.5 }}>
+        <Text variant="bodySm" strong style={{ color: selected ? color : t.text }}>
           {cName(q)}
         </Text>
-        <Text variant="small" style={{ fontSize: 11.5, lineHeight: 15 }}>
+        <Text variant="caption">
           {info.meaning}
         </Text>
       </View>

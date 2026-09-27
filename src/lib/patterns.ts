@@ -20,7 +20,7 @@ const WEEKDAYS = ['Sundays', 'Mondays', 'Tuesdays', 'Wednesdays', 'Thursdays', '
 const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
 const fmt = (x: number) => (Math.round(x * 10) / 10).toFixed(1);
 
-type Input = Pick<AppState, 'checkins' | 'moodTags' | 'garden' | 'tasks' | 'focus' | 'energy' | 'places' | 'checkinPlace'>;
+type Input = Pick<AppState, 'checkins' | 'moodTags' | 'garden' | 'tasks' | 'focus' | 'energy' | 'places' | 'checkinPlace' | 'clearedWork'>;
 
 export function checkinDays(s: Pick<AppState, 'checkins'>, today: string, window = 90): string[] {
   const from = dayKey(addDays(fromKey(today), -(window - 1)));
@@ -60,10 +60,10 @@ export function findPatterns(s: Input, today: string): Pattern[] {
   if (r && r.yes - r.no >= MOOD_GAP)
     out.push({ id: 'reach', emoji: '📞', title: 'You felt better on days you called someone', detail: `Average ${fmt(r.yes)} on ${r.n} days you reached out, against ${fmt(r.no)} on other days.` });
 
-  // 3. Finished tasks: two or more done in a day.
+  // 3. Finished tasks: two or more done in a day, counting ones since cleared from the matrix.
   const doneBy = new Map<string, number>();
   for (const t of s.tasks) if (t.done && t.doneAt) doneBy.set(dayKey(new Date(t.doneAt)), (doneBy.get(dayKey(new Date(t.doneAt))) ?? 0) + 1);
-  const tk = compare(days, s, (d) => (doneBy.get(d) ?? 0) >= 2);
+  const tk = compare(days, s, (d) => (doneBy.get(d) ?? 0) + (s.clearedWork[d] ?? 0) >= 2);
   if (tk && tk.yes - tk.no >= MOOD_GAP)
     out.push({ id: 'tasks', emoji: '✅', title: 'Days with two finished tasks felt lighter', detail: `Average ${fmt(tk.yes)} on ${tk.n} such days, against ${fmt(tk.no)} otherwise.` });
 

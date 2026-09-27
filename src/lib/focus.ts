@@ -38,38 +38,39 @@ function setActive(active: ActiveTimer | null) {
   update((s) => ({ focus: { ...s.focus, active } }));
 }
 
-export function startFocus(preset: FocusPreset, taskId?: string) {
+/** Resolves once the end alarm is scheduled (the widget handler waits for it before returning). */
+export function startFocus(preset: FocusPreset, taskId?: string): Promise<void> {
   const total = PRESETS[preset].focus * 60_000;
   const endAt = Date.now() + total;
   setActive({ kind: 'focus', preset, total, endAt, pausedLeft: null, taskId });
-  scheduleFocusAlarm(endAt, 'Focus session complete', 'A new flower is waiting in your garden.');
+  return scheduleFocusAlarm(endAt, 'Focus session complete', 'A new flower is waiting in your garden.');
 }
 
-export function startBreak(preset: FocusPreset) {
+export function startBreak(preset: FocusPreset): Promise<void> {
   const total = PRESETS[preset].rest * 60_000;
   const endAt = Date.now() + total;
   setActive({ kind: 'break', preset, total, endAt, pausedLeft: null });
-  scheduleFocusAlarm(endAt, 'Break over', 'Ready for another focus session?');
+  return scheduleFocusAlarm(endAt, 'Break over', 'Ready for another focus session?');
 }
 
-export function pauseTimer() {
+export function pauseTimer(): Promise<void> {
   const a = getState().focus.active;
-  if (!a || a.endAt === null) return;
+  if (!a || a.endAt === null) return Promise.resolve();
   setActive({ ...a, endAt: null, pausedLeft: remaining(a) });
-  cancelFocusAlarm();
+  return cancelFocusAlarm();
 }
 
-export function resumeTimer() {
+export function resumeTimer(): Promise<void> {
   const a = getState().focus.active;
-  if (!a || a.endAt !== null) return;
+  if (!a || a.endAt !== null) return Promise.resolve();
   const endAt = Date.now() + (a.pausedLeft ?? a.total);
   setActive({ ...a, endAt, pausedLeft: null });
-  scheduleFocusAlarm(endAt, a.kind === 'focus' ? 'Focus session complete' : 'Break over', a.kind === 'focus' ? 'A new flower is waiting in your garden.' : 'Ready for another focus session?');
+  return scheduleFocusAlarm(endAt, a.kind === 'focus' ? 'Focus session complete' : 'Break over', a.kind === 'focus' ? 'A new flower is waiting in your garden.' : 'Ready for another focus session?');
 }
 
-export function stopTimer() {
+export function stopTimer(): Promise<void> {
   setActive(null);
-  cancelFocusAlarm();
+  return cancelFocusAlarm();
 }
 
 /**
@@ -85,7 +86,10 @@ export function completeFocus(): { flower: FlowerKind; session: FocusSession } |
   const flower = bloom('focus', { ref: a.taskId, note: `${minutes}-minute focus`, rareChance: 0.15, silent: true });
   // Dated when it ended, not when the flower was collected (it may be collected the next day).
   const session: FocusSession = { at: a.endAt ?? Date.now(), minutes, flower: flower.id, taskId: a.taskId };
-  update((s) => ({ focus: { sessions: [session, ...s.focus.sessions].slice(0, 500), active: null } }));
+  update((s) => {
+    const all = [session, ...s.focus.sessions];
+    return { focus: { sessions: all.slice(0, MAX_SESSIONS), active: null }, clearedFocus: foldFocus(s.clearedFocus, all.slice(MAX_SESSIONS)) };
+  });
   // A session spent on a task counts as a day of progress on it.
   if (a.taskId) logProgress(a.taskId);
   return { flower, session };
@@ -99,13 +103,30 @@ export function completeBreak(): boolean {
   return true;
 }
 
+/** Sessions kept in full; older ones are folded into per-day totals (AppState.clearedFocus). */
+export const MAX_SESSIONS = 500;
+
+export type FocusDay = { sessions: number; minutes: number };
+
+/** Adds dropped sessions to the per-day totals, so the calendar and focus streak keep them. */
+export function foldFocus(cleared: Record<string, FocusDay>, dropped: FocusSession[]): Record<string, FocusDay> {
+  if (!dropped.length) return cleared;
+  const out = { ...cleared };
+  for (const f of dropped) {
+    const k = dayKey(new Date(f.at));
+    const d = out[k] ?? { sessions: 0, minutes: 0 };
+    out[k] = { sessions: d.sessions + 1, minutes: d.minutes + f.minutes };
+  }
+  return out;
+}
+
 export function sessionsOn(sessions: FocusSession[], day: string): FocusSession[] {
   return sessions.filter((s) => dayKey(new Date(s.at)) === day);
 }
 
 /** Consecutive days (ending today or yesterday) with at least one completed session. */
-export function focusStreak(sessions: FocusSession[], today = new Date()): number {
-  const days = new Set(sessions.map((s) => dayKey(new Date(s.at))));
+export function focusStreak(sessions: FocusSession[], today = new Date(), cleared: Record<string, FocusDay> = {}): number {
+  const days = new Set([...sessions.map((s) => dayKey(new Date(s.at))), ...Object.keys(cleared).filter((k) => cleared[k].sessions > 0)]);
   let cursor = days.has(dayKey(today)) ? today : addDays(today, -1);
   let n = 0;
   while (days.has(dayKey(cursor))) {

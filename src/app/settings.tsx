@@ -10,6 +10,7 @@ import { Icon } from '@/components/icons';
 import { AvatarPicker, ProfileAvatar } from '@/components/profile';
 import { Text } from '@/components/text';
 import { Card, Choice, Divider, Input, Row, Screen, tap } from '@/components/ui';
+import { Radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { QUADRANTS } from '@/lib/quadrants';
 import { CIRCLE } from '@/lib/circle';
@@ -28,6 +29,12 @@ const TIMES = [
   { label: '9 PM', value: 21 },
 ];
 
+/** The four usual times, plus the saved one when it is another hour (restored or older data). */
+function timesWith(hour: number, minute: number) {
+  if (TIMES.some((x) => x.value === hour)) return TIMES;
+  return [...TIMES, { label: prettyTime(hour, minute), value: hour }].sort((a, b) => a.value - b.value);
+}
+
 export const PRIVACY_URL = 'https://arancastro.github.io/privacy/';
 
 export default function Settings() {
@@ -35,6 +42,13 @@ export default function Settings() {
   const name = useAppState((s) => s.name);
   // Typed locally and saved once, so each keystroke does not rewrite storage and redraw widgets.
   const [draft, setDraft] = useState(name);
+  // A Restore (or any other change from outside) replaces the draft, so blurring the field
+  // cannot write the old name back over the restored one.
+  const [seenName, setSeenName] = useState(name);
+  if (seenName !== name) {
+    setSeenName(name);
+    setDraft(name);
+  }
   const [picking, setPicking] = useState(false);
   const reminder = useAppState((s) => s.reminder);
   const streak = useAppState((s) => s.streak);
@@ -66,6 +80,9 @@ export default function Settings() {
       cancelFocusAlarm();
       disableLock();
       resetAll();
+      // Close Settings and the tabs beneath it first, so a swipe back from onboarding cannot
+      // reveal the old screens.
+      if (router.canDismiss()) router.dismissAll();
       router.replace('/onboarding');
     };
     if (Platform.OS === 'web') {
@@ -205,7 +222,7 @@ export default function Settings() {
           />
         </View>
         {reminder.enabled && (
-          <Choice options={TIMES} value={reminder.hour} onChange={(hour) => setReminder({ ...reminder, hour, minute: 0 })} />
+          <Choice options={timesWith(reminder.hour, reminder.minute)} value={reminder.hour} onChange={(hour) => setReminder({ ...reminder, hour, minute: 0 })} />
         )}
       </Card>
 
@@ -237,7 +254,7 @@ export default function Settings() {
           onPress={() => Linking.openURL(help.number ? `tel:${help.number}` : help.link!).catch(() => {})}
         />
         <Divider />
-        <Row icon="lock" title="Privacy policy" onPress={() => Linking.openURL(PRIVACY_URL)} />
+        <Row icon="lock" title="Privacy policy" onPress={() => Linking.openURL(PRIVACY_URL).catch(() => {})} />
       </Card>
 
       <BackupCard />
@@ -284,17 +301,15 @@ function AboutFooter() {
   const t = useTheme();
   return (
     <View style={{ alignItems: 'center', gap: 6, paddingVertical: 18 }}>
-      <Image source={require('../../assets/images/icon.png')} style={{ width: 56, height: 56, borderRadius: 16 }} accessibilityIgnoresInvertColors />
+      <Image source={require('../../assets/images/icon.png')} style={{ width: 56, height: 56, borderRadius: Radius.md }} accessibilityIgnoresInvertColors />
       <Text variant="heading">Daybloom</Text>
-      <View style={{ paddingHorizontal: 10, paddingVertical: 3, borderRadius: 999, backgroundColor: t.surfaceAlt }}>
-        <Text variant="small" style={{ fontSize: 12 }}>
-          Version {app.expo.version}
-        </Text>
+      <View style={{ paddingHorizontal: 10, paddingVertical: 3, borderRadius: Radius.pill, backgroundColor: t.surfaceAlt }}>
+        <Text variant="caption">Version {app.expo.version}</Text>
       </View>
-      <Text variant="quote" color="textSecondary" center style={{ fontSize: 16 }}>
+      <Text variant="quoteSm" color="textSecondary" center>
         Grow a little every day.
       </Text>
-      <Text variant="small" color="textMuted" center style={{ fontSize: 12 }}>
+      <Text variant="caption" color="textMuted" center>
         Made with care in Kochi, India · © {new Date().getFullYear()} Dr Aran Castro
       </Text>
     </View>
@@ -364,6 +379,13 @@ function SectionNames() {
 
 function NameField({ value, placeholder, hint, onSave }: { value: string; placeholder: string; hint: string; onSave: (v: string) => void }) {
   const [draft, setDraft] = useState(value);
+  // Follow the saved name when it changes from outside (a Restore), so a blur does not
+  // write the stale draft over the restored label.
+  const [seen, setSeen] = useState(value);
+  if (seen !== value) {
+    setSeen(value);
+    setDraft(value);
+  }
   const save = () => draft.trim() !== value && onSave(draft);
   return (
     <View style={{ gap: 2 }}>
@@ -376,7 +398,7 @@ function NameField({ value, placeholder, hint, onSave }: { value: string; placeh
         maxLength={24}
         accessibilityLabel={`Name for ${placeholder} (${hint})`}
       />
-      <Text variant="small" color="textMuted" style={{ fontSize: 12 }}>
+      <Text variant="caption" color="textMuted">
         {hint}
       </Text>
     </View>

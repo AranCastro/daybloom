@@ -12,7 +12,7 @@ import { Flower } from '@/components/flower';
 import { Icon } from '@/components/icons';
 import { Text } from '@/components/text';
 import { Button, Card, Input, Screen, tap } from '@/components/ui';
-import { Fonts } from '@/constants/theme';
+import { Fonts, Radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { FlowerKind, flowerOf, RARITY_LABEL } from '@/lib/flowers';
 import { whatsapp } from '@/lib/reach';
@@ -104,7 +104,7 @@ export default function SendFlower() {
                   accessibilityLabel={k.name}
                   style={[styles.kind, { borderColor: k.id === flower.id ? t.brand : t.line, backgroundColor: t.surface }]}>
                   <Flower kind={k} size={40} />
-                  <Text style={{ fontFamily: Fonts.bodyStrong, fontSize: 11, color: t.text }} numberOfLines={1}>
+                  <Text variant="micro" strong numberOfLines={1} style={{ color: t.text }}>
                     {k.name}
                   </Text>
                 </Pressable>
@@ -117,7 +117,7 @@ export default function SendFlower() {
                 const on = !custom.trim() && l === line;
                 return (
                   <Pressable key={l} onPress={() => (tap(), setLine(l), setCustom(''))} style={[styles.chip, { borderColor: on ? t.brand : t.line, backgroundColor: on ? t.brand : t.surface }]}>
-                    <Text style={{ fontFamily: Fonts.bodyStrong, fontSize: 13, color: on ? t.brandText : t.text }}>{l}</Text>
+                    <Text variant="small" strong style={{ color: on ? t.brandText : t.text }}>{l}</Text>
                   </Pressable>
                 );
               })}
@@ -127,13 +127,13 @@ export default function SendFlower() {
             <Text variant="label">For</Text>
             <View style={styles.wrap}>
               <Pressable onPress={() => (tap(), setPersonId(undefined))} style={[styles.chip, { borderColor: !person ? t.brand : t.line, backgroundColor: !person ? t.brand : t.surface }]}>
-                <Text style={{ fontFamily: Fonts.bodyStrong, fontSize: 13, color: !person ? t.brandText : t.text }}>Anyone</Text>
+                <Text variant="small" strong style={{ color: !person ? t.brandText : t.text }}>Anyone</Text>
               </Pressable>
               {people.map((p) => {
                 const on = p.id === personId;
                 return (
                   <Pressable key={p.id} onPress={() => (tap(), setPersonId(p.id))} style={[styles.chip, { borderColor: on ? t.brand : t.line, backgroundColor: on ? t.brand : t.surface }]}>
-                    <Text style={{ fontFamily: Fonts.bodyStrong, fontSize: 13, color: on ? t.brandText : t.text }}>{p.name}</Text>
+                    <Text variant="small" strong style={{ color: on ? t.brandText : t.text }}>{p.name}</Text>
                   </Pressable>
                 );
               })}
@@ -163,7 +163,7 @@ export function FlowerCard({ flower, message, to, from }: { flower: FlowerKind; 
         A {flower.name} · {RARITY_LABEL[flower.rarity]}
         {from ? ` · from ${from}` : ''}
       </Text>
-      <Text style={[styles.small, { opacity: 0.6, fontSize: 10.5 }]}>grown in Daybloom</Text>
+      <Text style={[styles.small, styles.tiny]}>grown in Daybloom</Text>
     </LinearGradient>
   );
 }
@@ -174,7 +174,9 @@ const styles = StyleSheet.create({
   glow: { position: 'absolute', top: 60, width: 170, height: 170, borderRadius: 85 },
   message: { fontFamily: Fonts.displayItalic, fontSize: 26, lineHeight: 32, color: '#1D1B18', textAlign: 'center', marginTop: 6 },
   small: { fontFamily: Fonts.bodyStrong, fontSize: 12, color: '#5A544C', textAlign: 'center' },
-  kind: { width: 70, alignItems: 'center', gap: 4, paddingVertical: 8, borderRadius: 16, borderWidth: 1.5 },
+  // The shared card keeps its own fixed palette and sizes: it is a picture, not app UI.
+  tiny: { opacity: 0.6, fontSize: 10.5 },
+  kind: { width: 70, alignItems: 'center', gap: 4, paddingVertical: 8, borderRadius: Radius.md, borderWidth: 1.5 },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
-  chip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, borderWidth: 1 },
+  chip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: Radius.pill, borderWidth: 1 },
 });

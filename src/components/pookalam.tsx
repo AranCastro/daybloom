@@ -9,7 +9,11 @@ import type { Pookalam } from '@/lib/store';
 
 const BG = { onam: '#F6EAD2', diwali: '#1D1A38', pongal: '#8A4B2C' } as const;
 
-export function PookalamArt({ design, size }: { design: Pick<Pookalam, 'center' | 'rings' | 'festival'>; size: number }) {
+/**
+ * `thumb` draws a light version for galleries: plain and two-tone rings, a three-circle centre
+ * and a dashed border, about 20 nodes instead of about 200.
+ */
+export function PookalamArt({ design, size, thumb = false }: { design: Pick<Pookalam, 'center' | 'rings' | 'festival'>; size: number; thumb?: boolean }) {
   const c = size / 2;
   const R = size * 0.39; // outer edge of the rings; the festival border sits outside it
   const r0 = size * 0.1; // centre flower
@@ -29,6 +33,25 @@ export function PookalamArt({ design, size }: { design: Pick<Pookalam, 'center' 
         const mid = r0 + w * (i + 0.5);
         const circ = 2 * Math.PI * mid;
         const count = 12 + i * 6;
+        if (thumb) {
+          const dashed = ring.pattern === 'petals' || ring.pattern === 'dots' || ring.pattern === 'alternate';
+          return (
+            <G key={i}>
+              <Circle cx={c} cy={c} r={mid} stroke={dashed ? f.petalInner : f.petal} strokeWidth={w + 0.5} fill="none" />
+              {dashed && (
+                <Circle
+                  cx={c}
+                  cy={c}
+                  r={mid}
+                  stroke={ring.pattern === 'dots' ? f.center : f.petal}
+                  strokeWidth={ring.pattern === 'dots' ? w * 0.4 : w * 0.9}
+                  fill="none"
+                  strokeDasharray={`${circ / (count * 2)} ${circ / (count * 2)}`}
+                />
+              )}
+            </G>
+          );
+        }
         return (
           <G key={i}>
             {ring.pattern === 'solid' && <Circle cx={c} cy={c} r={mid} stroke={f.petal} strokeWidth={w + 0.5} fill="none" />}
@@ -61,13 +84,26 @@ export function PookalamArt({ design, size }: { design: Pick<Pookalam, 'center' 
       })}
 
       {/* Centre flower. */}
-      {Array.from({ length: 8 }, (_, k) => (
+      {thumb && <Circle cx={c} cy={c} r={r0 * 0.9} fill={centre.petal} />}
+      {!thumb && Array.from({ length: 8 }, (_, k) => (
         <Ellipse key={k} cx={c} cy={c - r0 * 0.55} rx={r0 * 0.28} ry={r0 * 0.5} fill={centre.petal} transform={`rotate(${k * 45} ${c} ${c})`} />
       ))}
       <Circle cx={c} cy={c} r={r0 * 0.42} fill={centre.petalInner} />
       <Circle cx={c} cy={c} r={r0 * 0.22} fill={centre.center} />
 
-      <Border festival={design.festival} c={c} R={R} size={size} accent={flowerOf(design.rings[n - 1]?.flower ?? design.center).petal} />
+      {thumb ? (
+        <Circle
+          cx={c}
+          cy={c}
+          r={R + size * 0.055}
+          stroke={design.festival === 'onam' ? '#4E9A4A' : design.festival === 'diwali' ? '#FFC23A' : '#FFF8EC'}
+          strokeWidth={size * 0.03}
+          strokeDasharray={`${size * 0.03} ${size * 0.04}`}
+          fill="none"
+        />
+      ) : (
+        <Border festival={design.festival} c={c} R={R} size={size} accent={flowerOf(design.rings[n - 1]?.flower ?? design.center).petal} />
+      )}
     </Svg>
   );
 }

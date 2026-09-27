@@ -8,7 +8,7 @@ import { Icon } from '@/components/icons';
 import { DueBadge, QuadrantChip, TaskRow, TaskSheet, useQuadrantColors } from '@/components/tasks';
 import { Text } from '@/components/text';
 import { Button, Card, Divider, Screen, tap } from '@/components/ui';
-import { Fonts } from '@/constants/theme';
+import { Radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useToday } from '@/hooks/use-today';
 import { useQuadrantNames } from '@/lib/labels';
@@ -56,7 +56,7 @@ export default function QuadrantScreen() {
           <Text variant="label">Open · {open.length}</Text>
           {open.length > 1 && (
             <Pressable onPress={() => (tap(), setArranging((a) => !a))} hitSlop={8} accessibilityRole="button">
-              <Text variant="small" color="accent" style={{ fontFamily: Fonts.bodyStrong }}>
+              <Text variant="small" strong color="accent">
                 {arranging ? 'Done' : 'Arrange'}
               </Text>
             </Pressable>
@@ -145,8 +145,8 @@ function confirmClear(q: Quadrant, n: number, name: string) {
 
 const styles = StyleSheet.create({
   arrange: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8 },
-  arrow: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  arrow: { width: 38, height: 38, borderRadius: Radius.sm, alignItems: 'center', justifyContent: 'center' },
   top: { height: 32, justifyContent: 'center' },
-  hero: { borderRadius: 26, padding: 22, gap: 6 },
+  hero: { borderRadius: Radius.lg, padding: 22, gap: 6 },
   doneHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
 });

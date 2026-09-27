@@ -11,6 +11,7 @@ import { Icon, IconName } from '@/components/icons';
 import { MoodOrb } from '@/components/mood-orb';
 import { Text } from '@/components/text';
 import { Button, Choice, Input, Screen, tap } from '@/components/ui';
+import { Radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { prettyTime } from '@/lib/dates';
 import { MOODS } from '@/lib/moods';
@@ -222,6 +223,6 @@ const styles = StyleSheet.create({
   body: { flex: 1, gap: 22, paddingTop: 20, paddingBottom: 12, minHeight: 560 },
   orbs: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: 24, marginBottom: 36 },
   how: { flexDirection: 'row', gap: 14, alignItems: 'center' },
-  howIcon: { width: 48, height: 48, borderRadius: 16, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  howIcon: { width: 48, height: 48, borderRadius: Radius.md, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   skip: { alignSelf: 'center', padding: 8 },
 });

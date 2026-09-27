@@ -3,13 +3,18 @@
  * Used to shade past days in the calendar, like a contribution heatmap.
  */
 import { dayKey } from '@/lib/dates';
-import type { FocusSession } from '@/lib/focus';
+import type { FocusDay, FocusSession } from '@/lib/focus';
 import type { Task } from '@/lib/store';
 
 export type DayWork = { tasks: number; focus: number; score: number };
 export type HeatLevel = 0 | 1 | 2 | 3 | 4;
 
-export function workByDay(tasks: Task[], sessions: FocusSession[], cleared: Record<string, number> = {}): Record<string, DayWork> {
+export function workByDay(
+  tasks: Task[],
+  sessions: FocusSession[],
+  cleared: Record<string, number> = {},
+  clearedFocus: Record<string, FocusDay> = {},
+): Record<string, DayWork> {
   const out: Record<string, DayWork> = {};
   const add = (at: number, kind: 'tasks' | 'focus') => {
     const k = dayKey(new Date(at));
@@ -23,6 +28,11 @@ export function workByDay(tasks: Task[], sessions: FocusSession[], cleared: Reco
     const d = (out[k] ??= { tasks: 0, focus: 0, score: 0 });
     d.tasks += n;
     d.score += n;
+  }
+  for (const [k, f] of Object.entries(clearedFocus)) {
+    const d = (out[k] ??= { tasks: 0, focus: 0, score: 0 });
+    d.focus += f.sessions;
+    d.score += f.sessions;
   }
   return out;
 }

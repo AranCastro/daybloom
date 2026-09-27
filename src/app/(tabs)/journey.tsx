@@ -3,10 +3,10 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { Icon } from '@/components/icons';
-import { MoodOrb } from '@/components/mood-orb';
+import { MoodDot } from '@/components/mood-orb';
 import { Text } from '@/components/text';
-import { Card, Screen, tap } from '@/components/ui';
-import { TabBarInset } from '@/constants/theme';
+import { Card, Screen, Tappable, tap } from '@/components/ui';
+import { Radius, Shadow, TabBarInset } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useToday } from '@/hooks/use-today';
 import { dayKey, shortDate, fromKey } from '@/lib/dates';
@@ -44,6 +44,7 @@ export default function Journey() {
   const checkins = useAppState((s) => s.checkins);
   const garden = useAppState((s) => s.garden);
   const bloomCount = useAppState((s) => s.bloomCount);
+  const bloomsEver = useAppState((s) => s.bloomsEver);
   const today = useToday();
   const weekStart = useAppState((s) => s.settings.weekStart);
   const todayBlooms = garden.filter((b) => dayKey(new Date(b.at)) === today);
@@ -81,7 +82,7 @@ export default function Journey() {
       </Animated.View>
 
       <Animated.View entering={FadeInDown.delay(80).duration(450)}>
-        <GardenBed blooms={garden} max={30} height={250} />
+        <GardenBed blooms={garden} max={30} height={250} onEmpty={() => router.navigate('/today')} />
       </Animated.View>
 
       <LiveWeatherPrompt />
@@ -90,7 +91,7 @@ export default function Journey() {
         <MiniStat label="Blooms" value={`${bloomCount}`} />
         <MiniStat label="Today" value={`${todayBlooms.length}`} />
         <MiniStat label="Kinds found" value={`${kinds.size}/${FLOWERS.length}`} />
-        <MiniStat label="Next golden" value={`${GOLDEN_EVERY - (bloomCount % GOLDEN_EVERY)}`} />
+        <MiniStat label="Next golden" value={`${GOLDEN_EVERY - (bloomsEver % GOLDEN_EVERY)}`} />
       </View>
 
       <GardenActions />
@@ -102,22 +103,22 @@ export default function Journey() {
           const n = todayBlooms.filter((b) => b.source === src).length;
           const total = garden.filter((b) => b.source === src).length;
           return (
-            <Pressable key={src} onPress={() => (tap(), GO[src]())} style={styles.wayRow} accessibilityRole="button" accessibilityLabel={`${info.label}. ${info.rule}`}>
+            <Tappable key={src} onPress={GO[src]} radius={Radius.sm} style={styles.wayRow} accessibilityLabel={`${info.label}. ${info.rule}`}>
               <View style={[styles.wayIcon, { backgroundColor: n ? t.accentSoft : t.surfaceAlt }]}>
                 <Icon name={n ? 'check' : info.icon} color={n ? t.accent : t.text} size={18} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text variant="bodyStrong" style={{ fontSize: 15 }}>
+                <Text variant="bodySm" strong color="text">
                   {info.label}
                 </Text>
-                <Text variant="small" style={{ fontSize: 12 }}>
+                <Text variant="caption">
                   {info.rule} · {total} so far
                 </Text>
               </View>
-              <Text variant="bodyStrong" style={{ color: n ? t.accent : t.textMuted, fontSize: 13 }}>
+              <Text variant="small" strong color={n ? 'accent' : 'textMuted'}>
                 {n ? `+${n} today` : 'Grow'}
               </Text>
-            </Pressable>
+            </Tappable>
           );
         })}
       </Card>
@@ -131,11 +132,11 @@ export default function Journey() {
               <View key={b.id} style={styles.latest}>
                 <Flower kind={f} size={34} />
                 <View style={{ flex: 1 }}>
-                  <Text variant="bodyStrong" style={{ fontSize: 14.5 }}>
+                  <Text variant="bodySm" strong color="text">
                     {f.name}
                     {f.rarity !== 'common' ? ` · ${RARITY_LABEL[f.rarity]}` : ''}
                   </Text>
-                  <Text variant="small" numberOfLines={1} style={{ fontSize: 12 }}>
+                  <Text variant="caption" numberOfLines={1}>
                     {b.note ?? SOURCES[b.source].label} · {shortDate(new Date(b.at))}
                   </Text>
                 </View>
@@ -152,7 +153,7 @@ export default function Journey() {
             kinds.has(f.id) ? (
               <View key={f.id} style={styles.collCell}>
                 <Flower kind={f} size={40} />
-                <Text variant="small" numberOfLines={1} style={{ fontSize: 10.5 }}>
+                <Text variant="micro" numberOfLines={1}>
                   {f.name}
                 </Text>
               </View>
@@ -163,7 +164,7 @@ export default function Journey() {
                     ?
                   </Text>
                 </View>
-                <Text variant="small" color="textMuted" style={{ fontSize: 10.5 }}>
+                <Text variant="micro" color="textMuted">
                   {RARITY_LABEL[f.rarity]}
                 </Text>
               </View>
@@ -177,17 +178,20 @@ export default function Journey() {
       </Text>
       <View style={styles.stats}>
         <Card style={styles.stat}>
-          <Text variant="hero">{streak}</Text>
+          <Text variant="hero" style={styles.tabular}>
+            {streak}
+          </Text>
           <Text variant="small">day check-in streak</Text>
         </Card>
         <Card style={styles.stat}>
-          <Text variant="hero">{logged.length}</Text>
+          <Text variant="hero" style={styles.tabular}>
+            {logged.length}
+          </Text>
           <Text variant="small">days noted this month</Text>
         </Card>
       </View>
 
-      <Pressable onPress={() => (tap(), router.push('/badges'))} accessibilityRole="button" accessibilityLabel="Streak and badges">
-        <Card>
+      <Card onPress={() => router.push('/badges')} accessibilityLabel="Streak and badges">
           <View style={styles.badgeHead}>
             <Text variant="label">Badges · {recent.length ? Object.keys(earned).length : 0} of {BADGES.length}</Text>
             <Icon name="arrow" color={t.textMuted} size={18} />
@@ -201,8 +205,7 @@ export default function Journey() {
           ) : (
             <Text variant="small">Your first check-in earns your first badge.</Text>
           )}
-        </Card>
-      </Pressable>
+      </Card>
 
       <Card>
         <View style={styles.monthHead}>
@@ -219,7 +222,7 @@ export default function Journey() {
         <View style={styles.grid}>
           {(weekStart === 1 ? ['M', 'T', 'W', 'T', 'F', 'S', 'S'] : ['S', 'M', 'T', 'W', 'T', 'F', 'S']).map((d, i) => (
             <View key={i} style={styles.cell}>
-              <Text variant="small" color="textMuted" style={{ fontSize: 12 }}>
+              <Text variant="caption" color="textMuted">
                 {d}
               </Text>
             </View>
@@ -231,10 +234,10 @@ export default function Journey() {
             return (
               <View key={i} style={styles.cell}>
                 {m ? (
-                  <MoodOrb mood={m} size={34} face={false} />
+                  <MoodDot mood={m} size={34} />
                 ) : (
                   <View style={[styles.blank, k === today && { borderColor: t.text, borderWidth: 1.5 }]}>
-                    <Text variant="small" color={k > today ? 'line' : 'textMuted'} style={{ fontSize: 12 }}>
+                    <Text variant="caption" color={k > today ? 'line' : 'textMuted'} style={styles.tabular}>
                       {d.getDate()}
                     </Text>
                   </View>
@@ -282,12 +285,12 @@ export default function Journey() {
           <View style={{ gap: 8 }}>
             {top.map(({ tag, count }) => (
               <View key={tag.id} style={styles.feelRow}>
-                <Text style={{ fontSize: 20 }}>{tag.emoji}</Text>
+                <Text variant="heading">{tag.emoji}</Text>
                 <Text variant="bodyStrong" style={{ width: 104 }}>
                   {tag.label}
                 </Text>
                 <View style={[styles.feelTrack, { backgroundColor: t.surfaceAlt }]}>
-                  <View style={{ width: `${Math.round((count / top[0].count) * 100)}%`, height: '100%', borderRadius: 6, backgroundColor: tag.tone === 'light' ? '#E0A23A' : '#7E8FD0' }} />
+                  <View style={{ width: `${Math.round((count / top[0].count) * 100)}%`, height: '100%', borderRadius: 6, backgroundColor: tag.tone === 'light' ? t.tagWarm : t.tagCool }} />
                 </View>
                 <Text variant="small" style={{ width: 44, textAlign: 'right' }}>
                   {count} {count === 1 ? 'day' : 'days'}
@@ -305,10 +308,8 @@ function MiniStat({ label, value }: { label: string; value: string }) {
   const t = useTheme();
   return (
     <View style={[styles.miniStat, { backgroundColor: t.surface, borderColor: t.line }]}>
-      <Text variant="bodyStrong" style={{ fontSize: 18 }}>
-        {value}
-      </Text>
-      <Text variant="small" numberOfLines={1} style={{ fontSize: 11 }}>
+      <Text variant="numeral">{value}</Text>
+      <Text variant="micro" numberOfLines={1}>
         {label}
       </Text>
     </View>
@@ -318,10 +319,11 @@ function MiniStat({ label, value }: { label: string; value: string }) {
 const styles = StyleSheet.create({
   feelRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   feelTrack: { flex: 1, height: 12, borderRadius: 6, overflow: 'hidden' },
+  tabular: { fontVariant: ['tabular-nums'] },
   gardenStats: { flexDirection: 'row', gap: 8 },
-  miniStat: { flex: 1, borderRadius: 18, borderWidth: 1, paddingVertical: 10, alignItems: 'center' },
+  miniStat: { flex: 1, borderRadius: Radius.md, borderWidth: 1, paddingVertical: 10, alignItems: 'center', ...Shadow.sm },
   wayRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 7 },
-  wayIcon: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  wayIcon: { width: 38, height: 38, borderRadius: Radius.sm, alignItems: 'center', justifyContent: 'center' },
   latest: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 4 },
   collection: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 10 },
   collCell: { width: '25%', alignItems: 'center', gap: 2 },

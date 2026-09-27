@@ -2,8 +2,8 @@
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, Platform, Pressable, StyleSheet, View } from 'react-native';
-import Animated, { FadeIn, FadeOut, useAnimatedStyle, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
+import { Alert, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { haptic } from '@/components/games/fx';
@@ -12,7 +12,7 @@ import { Text } from '@/components/text';
 import { Backdrop, tap } from '@/components/ui';
 import { Fonts } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { disableLock, PIN_LENGTH, unlockWithBiometric, unlockWithPin, useLock, waitSeconds } from '@/lib/app-lock';
+import { disableLock, PIN_LENGTH, unlockWithBiometric, unlockWithPin, useLock, waitLabel } from '@/lib/app-lock';
 import { resetAll } from '@/lib/store';
 
 /** A PIN pad. `onDone` gets each full PIN; return false to shake and clear. */
@@ -96,7 +96,10 @@ export function PinPad({
   );
 }
 
-/** Covers the app while it is locked. */
+/**
+ * Covers the app while it is locked. A Modal of its own, so it also covers any sheet or dialog
+ * (themselves Modals) that was open when the app locked.
+ */
 export function LockGate() {
   const lock = useLock();
   const insets = useSafeAreaInsets();
@@ -129,34 +132,36 @@ export function LockGate() {
   }
 
   return (
-    <Animated.View entering={FadeIn.duration(150)} exiting={FadeOut.duration(200)} style={[StyleSheet.absoluteFill, styles.gate, { paddingTop: insets.top + 36, paddingBottom: insets.bottom + 20 }]}>
-      <Backdrop />
-      <Image source={require('../../assets/images/icon.png')} style={styles.logo} />
-      <PinPad
-        title="Daybloom is locked"
-        subtitle={message ?? 'Enter your PIN'}
-        biometric={lock.biometric}
-        onBiometric={() => void unlockWithBiometric()}
-        onDone={async (pin) => {
-          const r = await unlockWithPin(pin);
-          if (r === 'ok') return true;
-          setMessage(r === 'wait' ? `Too many tries. Wait ${waitSeconds()} seconds.` : 'That PIN is not right. Try again.');
-          return false;
-        }}
-        footer={
-          <Pressable onPress={forgot} hitSlop={10} accessibilityRole="button">
-            <Text variant="small" style={{ color: t.accentText, fontFamily: Fonts.bodyStrong }}>
-              Forgot PIN?
-            </Text>
-          </Pressable>
-        }
-      />
-    </Animated.View>
+    <Modal visible animationType="fade" statusBarTranslucent navigationBarTranslucent onRequestClose={() => undefined}>
+      <View style={[styles.gate, { paddingTop: insets.top + 36, paddingBottom: insets.bottom + 20 }]}>
+        <Backdrop />
+        <Image source={require('../../assets/images/icon.png')} style={styles.logo} />
+        <PinPad
+          title="Daybloom is locked"
+          subtitle={message ?? 'Enter your PIN'}
+          biometric={lock.biometric}
+          onBiometric={() => void unlockWithBiometric()}
+          onDone={async (pin) => {
+            const r = await unlockWithPin(pin);
+            if (r === 'ok') return true;
+            setMessage(r === 'wait' ? `Too many tries. Wait ${waitLabel()}.` : 'That PIN is not right. Try again.');
+            return false;
+          }}
+          footer={
+            <Pressable onPress={forgot} hitSlop={10} accessibilityRole="button">
+              <Text variant="small" style={{ color: t.accentText, fontFamily: Fonts.bodyStrong }}>
+                Forgot PIN?
+              </Text>
+            </Pressable>
+          }
+        />
+      </View>
+    </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  gate: { zIndex: 1000, elevation: 1000, alignItems: 'center', gap: 18 },
+  gate: { flex: 1, alignItems: 'center', gap: 18 },
   logo: { width: 72, height: 72, borderRadius: 20 },
   dots: { flexDirection: 'row', gap: 18 },
   dot: { width: 16, height: 16, borderRadius: 8, borderWidth: 1.5 },

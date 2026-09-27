@@ -25,12 +25,14 @@ const FILES: Record<SoundId, number> = {
 let player: AudioPlayer | null = null;
 let playing: SoundId | null = null;
 let previewTimer: ReturnType<typeof setTimeout> | undefined;
-let modeSet = false;
+let modeSet: Promise<void> | null = null;
 
+/** Sets the background audio mode once; a failure is forgotten so the next sound tries again. */
 async function ensureMode() {
-  if (modeSet) return;
-  modeSet = true;
-  await setAudioModeAsync({ playsInSilentMode: true, shouldPlayInBackground: true, interruptionMode: 'doNotMix' }).catch(() => undefined);
+  modeSet ??= setAudioModeAsync({ playsInSilentMode: true, shouldPlayInBackground: true, interruptionMode: 'doNotMix' }).catch(() => {
+    modeSet = null;
+  });
+  await modeSet;
 }
 
 /** Starts (or switches to) a sound on a loop. `session` shows the media notification for background play. */

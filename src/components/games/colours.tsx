@@ -12,7 +12,7 @@ import { Confetti, Countdown, haptic, ResultPanel, TimeBar } from '@/components/
 import { GameShell, StatPill } from '@/components/games/shell';
 import { Text } from '@/components/text';
 import { Button } from '@/components/ui';
-import { Fonts } from '@/constants/theme';
+import { Fonts, Radius } from '@/constants/theme';
 import { useIsDark, useTheme } from '@/hooks/use-theme';
 import { gameOf } from '@/lib/games';
 import { recordGame, useAppState } from '@/lib/store';
@@ -200,7 +200,7 @@ export function ColoursGame() {
               <Text variant="small">{left}s</Text>
               {mult > 1 ? (
                 <Animated.View key={mult} entering={ZoomIn.springify()} style={[styles.mult, { backgroundColor: color }]}>
-                  <Text variant="bodyStrong" style={{ color: '#fff', fontSize: 12.5 }}>
+                  <Text variant="caption" strong style={{ color: '#fff' }}>
                     ×{mult} · streak {streak}
                   </Text>
                 </Animated.View>
@@ -256,7 +256,7 @@ function ColourKey({ name, swatch, onDown }: { name: string; swatch: string; onD
       style={styles.keyWrap}>
       <Animated.View pointerEvents="none" style={[styles.key, { backgroundColor: t.surface, borderColor: t.line }, style]}>
         <View style={[styles.swatch, { backgroundColor: swatch }]} />
-        <Text variant="bodyStrong" style={{ fontSize: 17 }}>
+        <Text variant="bodyStrong">
           {name}
         </Text>
       </Animated.View>
@@ -279,15 +279,15 @@ function Rule({ text }: { text: string }) {
 const styles = StyleSheet.create({
   centerFill: { flex: 1, justifyContent: 'center' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
-  wordCard: { minWidth: 250, paddingHorizontal: 28, paddingVertical: 24, borderRadius: 28, borderWidth: 2, alignItems: 'center' },
+  wordCard: { minWidth: 250, paddingHorizontal: 28, paddingVertical: 24, borderRadius: Radius.lg, borderWidth: 2, alignItems: 'center' },
   word: { fontFamily: Fonts.display, fontSize: 60, lineHeight: 70, letterSpacing: 1 },
   rules: { alignSelf: 'stretch', gap: 6, marginTop: 6 },
   rule: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   ruleDot: { width: 5, height: 5, borderRadius: 3 },
   hud: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', minHeight: 26 },
-  mult: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 999 },
+  mult: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: Radius.pill },
   pad: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   keyWrap: { width: '48%', flexGrow: 1 },
-  key: { height: 72, borderRadius: 22, borderWidth: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
+  key: { height: 72, borderRadius: Radius.md, borderWidth: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
   swatch: { width: 24, height: 24, borderRadius: 12 },
 });

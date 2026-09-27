@@ -4,8 +4,8 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { Icon } from '@/components/icons';
 import { Text } from '@/components/text';
-import { Button, Card, Screen, tap } from '@/components/ui';
-import { Fonts, TabBarInset } from '@/constants/theme';
+import { Button, Card, Screen, Tappable, tap } from '@/components/ui';
+import { Fonts, Radius, Shadow, TabBarInset } from '@/constants/theme';
 import { useIsDark, useTheme } from '@/hooks/use-theme';
 import { useToday } from '@/hooks/use-today';
 import { GameId, GameInfo, gameForMood, GAMES } from '@/lib/games';
@@ -13,7 +13,6 @@ import { moodOf } from '@/lib/moods';
 import { useAppState } from '@/lib/store';
 
 export default function Play() {
-  const t = useTheme();
   const todayKey = useToday();
   const mood = useAppState((s) => s.checkins[todayKey]);
   const pick = gameForMood(mood);
@@ -52,7 +51,7 @@ export default function Play() {
           </Animated.View>
         ))}
       </View>
-      <Text variant="small" color="textMuted" center style={{ marginTop: 4, color: t.textMuted }}>
+      <Text variant="small" color="textMuted" center style={{ marginTop: 4 }}>
         Short, calm games. No ads, no timers you did not choose.
       </Text>
     </Screen>
@@ -90,30 +89,27 @@ function GameCard({ game, highlighted }: { game: GameInfo; highlighted: boolean 
   const { color, soft } = useGameColors(game);
   const record = useAppState((s) => game.record(s.games.best, s.games.plays));
   return (
-    <Pressable
-      accessibilityRole="button"
+    <Tappable
       accessibilityLabel={`${game.title}. ${game.tagline}`}
-      onPress={() => (tap(), router.push({ pathname: '/game/[id]', params: { id: game.id } }))}
-      style={({ pressed }) => [
-        styles.card,
-        { backgroundColor: t.surface, borderColor: highlighted ? color : t.line, transform: [{ scale: pressed ? 0.97 : 1 }] },
-      ]}>
+      onPress={() => router.push({ pathname: '/game/[id]', params: { id: game.id } })}
+      containerStyle={[Shadow.sm, { backgroundColor: t.surface }]}
+      style={[styles.card, { backgroundColor: t.surface, borderColor: highlighted ? color : t.line }]}>
       <View style={[styles.art, { backgroundColor: soft }]}>
         <GameArt id={game.id} size={64} />
       </View>
-      <Text variant="heading" style={{ fontSize: 17 }}>
+      <Text variant="headingSm">
         {game.title}
       </Text>
-      <Text variant="small" numberOfLines={2} style={{ fontSize: 12.5, lineHeight: 17 }}>
+      <Text variant="caption" numberOfLines={2}>
         {game.tagline}
       </Text>
       <View style={styles.meta}>
         <Icon name={record ? 'star' : 'clock'} color={color} fill={record ? color : 'none'} size={14} />
-        <Text variant="small" style={{ color, fontSize: 12, fontFamily: Fonts.bodyStrong }}>
+        <Text variant="caption" strong style={{ color }}>
           {record ?? game.minutes}
         </Text>
       </View>
-    </Pressable>
+    </Tappable>
   );
 }
 
@@ -204,12 +200,13 @@ function GameArt({ id, size }: { id: GameId; size: number }) {
 }
 
 const styles = StyleSheet.create({
-  pick: { borderRadius: 28, padding: 22, gap: 12 },
+  pick: { borderRadius: Radius.lg, padding: 22, gap: 12 },
   pickTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   gridItem: { width: '47.5%', flexGrow: 1 },
-  card: { borderRadius: 24, borderWidth: 1.5, padding: 14, gap: 4 },
-  art: { height: 96, borderRadius: 18, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
+  card: { borderRadius: Radius.lg, borderWidth: 1.5, padding: 14, gap: 4 },
+  // Concentric with the card: 26 − 14 padding = 12.
+  art: { height: 96, borderRadius: Radius.sm, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
   meta: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 6 },
   centerBox: { alignItems: 'center', justifyContent: 'center' },
   tiles: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignContent: 'space-between' },
