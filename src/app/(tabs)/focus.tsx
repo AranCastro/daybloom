@@ -90,6 +90,8 @@ export default function FocusScreen() {
   const sessions = useAppState((s) => s.focus.sessions);
   const garden = useAppState((s) => s.garden);
   const gardenSize = useAppState((s) => s.bloomCount);
+  // The Golden Lotus follows every flower ever grown, so unticking cannot move it.
+  const bloomsEver = useAppState((s) => s.bloomsEver);
   const tasks = useAppState((s) => s.tasks);
   const todayKey = useToday();
   const lowMood = useAppState((s) => isLow(s.checkins[todayKey]));
@@ -213,6 +215,7 @@ export default function FocusScreen() {
           reward={reward}
           todayCount={today.length}
           total={gardenSize}
+          ever={bloomsEver}
           taskTitle={rewardTask && !rewardTask.done ? rewardTask.title : undefined}
           onTaskDone={() => reward.session.taskId && toggleTask(reward.session.taskId)}
           restMinutes={PRESETS[preset].rest}
@@ -361,6 +364,7 @@ function RewardView({
   reward,
   todayCount,
   total,
+  ever,
   taskTitle,
   onTaskDone,
   restMinutes,
@@ -370,6 +374,7 @@ function RewardView({
   reward: { flower: FlowerKind; session: FocusSession };
   todayCount: number;
   total: number;
+  ever: number;
   taskTitle?: string;
   onTaskDone: () => void;
   restMinutes: number;
@@ -406,7 +411,7 @@ function RewardView({
         <View style={[styles.statsRow, { borderColor: t.line }]}>
           <Stat label="Today" value={`${todayCount}`} />
           <Stat label="Garden" value={`${total}`} />
-          <Stat label="Next golden" value={`${GOLDEN_EVERY - (total % GOLDEN_EVERY)}`} />
+          <Stat label="Next golden" value={`${GOLDEN_EVERY - (ever % GOLDEN_EVERY)}`} />
         </View>
         {taskTitle && !taskMarked && (
           <Button

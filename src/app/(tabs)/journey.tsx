@@ -44,6 +44,7 @@ export default function Journey() {
   const checkins = useAppState((s) => s.checkins);
   const garden = useAppState((s) => s.garden);
   const bloomCount = useAppState((s) => s.bloomCount);
+  const bloomsEver = useAppState((s) => s.bloomsEver);
   const today = useToday();
   const weekStart = useAppState((s) => s.settings.weekStart);
   const todayBlooms = garden.filter((b) => dayKey(new Date(b.at)) === today);
@@ -90,7 +91,7 @@ export default function Journey() {
         <MiniStat label="Blooms" value={`${bloomCount}`} />
         <MiniStat label="Today" value={`${todayBlooms.length}`} />
         <MiniStat label="Kinds found" value={`${kinds.size}/${FLOWERS.length}`} />
-        <MiniStat label="Next golden" value={`${GOLDEN_EVERY - (bloomCount % GOLDEN_EVERY)}`} />
+        <MiniStat label="Next golden" value={`${GOLDEN_EVERY - (bloomsEver % GOLDEN_EVERY)}`} />
       </View>
 
       <GardenActions />
