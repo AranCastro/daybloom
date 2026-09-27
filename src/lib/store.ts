@@ -133,7 +133,8 @@ export type AppState = {
   /** Home-screen task widgets that are locked: taps open the app instead of ticking tasks off. */
   widgetLocks: Partial<Record<TaskWidget, boolean>>;
   /** The last task ticked off from a widget, so the widget can offer Undo for a few minutes. */
-  widgetUndo: { taskId: string; widget: TaskWidget; at: number } | null;
+  /** `stepId` when the widget tap ticked a step of a big task rather than the whole task. */
+  widgetUndo: { taskId: string; stepId?: string; widget: TaskWidget; at: number } | null;
   /** App-wide preferences from Settings. */
   settings: Settings;
   /** When backups were last made (kept on this phone; not replaced by a restore). */
@@ -601,30 +602,57 @@ export function logProgress(taskId: string): boolean {
 
 /**
  * A tap on a task in a home-screen widget. `done` only finishes (Focus today); `toggle` also
- * un-finishes (Matrix). Does nothing while the widget is locked. Returns true when the task changed.
+ * un-finishes (Matrix). A task with open steps is not finished in one tap: the tap ticks its next
+ * step (counting as progress today), and the last step finishes the task. Does nothing while the
+ * widget is locked. Returns what changed, or null.
  */
-export function widgetTickTask(widget: TaskWidget, id: string, mode: 'done' | 'toggle'): boolean {
-  if (state.widgetLocks[widget]) return false;
+export function widgetTickTask(widget: TaskWidget, id: string, mode: 'done' | 'toggle'): 'step' | 'task' | null {
+  if (state.widgetLocks[widget]) return null;
   const task = state.tasks.find((t) => t.id === id);
-  if (!task || (mode === 'done' && task.done)) return false;
+  if (!task || (mode === 'done' && task.done)) return null;
+  const open = task.done ? [] : (task.steps ?? []).filter((x) => !x.done);
+  if (open.length > 0) {
+    const step = open[0];
+    toggleStep(id, step.id);
+    if (open.length === 1) toggleTask(id);
+    update({ widgetUndo: { taskId: id, stepId: step.id, widget, at: Date.now() } });
+    return open.length === 1 ? 'task' : 'step';
+  }
   toggleTask(id);
   update({ widgetUndo: task.done ? null : { taskId: id, widget, at: Date.now() } });
-  return true;
+  return 'task';
 }
 
-/** The task a widget can still undo, if it was ticked off there in the last few minutes and is still done. */
-export function widgetUndoFor(s: Pick<AppState, 'widgetUndo' | 'tasks'>, widget: TaskWidget, now = Date.now()): Task | null {
+/**
+ * What a widget can still undo, if it was ticked there in the last few minutes and is still ticked:
+ * the task, and the step when the tap ticked a step.
+ */
+export function widgetUndoFor(
+  s: Pick<AppState, 'widgetUndo' | 'tasks'>,
+  widget: TaskWidget,
+  now = Date.now(),
+): (Task & { undoStep?: TaskStep }) | null {
   const u = s.widgetUndo;
   if (!u || u.widget !== widget || now - u.at > WIDGET_UNDO_MS) return null;
-  return s.tasks.find((t) => t.id === u.taskId && t.done) ?? null;
+  const task = s.tasks.find((t) => t.id === u.taskId);
+  if (!task) return null;
+  if (u.stepId) {
+    const step = task.steps?.find((x) => x.id === u.stepId && x.done);
+    return step ? { ...task, undoStep: step } : null;
+  }
+  return task.done ? task : null;
 }
 
-/** Undo on a widget: puts the last ticked-off task back (and takes its flower back). */
+/**
+ * Undo on a widget: puts back the last ticked task (and takes its flowers back), or unticks the
+ * step it ticked. A day's progress flower stays, as in the app.
+ */
 export function widgetUndo(widget: TaskWidget): boolean {
-  const task = widgetUndoFor(state, widget);
+  const hit = widgetUndoFor(state, widget);
   update({ widgetUndo: null });
-  if (!task) return false;
-  toggleTask(task.id);
+  if (!hit) return false;
+  if (hit.done) toggleTask(hit.id);
+  if (hit.undoStep) toggleStep(hit.id, hit.undoStep.id);
   return true;
 }
 

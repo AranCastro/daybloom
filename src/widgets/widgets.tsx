@@ -344,8 +344,9 @@ export function StreakWidget({ s, p, height }: WidgetProps) {
 
 export function TasksWidget({ s, p, height, flash }: WidgetProps) {
   if (!s.onboarded) return <Welcome p={p} />;
-  const rows = Math.max(1, Math.floor((height - 84) / 30));
-  const items = s.tasks.items.slice(0, rows);
+  // Rows with a next step are taller (two lines), so fit them by height rather than count.
+  const used = s.tasks.items.map((t, i, all) => all.slice(0, i + 1).reduce((n, x) => n + (x.next ? 40 : 30), 0));
+  const items = s.tasks.items.filter((_, i) => i === 0 || used[i] <= height - 84);
   const more = s.tasks.more + (s.tasks.items.length - items.length);
   const locked = s.locks.Tasks;
   const sub = flash ?? (locked ? 'Locked' : s.tasks.doneToday ? `${s.tasks.doneToday} done today` : s.low && items.length ? 'One thing is enough' : '');
@@ -373,8 +374,10 @@ export function TasksWidget({ s, p, height, flash }: WidgetProps) {
           // The whole row is the tap target: tapping a task finishes it (or, locked, opens the matrix).
           <FlexWidget
             key={t.id}
-            {...(locked ? open(LINK.matrix) : { clickAction: 'TASK_DONE', clickActionData: { id: t.id }, accessibilityLabel: `Mark done: ${t.title}` })}
-            style={{ flexDirection: 'row', alignItems: 'center', width: 'match_parent', height: 32 }}
+            {...(locked
+              ? open(LINK.matrix)
+              : { clickAction: 'TASK_DONE', clickActionData: { id: t.id }, accessibilityLabel: t.next ? `Tick step: ${t.next}` : `Mark done: ${t.title}` })}
+            style={{ flexDirection: 'row', alignItems: 'center', width: 'match_parent', height: t.next ? 42 : 32 }}
           >
             <FlexWidget style={{ height: 18, width: 3, borderRadius: 2, backgroundColor: QUADRANTS[t.quadrant - 1].color[p.mode] as `#${string}`, marginRight: 7 }} />
             <FlexWidget style={{ paddingRight: 10, paddingVertical: 4 }}>
@@ -383,6 +386,7 @@ export function TasksWidget({ s, p, height, flash }: WidgetProps) {
             {t.effort && <TextWidget text={t.effort} style={{ fontSize: 13, marginRight: 5 }} />}
             <FlexWidget style={{ flex: 1 }}>
               <TextWidget text={t.title} style={{ fontSize: 14, fontFamily: BODY, color: p.ink }} maxLines={1} truncate="END" />
+              {!!t.next && <TextWidget text={`Next: ${t.next}`} style={{ fontSize: 11, fontFamily: BODY, color: p.dim }} maxLines={1} truncate="END" />}
             </FlexWidget>
             {t.steps && <TextWidget text={t.steps} style={{ fontSize: 11, fontFamily: BOLD, color: p.dim, marginLeft: 6 }} />}
             {t.due && <TextWidget text={t.due.text} style={{ fontSize: 11, fontFamily: BOLD, color: t.due.late ? p.accent : p.dim, marginLeft: 8 }} />}
@@ -683,7 +687,11 @@ export function MatrixWidget({ s, p, width, height, scale = 1, checkbox = true }
                 <FlexWidget
                   key={t.id}
                   {...(ticks
-                    ? { clickAction: 'TASK_TOGGLE', clickActionData: { id: t.id }, accessibilityLabel: `${t.done ? 'Mark not done' : 'Mark done'}: ${t.title}` }
+                    ? {
+                        clickAction: 'TASK_TOGGLE',
+                        clickActionData: { id: t.id },
+                        accessibilityLabel: t.next ? `Tick step: ${t.next}` : `${t.done ? 'Mark not done' : 'Mark done'}: ${t.title}`,
+                      }
                     : open(uri))}
                   style={{ flexDirection: 'row', alignItems: 'center', height: lineH, width: 'match_parent' }}
                 >
