@@ -1,4 +1,4 @@
-import Constants from 'expo-constants';
+import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Linking, Platform, Pressable, Switch, View } from 'react-native';
@@ -17,6 +17,7 @@ import { prettyTime } from '@/lib/dates';
 import { cancelFocusAlarm, cancelReminders, scheduleDailyReminder } from '@/lib/reminders';
 import { helpline } from '@/lib/region';
 import { disableLock } from '@/lib/app-lock';
+import app from '../../app.json';
 import { AppState, resetAll, setLabel, setSettings, update, useAppState } from '@/lib/store';
 
 const TIMES = [
@@ -244,10 +245,30 @@ export default function Settings() {
 
       <Credits />
 
-      <Text variant="small" color="textMuted" center style={{ marginTop: 4 }}>
-        Daybloom {Constants.expoConfig?.version ?? ''}{'\n'}Not a medical service. In an emergency, call {help.emergency}.
-      </Text>
+      <AboutFooter />
     </Screen>
+  );
+}
+
+/** The app's name, version and where it was made, at the foot of Settings. */
+function AboutFooter() {
+  const t = useTheme();
+  return (
+    <View style={{ alignItems: 'center', gap: 6, paddingVertical: 18 }}>
+      <Image source={require('../../assets/images/icon.png')} style={{ width: 56, height: 56, borderRadius: 16 }} accessibilityIgnoresInvertColors />
+      <Text variant="heading">Daybloom</Text>
+      <View style={{ paddingHorizontal: 10, paddingVertical: 3, borderRadius: 999, backgroundColor: t.surfaceAlt }}>
+        <Text variant="small" style={{ fontSize: 12 }}>
+          Version {app.expo.version}
+        </Text>
+      </View>
+      <Text variant="quote" color="textSecondary" center style={{ fontSize: 16 }}>
+        Grow a little every day.
+      </Text>
+      <Text variant="small" color="textMuted" center style={{ fontSize: 12 }}>
+        Made with care in Kochi, India · © {new Date().getFullYear()} Dr Aran Castro
+      </Text>
+    </View>
   );
 }
 
