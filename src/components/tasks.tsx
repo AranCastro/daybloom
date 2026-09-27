@@ -111,7 +111,16 @@ export function TaskRow({ task, today, onOpen, compact }: { task: Task; today: s
           style={[{ fontSize: compact ? 14.5 : 16, lineHeight: compact ? 19 : 22 }, task.done && styles.struck]}>
           {task.title}
         </Text>
-        {!task.done && <DueBadge due={task.due} today={today} />}
+        {!task.done && (task.due || task.easy) && (
+          <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+            <DueBadge due={task.due} today={today} />
+            {task.easy && (
+              <Text variant="small" style={{ fontSize: 12 }}>
+                🪶 Easy
+              </Text>
+            )}
+          </View>
+        )}
       </Pressable>
     </Animated.View>
   );
@@ -155,6 +164,7 @@ function SheetBody({ onClose, task, defaultQuadrant = 1, defaultDue }: SheetProp
   const [q, setQ] = useState<Quadrant>(task?.quadrant ?? defaultQuadrant);
   const [due, setDue] = useState<string | undefined>(task ? task.due : defaultDue);
   const [picking, setPicking] = useState(false);
+  const [easy, setEasy] = useState(!!task?.easy);
   const presets = DUE_CHOICES.map((c) => (c.days === null ? undefined : dayKey(addDays(fromKey(today), c.days))));
   const custom = !!due && !presets.includes(due);
   // Position of this task among the open tasks of its quadrant (for Move up / Move down).
@@ -165,8 +175,8 @@ function SheetBody({ onClose, task, defaultQuadrant = 1, defaultDue }: SheetProp
   function save() {
     const clean = title.trim();
     if (!clean) return;
-    if (task) editTask(task.id, { title: clean, quadrant: q, due });
-    else addTask(clean, q, due);
+    if (task) editTask(task.id, { title: clean, quadrant: q, due, easy });
+    else addTask(clean, q, due, easy);
     if (hapticsOn()) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     onClose();
   }
@@ -239,6 +249,23 @@ function SheetBody({ onClose, task, defaultQuadrant = 1, defaultDue }: SheetProp
             {due && !picking && <Text variant="small">{prettyDate(fromKey(due))}</Text>}
           </View>
 
+          <Pressable
+            onPress={() => (tap(), setEasy(!easy))}
+            accessibilityRole="switch"
+            accessibilityState={{ checked: easy }}
+            style={[styles.easy, { borderColor: easy ? '#3A9477' : t.line, backgroundColor: easy ? '#3A947718' : 'transparent' }]}>
+            <Text style={{ fontSize: 18 }}>🪶</Text>
+            <View style={{ flex: 1 }}>
+              <Text variant="bodyStrong">Quick and easy</Text>
+              <Text variant="small" style={{ fontSize: 12 }}>
+                On a low-energy day, the matrix shows only these.
+              </Text>
+            </View>
+            <View style={[styles.easyDot, { borderColor: easy ? '#3A9477' : t.line, backgroundColor: easy ? '#3A9477' : 'transparent' }]}>
+              {easy && <Icon name="check" color="#fff" size={14} strokeWidth={2.6} />}
+            </View>
+          </Pressable>
+
           <Button title={task ? 'Save changes' : 'Add task'} icon={task ? 'check' : 'plus'} onPress={save} disabled={!title.trim()} />
           {index >= 0 && list.length > 1 && (
             <View style={{ flexDirection: 'row', gap: 10 }}>
@@ -303,6 +330,8 @@ function QuadrantOption({ q, selected, onPress }: { q: Quadrant; selected: boole
 }
 
 const styles = StyleSheet.create({
+  easy: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, borderRadius: 16, borderWidth: 1.5 },
+  easyDot: { width: 24, height: 24, borderRadius: 12, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
   chip: { alignItems: 'center', justifyContent: 'center' },
   box: { borderWidth: 2, borderRadius: 7, alignItems: 'center', justifyContent: 'center' },
   row: { flexDirection: 'row', gap: 12, alignItems: 'flex-start', paddingVertical: 7 },

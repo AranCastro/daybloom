@@ -1,5 +1,5 @@
 /**
- * Draws a pookalam (floral carpet) from a Thottam design: a flower at the centre, rings of
+ * Draws a Poo Kolam (floral carpet) from a Thottam design: a flower at the centre, rings of
  * petals outwards, and a festival border: Onam petals and leaves, Diwali diyas, or a Pongal kolam.
  */
 import Svg, { Circle, Ellipse, G, Path, Rect } from 'react-native-svg';

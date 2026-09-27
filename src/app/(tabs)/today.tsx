@@ -8,6 +8,7 @@ import { NudgeReadyCard, useBuddy } from '@/components/buddy';
 import { Icon } from '@/components/icons';
 import { MoodTagPicker } from '@/components/mood-tags';
 import { PlacePicker } from '@/components/place-picker';
+import { EnergyCard } from '@/components/energy';
 import { useScene } from '@/components/garden-sky';
 import { checkInLine } from '@/lib/weather';
 import { festivalNear } from '@/lib/thottam';
@@ -169,6 +170,8 @@ export default function Today() {
 
       {isLow(checkins[today]) && !editing && <ReachOutCard />}
 
+      <EnergyCard day={today} hour={hour} />
+
       <FocusCard lowDay={isLow(checkins[today]) && !editing} today={today} />
 
       <FocusTimerCard today={today} />
@@ -203,12 +206,12 @@ export default function Today() {
   );
 }
 
-/** In the Onam, Diwali or Pongal season: an invitation to make a pookalam in Thottam. */
+/** In the Onam, Diwali or Pongal season: an invitation to make a Poo Kolam in Thottam. */
 function FestivalCard({ today: day }: { today: string }) {
   const t = useTheme();
   const festival = festivalNear(fromKey(day));
   if (!festival) return null;
-  const line = festival === 'onam' ? 'Onam is near. Make a pookalam from your flowers.' : festival === 'diwali' ? 'Diwali is near. Make a pookalam with diyas.' : 'Pongal is near. Make a pookalam with a kolam.';
+  const line = festival === 'onam' ? 'Onam is near. Make a Poo Kolam from your flowers.' : festival === 'diwali' ? 'Diwali is near. Make a Poo Kolam with diyas.' : 'Pongal is near. Make a Poo Kolam with a kolam.';
   return (
     <Pressable onPress={() => (tap(), router.push('/thottam'))} accessibilityRole="button" style={[styles.festival, { backgroundColor: t.accentSoft }]}>
       <PookalamArt design={{ center: 'marigold', rings: [{ flower: 'jasmine', pattern: 'petals' }, { flower: 'marigold', pattern: 'solid' }], festival }} size={48} />

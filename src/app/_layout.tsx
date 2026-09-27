@@ -11,7 +11,10 @@ import { ReducedMotionConfig, ReduceMotion } from 'react-native-reanimated';
 import { BloomToast } from '@/components/garden';
 import { LockGate } from '@/components/lock-screen';
 import { useIsDark, useTheme } from '@/hooks/use-theme';
+import * as Notifications from 'expo-notifications';
+
 import { startLockWatch } from '@/lib/app-lock';
+import { handleCheckinAction } from '@/lib/notification-checkin';
 import { weeklyBackupIfDue } from '@/lib/backup';
 import { startFocusSoundSync } from '@/lib/focus-sound';
 import { refreshWeather } from '@/lib/weather';
@@ -61,6 +64,15 @@ export default function RootLayout() {
   // Focus sounds follow the focus timer; the app lock watches for returns from the background.
   useEffect(() => startFocusSoundSync(getState, subscribe), []);
   useEffect(() => startLockWatch(), []);
+
+  // A mood button on the reminder pressed while the app is open.
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    const sub = Notifications.addNotificationResponseReceivedListener((r) => {
+      void handleCheckinAction(r.actionIdentifier, r.notification.request.identifier);
+    });
+    return () => sub.remove();
+  }, []);
 
   if (!loaded && !error) return null;
 

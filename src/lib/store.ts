@@ -41,7 +41,12 @@ export type Task = {
   createdAt: number;
   /** Position set by hand (Arrange); tasks without one follow, in the automatic order. */
   order?: number;
+  /** Quick and easy: the only tasks the matrix shows on a low-energy day. */
+  easy?: boolean;
 };
+
+/** Morning energy: 1 low, 2 medium, 3 high. */
+export type EnergyLevel = 1 | 2 | 3;
 
 /** Circle quadrant: 1 call anytime, 2 quick call, 3 message first, 4 light chat. */
 export type CircleQuadrant = 1 | 2 | 3 | 4;
@@ -89,8 +94,10 @@ export type AppState = {
   places: Place[];
   /** YYYY-MM-DD -> id of the place where that day's check-in was made. */
   checkinPlace: Record<string, string>;
-  /** Thottam: pookalam designs made from the flowers grown. */
+  /** Thottam: poo kolam designs made from the flowers grown. */
   pookalams: Pookalam[];
+  /** YYYY-MM-DD -> energy that morning. */
+  energy: Record<string, EnergyLevel>;
   nudges: NudgeLog[];
   /** False after a nudge fires; re-armed by a later day that is Okay or better. */
   armed: boolean;
@@ -203,6 +210,7 @@ const initial: AppState = {
   places: [],
   checkinPlace: {},
   pookalams: [],
+  energy: {},
   nudges: [],
   armed: true,
   tasks: [],
@@ -233,6 +241,7 @@ function mergeSaved(saved: Partial<AppState>): AppState {
   merged.places = [...(saved.places ?? [])];
   merged.checkinPlace = { ...saved.checkinPlace };
   merged.pookalams = [...(saved.pookalams ?? [])];
+  merged.energy = { ...saved.energy };
   merged.settings = { ...DEFAULT_SETTINGS, ...saved.settings };
   merged.backup = { ...initial.backup, ...saved.backup };
   // Nested objects are merged too, so fields added in later versions get their defaults.
@@ -330,6 +339,16 @@ export function toggleMoodTag(day: string, tag: string, max = 5) {
     if (next.length) moodTags[day] = next;
     else delete moodTags[day];
     return { moodTags };
+  });
+}
+
+/** Records the morning's energy (tap the same level again to clear it). */
+export function setEnergy(day: string, level: EnergyLevel | null) {
+  update((s) => {
+    const energy = { ...s.energy };
+    if (level && energy[day] !== level) energy[day] = level;
+    else delete energy[day];
+    return { energy };
   });
 }
 
@@ -497,12 +516,12 @@ function newId(): string {
   return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
 }
 
-export function addTask(title: string, quadrant: Quadrant, due?: string) {
-  const task: Task = { id: newId(), title: title.trim(), quadrant, due, done: false, createdAt: Date.now() };
+export function addTask(title: string, quadrant: Quadrant, due?: string, easy?: boolean) {
+  const task: Task = { id: newId(), title: title.trim(), quadrant, due, done: false, createdAt: Date.now(), ...(easy ? { easy: true } : {}) };
   update((s) => ({ tasks: [...s.tasks, task] }));
 }
 
-export function editTask(id: string, patch: Partial<Pick<Task, 'title' | 'quadrant' | 'due'>>) {
+export function editTask(id: string, patch: Partial<Pick<Task, 'title' | 'quadrant' | 'due' | 'easy'>>) {
   // A task moved to another quadrant joins it at the end of the arranged tasks.
   update((s) => ({
     tasks: s.tasks.map((t) => (t.id === id ? { ...t, ...patch, order: patch.quadrant && patch.quadrant !== t.quadrant ? undefined : t.order } : t)),

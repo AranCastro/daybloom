@@ -17,6 +17,8 @@ import { MOODS, moodOf } from '@/lib/moods';
 import { topTags } from '@/lib/mood-tags';
 import { GoodDaysJar } from '@/components/good-days';
 import { GardenActions } from '@/components/garden-actions';
+import { PatternsCard } from '@/components/patterns';
+import { LiveWeatherPrompt } from '@/components/garden-sky';
 import { BADGES, badgeOf, streakInfo } from '@/lib/badges';
 import { Medal } from '@/components/badge';
 import { router } from 'expo-router';
@@ -81,6 +83,8 @@ export default function Journey() {
       <Animated.View entering={FadeInDown.delay(80).duration(450)}>
         <GardenBed blooms={garden} max={30} height={250} />
       </Animated.View>
+
+      <LiveWeatherPrompt />
 
       <View style={styles.gardenStats}>
         <MiniStat label="Blooms" value={`${bloomCount}`} />
@@ -267,6 +271,8 @@ export default function Journey() {
           </>
         )}
       </Card>
+
+      <PatternsCard today={today} />
 
       <GoodDaysJar />
 

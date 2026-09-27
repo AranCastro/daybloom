@@ -66,7 +66,9 @@ export default function FocusScreen() {
   const gardenSize = useAppState((s) => s.bloomCount);
   const tasks = useAppState((s) => s.tasks);
   const todayKey = useToday();
-  const lowToday = useAppState((s) => isLow(s.checkins[todayKey]));
+  const lowMood = useAppState((s) => isLow(s.checkins[todayKey]));
+  const lowEnergy = useAppState((s) => s.energy[todayKey] === 1);
+  const lowToday = lowMood || lowEnergy;
   const defaultPreset = useAppState((s) => s.settings.focusPreset);
 
   const [now, setNow] = useState(() => Date.now());
@@ -228,7 +230,7 @@ export default function FocusScreen() {
               />
               {lowToday && preset === 'gentle' && (
                 <Text variant="small" center>
-                  A low day: we picked the gentle 15-minute session.
+                  {lowEnergy && !lowMood ? 'Low energy today: we picked the gentle 15-minute session.' : 'A low day: we picked the gentle 15-minute session.'}
                 </Text>
               )}
               {candidates.length > 0 && (

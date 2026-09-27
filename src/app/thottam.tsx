@@ -1,5 +1,5 @@
 /**
- * Thottam (Malayalam: garden). Arrange the flowers you have grown into a pookalam, ring by
+ * Thottam (Malayalam: garden). Arrange the flowers you have grown into a Poo Kolam, ring by
  * ring, with an Onam, Diwali or Pongal border; save your designs and share them as a picture.
  */
 import { router } from 'expo-router';
@@ -51,7 +51,7 @@ export default function Thottam() {
         <Back />
         <Text variant="title">Thottam</Text>
         <Card>
-          <Text variant="body">Your pookalam is made from the flowers you grow. Check in, finish a task or a focus session to grow your first one.</Text>
+          <Text variant="body">Your Poo Kolam is made from the flowers you grow. Check in, finish a task or a focus session to grow your first one.</Text>
         </Card>
       </Screen>
     );
@@ -90,13 +90,13 @@ export default function Thottam() {
   };
   const save = () => {
     tap();
-    const p = savePookalam({ id, name: name.trim() || `Pookalam ${saved.length + 1}`, center, rings, festival });
+    const p = savePookalam({ id, name: name.trim() || `Poo Kolam ${saved.length + 1}`, center, rings, festival });
     setId(p.id);
     setName(p.name);
   };
   const share = async () => {
     setBusy(true);
-    const ok = await shareViewAsImage(art, 'Share your pookalam');
+    const ok = await shareViewAsImage(art, 'Share your Poo Kolam');
     setBusy(false);
     if (!ok) {
       const msg = 'Saving a picture works in the Android app.';
@@ -119,14 +119,14 @@ export default function Thottam() {
       <Back />
       <Animated.View entering={FadeInDown.duration(400)} style={{ gap: 4 }}>
         <Text variant="label">Thottam</Text>
-        <Text variant="title">Your pookalam.</Text>
+        <Text variant="title">Your Poo Kolam.</Text>
         <Text variant="small">Ring by ring, from the {kinds.length} kinds of flower you have grown.</Text>
       </Animated.View>
 
       {season && (
         <Card tone="accent">
           <Text variant="bodyStrong">
-            {season === 'onam' ? 'Onam season. Make a pookalam for Thiruvonam.' : season === 'diwali' ? 'Diwali season. Light it up with diyas.' : 'Pongal season. Add a kolam to your doorstep.'}
+            {season === 'onam' ? 'Onam season. Make a Poo Kolam for Thiruvonam.' : season === 'diwali' ? 'Diwali season. Light it up with diyas.' : 'Pongal season. Add a kolam to your doorstep.'}
           </Text>
         </Card>
       )}
@@ -217,7 +217,7 @@ export default function Thottam() {
 
       {saved.length > 0 && (
         <Card>
-          <Text variant="label">Your pookalams · {saved.length}</Text>
+          <Text variant="label">Your Poo Kolams · {saved.length}</Text>
           <View style={styles.gallery}>
             {saved.map((p) => (
               <Pressable

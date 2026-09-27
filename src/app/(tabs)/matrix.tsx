@@ -28,6 +28,9 @@ export default function Matrix() {
   const [sheet, setSheet] = useState<{ open: boolean; task?: Task | null }>({ open: false });
   const today = useToday();
 
+  const lowEnergy = useAppState((s) => s.energy[today] === 1);
+  const [showAll, setShowAll] = useState(false);
+  const easyOnly = lowEnergy && !showAll;
   const open = tasks.filter((x) => !x.done);
   const dueToday = open.filter((x) => x.due && x.due <= today).length;
 
@@ -52,6 +55,18 @@ export default function Matrix() {
           </Text>
         </Animated.View>
 
+        {lowEnergy && (
+          <Pressable onPress={() => (tap(), setShowAll(!showAll))} accessibilityRole="button" style={[styles.energy, { backgroundColor: '#3A947718', borderColor: '#3A947755' }]}>
+            <Text style={{ fontSize: 16 }}>🪫</Text>
+            <Text variant="small" style={{ flex: 1, fontSize: 12.5, color: t.text }}>
+              {easyOnly ? 'Low energy today: showing quick and easy tasks only.' : 'Showing everything.'}
+            </Text>
+            <Text variant="small" color="accent" style={{ fontSize: 12.5 }}>
+              {easyOnly ? 'Show all' : 'Easy only'}
+            </Text>
+          </Pressable>
+        )}
+
         <View style={styles.grid}>
           {[0, 2].map((start) => (
             <View key={start} style={styles.gridRow}>
@@ -60,7 +75,7 @@ export default function Matrix() {
                   key={info.id}
                   entering={FadeInDown.delay(80 * (start + i)).duration(420)}
                   style={{ flex: 1 }}>
-                  <QuadrantCard q={info.id} tasks={tasks} today={today} onOpen={(task) => setSheet({ open: true, task })} />
+                  <QuadrantCard q={info.id} tasks={easyOnly ? tasks.filter((x) => x.easy || x.done) : tasks} today={today} onOpen={(task) => setSheet({ open: true, task })} />
                 </Animated.View>
               ))}
             </View>
@@ -137,6 +152,7 @@ function QuadrantCard({ q, tasks, today, onOpen }: { q: Quadrant; tasks: Task[];
 }
 
 const styles = StyleSheet.create({
+  energy: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 14, borderWidth: 1 },
   header: { gap: 2, marginTop: 8 },
   calBtn: { position: 'absolute', right: 0, top: 0, width: 42, height: 42, borderRadius: 21, borderWidth: 1, alignItems: 'center', justifyContent: 'center', zIndex: 1 },
   grid: { flex: 1, gap: 12, marginTop: 4 },
