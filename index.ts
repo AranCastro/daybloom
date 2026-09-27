@@ -23,8 +23,8 @@ if (Platform.OS === 'android') {
   // Mood buttons on the daily reminder: check in without opening the app.
   TaskManager.defineTask<Notifications.NotificationTaskPayload>(NOTIFICATION_TASK, async ({ data }) => {
     if (data && 'actionIdentifier' in data) {
-      const r = data as unknown as { actionIdentifier: string; notification?: { request?: { identifier?: string } } };
-      if (await handleCheckinAction(r.actionIdentifier, r.notification?.request?.identifier)) await refreshWidgets().catch(() => undefined);
+      const r = data as unknown as { actionIdentifier: string; notification?: { date?: number; request?: { identifier?: string } } };
+      if (await handleCheckinAction(r.actionIdentifier, r.notification?.request?.identifier, r.notification?.date)) await refreshWidgets().catch(() => undefined);
     }
   });
   void Notifications.registerTaskAsync(NOTIFICATION_TASK).catch(() => undefined);

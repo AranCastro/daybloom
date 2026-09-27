@@ -6,6 +6,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Directory, File, Paths } from 'expo-file-system';
 import { Platform } from 'react-native';
 
+import { expectReturn } from '@/lib/app-lock';
 import { getState, update } from '@/lib/store';
 
 export type AvatarPreset = { id: string; kind: 'flower' | 'initial'; flower?: string; bg: { light: string; dark: string } };
@@ -52,6 +53,7 @@ function removeOldPhoto() {
 
 /** Opens the photo picker (square crop). Returns false if the user cancelled. */
 export async function pickPhoto(): Promise<boolean> {
+  expectReturn();
   const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.7 });
   if (res.canceled || !res.assets?.length) return false;
   const picked = res.assets[0].uri;

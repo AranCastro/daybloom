@@ -40,7 +40,8 @@ export default function CalendarScreen() {
   // Past days are shaded by how much got done: tasks finished plus focus sessions.
   const cleared = useAppState((s) => s.clearedWork);
   const moodTags = useAppState((s) => s.moodTags);
-  const work = workByDay(tasks, sessions, cleared);
+  const clearedFocus = useAppState((s) => s.clearedFocus);
+  const work = workByDay(tasks, sessions, cleared, clearedFocus);
   const heat: Record<string, HeatLevel> = Object.fromEntries(Object.entries(work).map(([k, w]) => [k, levelOf(w.score)]));
 
   const open = sortOpen(tasks.filter((x) => x.due === day && !x.done)).sort((a, b) => a.quadrant - b.quadrant);

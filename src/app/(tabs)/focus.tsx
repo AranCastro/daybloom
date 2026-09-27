@@ -364,7 +364,10 @@ function Stat({ label, value }: { label: string; value: string }) {
 }
 
 function FocusStats({ sessions, garden }: { sessions: FocusSession[]; garden: Bloom[] }) {
-  const minutes = sessions.reduce((n, s) => n + s.minutes, 0);
+  // Sessions older than the kept list still count, as per-day totals.
+  const cleared = useAppState((s) => s.clearedFocus);
+  const old = Object.values(cleared).reduce((n, d) => ({ sessions: n.sessions + d.sessions, minutes: n.minutes + d.minutes }), { sessions: 0, minutes: 0 });
+  const minutes = sessions.reduce((n, s) => n + s.minutes, 0) + old.minutes;
   return (
     <Pressable onPress={() => (tap(), router.navigate('/journey'))} accessibilityRole="button" accessibilityLabel="Open your garden">
       <Card>
@@ -376,8 +379,8 @@ function FocusStats({ sessions, garden }: { sessions: FocusSession[]; garden: Bl
         </View>
         <GardenBed blooms={garden} max={12} height={150} />
         <View style={styles.gardenStats}>
-          <Stat label="Focus sessions" value={`${sessions.length}`} />
-          <Stat label="Focus streak" value={`${focusStreak(sessions)} d`} />
+          <Stat label="Focus sessions" value={`${sessions.length + old.sessions}`} />
+          <Stat label="Focus streak" value={`${focusStreak(sessions, undefined, cleared)} d`} />
           <Stat label="Focus hours" value={(minutes / 60).toFixed(1)} />
         </View>
       </Card>

@@ -1,6 +1,7 @@
 /** One-tap ways to reach a person: phone call, SMS and WhatsApp. */
 import { Linking, Platform } from 'react-native';
 
+import { expectReturn } from '@/lib/app-lock';
 import { callingCode } from '@/lib/region';
 
 /** Keeps digits and a leading "+". */
@@ -38,6 +39,7 @@ export async function whatsapp(phone: string, text: string): Promise<boolean> {
 
 async function open(url: string): Promise<boolean> {
   try {
+    expectReturn();
     await Linking.openURL(url);
     return true;
   } catch {

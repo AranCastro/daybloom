@@ -9,6 +9,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { Directory, File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 
+import { expectReturn } from '@/lib/app-lock';
 import { backupFileName, makeBackup, parseBackup } from '@/lib/backup-core';
 import { getState, setBackupInfo } from '@/lib/store';
 
@@ -31,6 +32,7 @@ function writeBackup(dir: Directory): File {
 
 async function share(file: File): Promise<boolean> {
   if (!(await Sharing.isAvailableAsync())) return false;
+  expectReturn();
   await Sharing.shareAsync(file.uri, { mimeType: 'application/json', dialogTitle: 'Save your Daybloom backup', UTI: 'public.json' });
   return true;
 }
@@ -52,6 +54,7 @@ export async function saveLatestWeekly(): Promise<boolean> {
 
 /** Lets the user choose a backup file and checks it. Nothing is changed until they confirm. */
 export async function pickBackup() {
+  expectReturn();
   const result = await DocumentPicker.getDocumentAsync({ type: ['application/json', 'text/plain', '*/*'], copyToCacheDirectory: true });
   if (result.canceled || !result.assets?.length) return null;
   const text = await new File(result.assets[0].uri).text();

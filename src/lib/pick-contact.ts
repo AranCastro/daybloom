@@ -1,6 +1,8 @@
 /** Opens the phone's own contact picker and returns the chosen name and first phone number. */
 import { Contact, requestPermissionsAsync } from 'expo-contacts';
 
+import { expectReturn } from '@/lib/app-lock';
+
 export const canPickContacts = true;
 
 export type Picked = { name: string; phone?: string };
@@ -12,13 +14,16 @@ async function read(c: Contact): Promise<Picked> {
 
 export async function pickContact(): Promise<Picked | null> {
   try {
+    expectReturn();
     const c = await Contact.presentPicker();
     return c ? await read(c) : null;
   } catch {
     // Some devices need contacts permission before the picked contact's details can be read.
+    expectReturn();
     const { granted } = await requestPermissionsAsync();
     if (!granted) return null;
     try {
+      expectReturn();
       const c = await Contact.presentPicker();
       return c ? await read(c) : null;
     } catch {
