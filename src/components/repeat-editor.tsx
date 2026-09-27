@@ -149,8 +149,8 @@ export function RepeatEditor({ value, onChange }: { value: RepeatDraft; onChange
             />
           </View>
           <Text variant="caption">
-            {repeatLabel({ kind: value.kind as RepeatKind, weekdays: value.weekdays, every: value.every, times: value.times })}. It appears in its
-            quadrant on those days by itself; a day left unfinished is not carried over.
+            {repeatLabel({ kind: value.kind as RepeatKind, weekdays: value.weekdays, every: value.every, times: value.times })}. It shows once in its
+            quadrant, for the current time; when the next time comes it takes the earlier one&rsquo;s place. Nothing piles up.
           </Text>
         </>
       )}

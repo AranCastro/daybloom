@@ -65,8 +65,17 @@ function RoutineRow({ r, onOpen }: { r: Routine; onOpen: () => void }) {
   const today = useToday();
   const names = useQuadrantNames();
   const { color } = useQuadrantColors(r.quadrant);
-  const doneToday = useAppState((s) => s.tasks.filter((x) => x.routineId === r.id && x.due === today && x.done).length);
+  // The routine's one task in the matrix today (the current time of day), if any.
+  const current = useAppState((s) => s.tasks.find((x) => x.routineId === r.id && x.due === today));
   const dueToday = occursOn(r, today);
+  const last = current?.slot === r.times.length - 1;
+  const status = !current
+    ? null
+    : current.done
+      ? last
+        ? 'Done for today'
+        : `Done · next ${clockText(r.times[(current.slot ?? 0) + 1])}`
+      : `Now · ${clockText(current.at ?? r.times[0])}`;
   return (
     <Tappable onPress={onOpen} radius={Radius.lg} style={[styles.row, { backgroundColor: t.surface, borderColor: t.line }]}>
       <View style={[styles.bar, { backgroundColor: color }]} />
@@ -83,9 +92,9 @@ function RoutineRow({ r, onOpen }: { r: Routine; onOpen: () => void }) {
           <Text variant="caption">{r.times.map(clockText).join(' · ')}</Text>
         </View>
       </View>
-      {dueToday && (
-        <Text variant="caption" strong color={doneToday >= r.times.length ? 'success' : 'textSecondary'}>
-          {doneToday}/{r.times.length} today
+      {dueToday && !!status && (
+        <Text variant="caption" strong color={current?.done ? 'success' : 'textSecondary'}>
+          {status}
         </Text>
       )}
     </Tappable>

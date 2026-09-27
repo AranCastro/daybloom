@@ -62,58 +62,88 @@ describe('when a routine is due', () => {
 });
 
 describe('routine tasks in the matrix', () => {
-  it('a daily routine three times a day adds three tasks today, in its quadrant, with its effort', () => {
-    const r = store.addRoutine({ title: 'Take medicine', quadrant: 1, effort: 'quick', kind: 'daily', times: ['20:00', '08:00', '13:00'], remind: true });
-    const tasks = routineTasks(r.id);
-    expect(tasks.map((t) => t.at)).toEqual(['08:00', '13:00', '20:00']);
-    expect(tasks.every((t) => t.quadrant === 1 && t.effort === 'quick' && t.due === TODAY)).toBe(true);
-    // Calling again the same day adds nothing more.
-    expect(store.ensureRoutines()).toBe(false);
-    expect(routineTasks(r.id)).toHaveLength(3);
+  const at = (d: string, hh: number, mm = 0) => {
+    const x = fromKey(d);
+    x.setHours(hh, mm, 0, 0);
+    return x;
+  };
+
+  it('three times a day shows one task at a time; each new time replaces the earlier one', () => {
+    // Tomorrow, so the day runs forward from morning (adding it runs today's check at the real time).
+    const D = day(1);
+    const r = store.addRoutine({ title: 'Affirmations', quadrant: 2, effort: 'quick', kind: 'daily', times: ['20:00', '08:00', '13:00'], remind: true });
+    store.ensureRoutines(at(D, 7));
+    let mine = routineTasks(r.id);
+    expect(mine.map((t) => t.at)).toEqual(['08:00']); // before the first time: the morning one
+    expect(mine[0]).toMatchObject({ quadrant: 2, effort: 'quick', due: D });
+    expect(store.ensureRoutines(at(D, 9))).toBe(false); // still the morning one
+    // Morning one done; at 1 pm it makes way for the afternoon one (its flower stays).
+    store.toggleTask(mine[0].id);
+    const blooms = store.getState().bloomCount;
+    store.ensureRoutines(at(D, 13, 5));
+    mine = routineTasks(r.id);
+    expect(mine.map((t) => [t.at, t.done])).toEqual([['13:00', false]]);
+    expect(store.getState().bloomCount).toBe(blooms);
+    expect(store.getState().clearedWork[TODAY]).toBe(1); // shaded on the day it was ticked
+    // Afternoon one missed: at 8 pm the evening one replaces it.
+    store.ensureRoutines(at(D, 20));
+    expect(routineTasks(r.id).map((t) => t.at)).toEqual(['20:00']);
   });
 
-  it('a task skipped today does not come back until the next day', () => {
-    const r = store.addRoutine({ title: 'Walk', quadrant: 2, kind: 'daily', times: ['07:00'], remind: false });
-    store.deleteTask(instanceId(r.id, TODAY, 0));
-    store.ensureRoutines();
+  it('never more than one row, even for data from 3.1 that added all three at once', () => {
+    const r = store.addRoutine({ title: 'Water', quadrant: 1, kind: 'daily', times: ['08:00', '13:00', '20:00'], remind: false });
+    // As 3.1 left it: all three of today's tasks, and a bare day in routineMade.
+    store.update((s) => ({
+      routineMade: { ...s.routineMade, [r.id]: TODAY },
+      tasks: [
+        ...s.tasks.filter((t) => t.routineId !== r.id),
+        ...[0, 1, 2].map((slot) => ({ id: `${r.id}:${TODAY}:${slot}`, title: 'Water', quadrant: 1 as const, due: TODAY, done: false, createdAt: 1, routineId: r.id, slot, at: ['08:00', '13:00', '20:00'][slot] })),
+      ],
+    }));
+    store.ensureRoutines(at(TODAY, 14));
+    expect(routineTasks(r.id).map((t) => t.at)).toEqual(['13:00']);
+  });
+
+  it('skipping today keeps it away for the rest of the day, back tomorrow', () => {
+    const r = store.addRoutine({ title: 'Walk', quadrant: 2, kind: 'daily', times: ['07:00', '18:00'], remind: false });
+    store.ensureRoutines(at(TODAY, 8));
+    store.deleteTask(routineTasks(r.id)[0].id);
+    store.ensureRoutines(at(TODAY, 19));
     expect(routineTasks(r.id)).toHaveLength(0);
-    store.ensureRoutines(day(1));
+    store.ensureRoutines(at(day(1), 8));
     expect(routineTasks(r.id).map((t) => t.id)).toEqual([instanceId(r.id, day(1), 0)]);
   });
 
-  it('the next day: unfinished ones go, finished ones are cleared with their shading kept', () => {
-    const r = store.addRoutine({ title: 'Water plants', quadrant: 2, kind: 'daily', times: ['08:00', '19:00'], remind: false });
+  it('the next day: an unfinished one goes, a finished one is cleared with its shading kept', () => {
+    const r = store.addRoutine({ title: 'Plants', quadrant: 2, kind: 'daily', times: ['08:00'], remind: false });
+    store.ensureRoutines(at(TODAY, 9));
     store.toggleTask(instanceId(r.id, TODAY, 0));
-    const blooms = store.getState().bloomCount;
-    store.ensureRoutines(day(1));
-    const ids = routineTasks(r.id).map((t) => t.id);
-    expect(ids).toEqual([instanceId(r.id, day(1), 0), instanceId(r.id, day(1), 1)]);
+    store.ensureRoutines(at(day(1), 9));
+    expect(routineTasks(r.id).map((t) => t.id)).toEqual([instanceId(r.id, day(1), 0)]);
     expect(store.getState().clearedWork[TODAY]).toBe(1);
-    expect(store.getState().bloomCount).toBe(blooms); // the flower stays
   });
 
   it('weekly: nothing on other days', () => {
     const notToday = (fromKey(TODAY).getDay() + 1) % 7;
     const r = store.addRoutine({ title: 'Clean desk', quadrant: 3, kind: 'weekly', weekdays: [notToday], times: ['10:00'], remind: false });
+    store.ensureRoutines(at(TODAY, 11));
     expect(routineTasks(r.id)).toHaveLength(0);
-    store.ensureRoutines(day(1));
+    store.ensureRoutines(at(day(1), 11));
     expect(routineTasks(r.id)).toHaveLength(1);
   });
 
-  it('editing follows through to today’s unfinished tasks; a new time re-adds them', () => {
-    const r = store.addRoutine({ title: 'Stretch', quadrant: 2, kind: 'daily', times: ['08:00', '18:00'], remind: false });
-    store.toggleTask(instanceId(r.id, TODAY, 0));
+  it('editing follows through to today’s task; a finished current one stays finished', () => {
+    const r = store.addRoutine({ title: 'Stretch', quadrant: 2, kind: 'daily', times: ['00:00'], remind: false });
+    const id = instanceId(r.id, TODAY, 0);
     store.editRoutine(r.id, { title: 'Stretch 10 min', quadrant: 1 });
-    const open = routineTasks(r.id).filter((t) => !t.done);
-    expect(open.map((t) => [t.title, t.quadrant])).toEqual([['Stretch 10 min', 1]]);
-    store.editRoutine(r.id, { times: ['08:00', '17:30'] });
-    const now = routineTasks(r.id);
-    expect(now.find((t) => t.slot === 0)?.done).toBe(true); // finished stays finished
-    expect(now.find((t) => t.slot === 1)?.at).toBe('17:30');
+    expect(routineTasks(r.id).map((t) => [t.title, t.quadrant])).toEqual([['Stretch 10 min', 1]]);
+    store.toggleTask(id);
+    store.editRoutine(r.id, { kind: 'interval', every: 2 });
+    expect(routineTasks(r.id)).toEqual([expect.objectContaining({ id, done: true })]);
   });
 
-  it('stopping a routine keeps finished tasks and can remove today’s open ones', () => {
-    const r = store.addRoutine({ title: 'Read', quadrant: 2, kind: 'daily', times: ['08:00', '21:00'], remind: false });
+  it('stopping a routine keeps a finished task and can remove an open one', () => {
+    const r = store.addRoutine({ title: 'Read', quadrant: 2, kind: 'daily', times: ['00:00'], remind: false });
     store.toggleTask(instanceId(r.id, TODAY, 0));
     store.deleteRoutine(r.id, true);
     expect(store.getState().routines).toHaveLength(0);
@@ -144,6 +174,7 @@ describe('routine tasks in the matrix', () => {
     expect(out.routines?.[0]).toMatchObject({ quadrant: 1, times: ['07:30'], remind: true });
     expect(out.routines?.[1]).toMatchObject({ every: 30, times: ['08:00'] });
     expect(out.routineMade).toEqual({ a: '2026-09-27' });
+    expect(sanitise({ routineMade: { a: '2026-09-27#2', b: '2026-09-27#x' } }).routineMade).toEqual({ a: '2026-09-27#2' });
   });
 });
 
@@ -153,8 +184,9 @@ describe('gentle reminders', () => {
     const r = store.addRoutine({ title: 'Medicine', quadrant: 1, kind: 'daily', times: ['08:00', '20:00'], remind: true });
     const now = fromKey(TODAY);
     now.setHours(12, 0, 0, 0);
-    store.toggleTask(instanceId(r.id, TODAY, 1)); // evening dose already taken
-    await syncRoutineReminders(store.getState().routines, store.getState().tasks, false, now);
+    // The evening dose already taken (early, from its reminder).
+    const tasks = [...store.getState().tasks, { id: instanceId(r.id, TODAY, 1), done: true }];
+    await syncRoutineReminders(store.getState().routines, tasks, false, now);
     expect(n.cancelScheduledNotificationAsync).toHaveBeenCalledWith('routine:old:2026-01-01:0');
     expect(n.cancelScheduledNotificationAsync).not.toHaveBeenCalledWith('daily-checkin');
     const ids = n.scheduleNotificationAsync.mock.calls.map((c) => (c[0] as { identifier: string }).identifier);
@@ -172,7 +204,7 @@ describe('gentle reminders', () => {
   });
 
   it('Done on the reminder ticks that task and grows its flower, once', async () => {
-    const r = store.addRoutine({ title: 'Walk', quadrant: 2, kind: 'daily', times: ['07:00'], remind: true });
+    const r = store.addRoutine({ title: 'Walk', quadrant: 2, kind: 'daily', times: ['00:00'], remind: true });
     const id = instanceId(r.id, TODAY, 0);
     const blooms = store.getState().bloomCount;
     expect(await handleRoutineAction(ROUTINE_DONE, reminderId(id), 111)).toBe(true);

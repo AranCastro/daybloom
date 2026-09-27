@@ -263,7 +263,7 @@ const FIELDS: Record<string, (v: unknown) => unknown> = {
   avatar,
   tasks: (v) => list(v, task),
   routines: (v) => list(v, routine),
-  routineMade: (v) => strMap(v, (x) => (isDayKey(x) ? x : undefined)),
+  routineMade: (v) => strMap(v, (x) => (isStr(x) && isDayKey(x.split('#')[0]) && /^[^#]+(#\d)?$/.test(x) ? x : undefined)),
   people: (v) => list(v, person),
   games: (v) =>
     isObj(v)

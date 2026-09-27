@@ -2,7 +2,7 @@
   "expo": {
     "name": "Daybloom",
     "slug": "daybloom",
-    "version": "3.1.0",
+    "version": "3.1.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "daybloom",
@@ -14,7 +14,7 @@
     },
     "android": {
       "package": "online.draran.daybloom",
-      "versionCode": 24,
+      "versionCode": 25,
       "adaptiveIcon": {
         "backgroundColor": "#F6F2EC",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -91,7 +91,7 @@
               "maxResizeWidth": "520dp",
               "maxResizeHeight": "620dp",
               "resizeMode": "horizontal|vertical",
-              "updatePeriodMillis": 7200000,
+              "updatePeriodMillis": 1800000,
               "previewImage": "./assets/widgets/matrix.png",
               "widgetFeatures": "reconfigurable|configuration_optional"
             },
@@ -136,7 +136,7 @@
               "maxResizeWidth": "420dp",
               "maxResizeHeight": "360dp",
               "resizeMode": "horizontal|vertical",
-              "updatePeriodMillis": 7200000,
+              "updatePeriodMillis": 1800000,
               "previewImage": "./assets/widgets/tasks.png",
               "widgetFeatures": "reconfigurable|configuration_optional"
             },
