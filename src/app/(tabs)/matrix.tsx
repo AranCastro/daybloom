@@ -10,11 +10,12 @@ import { Text } from '@/components/text';
 import { EmptyState, Screen, Tappable, tap } from '@/components/ui';
 import { Radius, Shadow, Spacing, TabBarInset } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { useToday } from '@/hooks/use-today';
+import { useClock, useToday } from '@/hooks/use-today';
 import { useQuadrantNames } from '@/lib/labels';
-import { dayKey } from '@/lib/dates';
 import { QUADRANTS, quadrantOf } from '@/lib/quadrants';
 import { deepFirst, fitEnergy } from '@/lib/effort';
+import { addDays, dayKey, fromKey } from '@/lib/dates';
+import { clockText, occursOn } from '@/lib/routines';
 import { openTasks, Quadrant, Task, useAppState } from '@/lib/store';
 
 /** Energy tints, from the status colours of the current scheme. */
@@ -31,6 +32,11 @@ export default function Matrix() {
   const tasks = useAppState((s) => s.tasks);
   const [sheet, setSheet] = useState<{ open: boolean; task?: Task | null }>({ open: false });
   const today = useToday();
+  const { hour } = useClock();
+  // From 6 pm, tomorrow's routines show under the header, so the next day's tasks are known in advance.
+  const routines = useAppState((s) => s.routines);
+  const tomorrow = dayKey(addDays(fromKey(today), 1));
+  const coming = hour >= 18 ? routines.filter((r) => occursOn(r, tomorrow)) : [];
 
   const energy = useAppState((s) => s.energy[today]);
   const [showAll, setShowAll] = useState(false);
@@ -74,6 +80,22 @@ export default function Matrix() {
             </Pressable>
           </View>
         </Animated.View>
+
+        {coming.length > 0 && (
+          <Tappable
+            onPress={() => router.push('/routines')}
+            radius={Radius.sm}
+            accessibilityLabel={`Tomorrow: ${coming.map((r) => r.title).join(', ')}`}
+            style={[styles.energy, { backgroundColor: t.surface, borderColor: t.line }]}>
+            <Icon name="repeat" color={t.textSecondary} size={16} />
+            <Text variant="caption" color="text" style={{ flex: 1 }} numberOfLines={2}>
+              <Text variant="caption" strong color="text">
+                Tomorrow ·{' '}
+              </Text>
+              {coming.map((r) => `${r.title} ${clockText(r.times[0])}`).join(' · ')}
+            </Text>
+          </Tappable>
+        )}
 
         {!!energy && (
           <Tappable

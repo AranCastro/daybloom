@@ -20,7 +20,7 @@ const WEEKDAYS = ['Sundays', 'Mondays', 'Tuesdays', 'Wednesdays', 'Thursdays', '
 const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
 const fmt = (x: number) => (Math.round(x * 10) / 10).toFixed(1);
 
-type Input = Pick<AppState, 'checkins' | 'moodTags' | 'garden' | 'tasks' | 'focus' | 'energy' | 'places' | 'checkinPlace' | 'clearedWork'>;
+type Input = Pick<AppState, 'checkins' | 'moodTags' | 'garden' | 'tasks' | 'focus' | 'energy' | 'places' | 'checkinPlace' | 'clearedWork'> & Partial<Pick<AppState, 'customMoods'>>;
 
 export function checkinDays(s: Pick<AppState, 'checkins'>, today: string, window = 90): string[] {
   const from = dayKey(addDays(fromKey(today), -(window - 1)));
@@ -71,7 +71,7 @@ export function findPatterns(s: Input, today: string): Pattern[] {
   const focusBy = new Map<string, number>();
   for (const f of s.focus.sessions) focusBy.set(dayKey(new Date(f.at)), (focusBy.get(dayKey(new Date(f.at))) ?? 0) + 1);
   const heavyTags = new Map<string, string[]>();
-  for (const d of days) for (const id of s.moodTags[d] ?? []) if (tagOf(id)?.tone === 'heavy') heavyTags.set(id, [...(heavyTags.get(id) ?? []), d]);
+  for (const d of days) for (const id of s.moodTags[d] ?? []) if (tagOf(id, s.customMoods ?? [])?.tone === 'heavy') heavyTags.set(id, [...(heavyTags.get(id) ?? []), d]);
   let bestTag: { id: string; on: number; off: number; n: number } | null = null;
   for (const [id, tagged] of heavyTags) {
     const others = days.filter((d) => !tagged.includes(d));
@@ -81,7 +81,7 @@ export function findPatterns(s: Input, today: string): Pattern[] {
     if (off - on >= 0.5 && (!bestTag || off - on > bestTag.off - bestTag.on)) bestTag = { id, on, off, n: tagged.length };
   }
   if (bestTag) {
-    const tag = tagOf(bestTag.id)!;
+    const tag = tagOf(bestTag.id, s.customMoods ?? [])!;
     out.push({ id: 'tag-focus', emoji: tag.emoji, title: `${tag.label} days had fewer focus sessions`, detail: `${fmt(bestTag.on)} sessions a day on ${bestTag.n} ${tag.label.toLowerCase()} days, against ${fmt(bestTag.off)} on other days.` });
   }
 
