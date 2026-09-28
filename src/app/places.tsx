@@ -62,7 +62,7 @@ export default function PlacesScreen() {
           </Text>
           <Text variant="small">
             Average mood {moodOf(Math.round(best.avg))?.label ?? ''} over {best.days} {best.days === 1 ? 'day' : 'days'}
-            {best.top ? ` · often ${tagOf(best.top)?.label.toLowerCase()}` : ''}.
+            {best.top ? ` · often ${tagOf(best.top, state.customMoods)?.label.toLowerCase()}` : ''}.
           </Text>
         </Card>
       )}
@@ -88,6 +88,7 @@ export default function PlacesScreen() {
 }
 
 function PlaceRow({ x }: { x: PlaceStats }) {
+  const custom = useAppState((s) => s.customMoods);
   const t = useTheme();
   const mood = x.avg !== null ? moodOf(Math.round(x.avg)) : undefined;
   const pinned = x.place.lat !== undefined;
@@ -117,7 +118,7 @@ function PlaceRow({ x }: { x: PlaceStats }) {
         <Text variant="bodyStrong">{x.place.name}</Text>
         <Text variant="caption">
           {x.days ? `${x.days} ${x.days === 1 ? 'day' : 'days'} · ${x.best} good` : 'No check-ins here yet'}
-          {x.top ? ` · ${tagOf(x.top)?.emoji} ${tagOf(x.top)?.label}` : ''}
+          {x.top ? ` · ${tagOf(x.top, custom)?.emoji} ${tagOf(x.top, custom)?.label}` : ''}
         </Text>
         <View style={{ flexDirection: 'row', gap: 14, marginTop: 2 }}>
           {!pinned && (

@@ -23,6 +23,7 @@ import { useScene } from '@/components/garden-sky';
 import { checkInLine } from '@/lib/weather';
 import { festivalNear } from '@/lib/thottam';
 import { PookalamArt } from '@/components/pookalam';
+import { DayNotesCard } from '@/components/day-notes';
 import { GoodDayMemory, GoodDayPrompt } from '@/components/good-days';
 import { MoodDot, MoodOrb } from '@/components/mood-orb';
 import { Avatar, ReachButtons } from '@/components/people';
@@ -249,6 +250,7 @@ export default function Today() {
       {todayMood?.value === 1 && !editing && <GoodDayMemory day={today} />}
       {todayMood?.value === 1 && !editing && <SupportCard />}
       {todayMood && todayMood.value >= 4 && !editing && <GoodDayPrompt day={today} key={today} />}
+      {!fresh && <DayNotesCard day={today} key={`notes-${today}`} />}
 
       {!fresh && (
         <>

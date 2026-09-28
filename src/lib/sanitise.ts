@@ -244,6 +244,17 @@ const FIELDS: Record<string, (v: unknown) => unknown> = {
   checkins: (v) => dayMap(v, (x) => clampInt(x, 1, 5)),
   moodTags: (v) => dayMap(v, (x) => list(x, (t) => (isStr(t) ? t : undefined))),
   goodNotes: (v) => dayMap(v, (x) => (isStr(x) ? x.slice(0, 160) : undefined)),
+  dayNotes: (v) =>
+    dayMap(v, (x) => {
+      const notes = list(x, (n) => (isObj(n) && isStr(n.id) && isStr(n.text) && n.text.trim() ? { id: n.id, text: n.text.slice(0, 280), at: isNum(n.at) ? n.at : 0 } : undefined));
+      return notes?.length ? notes.slice(-20) : undefined;
+    }),
+  customMoods: (v) =>
+    list(v, (m) =>
+      isObj(m) && isStr(m.id) && m.id.startsWith('my-') && isStr(m.label) && m.label.trim()
+        ? { id: m.id, label: m.label.slice(0, 16), emoji: isStr(m.emoji) && m.emoji.trim() ? m.emoji.slice(0, 8) : '🙂', tone: m.tone === 'heavy' ? ('heavy' as const) : ('light' as const) }
+        : undefined,
+    )?.slice(0, 30),
   places: (v) => list(v, place),
   checkinPlace: (v) => dayMap(v, (x) => (isStr(x) ? x : undefined)),
   pookalams: (v) => list(v, pookalam),

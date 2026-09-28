@@ -17,6 +17,7 @@ import { isLowStreak } from '@/lib/nudge-rule';
 import { rewardFor } from '@/lib/effort';
 import { currentSlot, instanceId, normaliseTimes, occursOn, parseMade, Routine, SKIPPED_SLOT } from '@/lib/routines';
 import { sanitise } from '@/lib/sanitise';
+import { cleanMoodWord, CUSTOM_PREFIX, MAX_CUSTOM_MOODS, type MoodTag } from '@/lib/mood-tags';
 
 export type NudgeLog = {
   at: number;
@@ -59,6 +60,8 @@ export type Task = {
 export type { Routine } from '@/lib/routines';
 
 export type TaskStep = { id: string; title: string; done: boolean };
+
+export type DayNote = { id: string; text: string; at: number };
 
 /** Morning energy: 1 low, 2 medium, 3 high. */
 export type EnergyLevel = 1 | 2 | 3;
@@ -105,6 +108,10 @@ export type AppState = {
   moodTags: Record<string, string[]>;
   /** Jar of good days: YYYY-MM-DD -> one line about what went well (bright days). */
   goodNotes: Record<string, string>;
+  /** Small notes for any day, good or hard: a few lines each, with the time they were written. */
+  dayNotes: Record<string, DayNote[]>;
+  /** The user's own moods (one word and an emoji), offered beside the built-in feelings. */
+  customMoods: MoodTag[];
   /** Places the user named (Home, Office…), optionally with coordinates from the phone's GPS. */
   places: Place[];
   /** YYYY-MM-DD -> id of the place where that day's check-in was made. */
@@ -231,6 +238,8 @@ const initial: AppState = {
   checkins: {},
   moodTags: {},
   goodNotes: {},
+  dayNotes: {},
+  customMoods: [],
   places: [],
   checkinPlace: {},
   pookalams: [],
@@ -270,6 +279,8 @@ function mergeSaved(raw: Partial<AppState>): AppState {
   ) as Record<WidgetKey, WidgetPrefs>;
   merged.moodTags = { ...saved.moodTags };
   merged.goodNotes = { ...saved.goodNotes };
+  merged.dayNotes = { ...saved.dayNotes };
+  merged.customMoods = [...(saved.customMoods ?? [])];
   merged.places = [...(saved.places ?? [])];
   merged.checkinPlace = { ...saved.checkinPlace };
   merged.pookalams = [...(saved.pookalams ?? [])];
@@ -462,6 +473,55 @@ export function setGoodNote(day: string, text: string) {
     else delete goodNotes[day];
     return { goodNotes };
   });
+}
+
+/** Longest small note, and how many a day keeps. */
+export const NOTE_MAX = 280;
+export const NOTES_PER_DAY = 20;
+
+export function addDayNote(day: string, text: string): void {
+  const clean = text.trim().slice(0, NOTE_MAX);
+  if (!clean) return;
+  update((s) => {
+    const list = [...(s.dayNotes[day] ?? []), { id: newId(), text: clean, at: Date.now() }].slice(-NOTES_PER_DAY);
+    return { dayNotes: { ...s.dayNotes, [day]: list } };
+  });
+}
+
+export function editDayNote(day: string, id: string, text: string): void {
+  const clean = text.trim().slice(0, NOTE_MAX);
+  if (!clean) return deleteDayNote(day, id);
+  update((s) => ({ dayNotes: { ...s.dayNotes, [day]: (s.dayNotes[day] ?? []).map((n) => (n.id === id ? { ...n, text: clean } : n)) } }));
+}
+
+export function deleteDayNote(day: string, id: string): void {
+  update((s) => {
+    const dayNotes = { ...s.dayNotes };
+    const list = (dayNotes[day] ?? []).filter((n) => n.id !== id);
+    if (list.length) dayNotes[day] = list;
+    else delete dayNotes[day];
+    return { dayNotes };
+  });
+}
+
+/**
+ * Adds the user's own mood (one word, an emoji, light or heavy). An existing one with the same word
+ * is reused rather than duplicated. Returns it, or null when the word is empty or the list is full.
+ */
+export function addCustomMood(word: string, emoji: string, tone: MoodTag['tone']): MoodTag | null {
+  const label = cleanMoodWord(word);
+  if (!label) return null;
+  const same = state.customMoods.find((m) => m.label.toLowerCase() === label.toLowerCase());
+  if (same) return same;
+  if (state.customMoods.length >= MAX_CUSTOM_MOODS) return null;
+  const mood: MoodTag = { id: `${CUSTOM_PREFIX}${newId()}`, label, emoji: emoji.trim() || '🙂', tone };
+  update((s) => ({ customMoods: [...s.customMoods, mood] }));
+  return mood;
+}
+
+/** Removes one of the user's own moods from the list (days already tagged with it keep the tag). */
+export function deleteCustomMood(id: string): void {
+  update((s) => ({ customMoods: s.customMoods.filter((m) => m.id !== id) }));
 }
 
 export function addPlace(name: string, emoji: string, coords?: { lat: number; lon: number }): Place {

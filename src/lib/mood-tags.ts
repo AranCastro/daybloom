@@ -30,16 +30,29 @@ export const MOOD_TAGS: readonly MoodTag[] = [
 /** Up to five tags a day keeps the choice quick. */
 export const MAX_TAGS_PER_DAY = 5;
 
-export function tagOf(id: string): MoodTag | undefined {
-  return MOOD_TAGS.find((t) => t.id === id);
+/** Ids of the user's own moods start with this, so they never clash with the built-in ones. */
+export const CUSTOM_PREFIX = 'my-';
+export const MAX_CUSTOM_MOODS = 30;
+const WORD_MAX = 16;
+
+/** One word, letters only (any script), first letter capital: "  so tired " → "So". */
+export function cleanMoodWord(input: string): string {
+  const word = input.trim().split(/\s+/)[0] ?? '';
+  const letters = word.replace(/[^\p{L}\p{M}'-]/gu, '').slice(0, WORD_MAX);
+  return letters ? letters[0].toUpperCase() + letters.slice(1) : '';
+}
+
+/** A built-in feeling, or one of the user's own when their list is given. */
+export function tagOf(id: string, custom: readonly MoodTag[] = []): MoodTag | undefined {
+  return MOOD_TAGS.find((t) => t.id === id) ?? custom.find((t) => t.id === id);
 }
 
 /** The most used tags over a set of days, most frequent first. */
-export function topTags(moodTags: Record<string, string[]>, days: string[], limit = 3): { tag: MoodTag; count: number }[] {
+export function topTags(moodTags: Record<string, string[]>, days: string[], limit = 3, custom: readonly MoodTag[] = []): { tag: MoodTag; count: number }[] {
   const counts = new Map<string, number>();
   for (const d of days) for (const id of moodTags[d] ?? []) counts.set(id, (counts.get(id) ?? 0) + 1);
   return [...counts.entries()]
-    .map(([id, count]) => ({ tag: tagOf(id), count }))
+    .map(([id, count]) => ({ tag: tagOf(id, custom), count }))
     .filter((x): x is { tag: MoodTag; count: number } => !!x.tag)
     .sort((a, b) => b.count - a.count)
     .slice(0, limit);

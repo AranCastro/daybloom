@@ -62,9 +62,10 @@ export function hasOpenSteps(t: Pick<Task, 'steps'>): boolean {
  * Tasks the day's energy can carry; finished ones always stay. A big task that has open steps stays
  * too, because only its next step is asked of you (the task row shows it).
  */
-export function fitEnergy<T extends Pick<Task, 'effort' | 'done' | 'steps'>>(tasks: T[], energy: EnergyLevel | undefined): T[] {
+export function fitEnergy<T extends Pick<Task, 'effort' | 'done' | 'steps' | 'routineId'>>(tasks: T[], energy: EnergyLevel | undefined): T[] {
   const ok = allowedEfforts(energy);
-  return tasks.filter((t) => t.done || ok.includes(effortOf(t)) || hasOpenSteps(t));
+  // Routine tasks (medicines, a walk, a bath) are part of every day, whatever the energy: never hidden.
+  return tasks.filter((t) => t.done || !!t.routineId || ok.includes(effortOf(t)) || hasOpenSteps(t));
 }
 
 /** "2 of 5 steps" progress, or null for a task without steps. */

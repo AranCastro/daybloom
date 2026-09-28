@@ -6,6 +6,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { HeatLegend, MonthCalendar } from '@/components/calendar';
 import { Icon } from '@/components/icons';
+import { DayNotesCard } from '@/components/day-notes';
 import { MoodTagRow } from '@/components/mood-tags';
 import { MoodOrb } from '@/components/mood-orb';
 import { TaskRow, TaskSheet } from '@/components/tasks';
@@ -85,6 +86,7 @@ export default function CalendarScreen() {
           </Text>
         )}
         {day <= today && <MoodTagRow ids={moodTags[day]} />}
+        {day <= today && <DayNotesCard day={day} title={day === today ? 'Notes for today' : 'Notes for this day'} compact key={day} />}
 
         {open.length === 0 && done.length === 0 && late.length === 0 && <Text variant="small">Nothing due on this day.</Text>}
         {late.length > 0 && (

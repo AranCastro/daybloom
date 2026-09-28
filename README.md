@@ -34,6 +34,13 @@ weather following the phone, and Thottam now says Poo Kolam.
   ticked, "I worked on it today", or a focus session on that task) grows one flower at the task's rare odds, and those
   flowers stay even if the task is unticked later; the full effort reward still comes when the task is finished. On a
   low- or medium-energy day, a big task with open steps stays in the matrix, because only its next step is asked.
+- **Notes for every day (3.2).** Today has a Notes card on every day, good or hard: several short notes (up to 280
+  characters, 20 a day), each with its time; tap one to edit it. The calendar shows and adds notes for any past day.
+  The Jar of good days stays as it was.
+- **Your own moods (3.2).** In "Add how you feel", ＋ Your own adds a one-word mood with any emoji and whether it
+  feels light or heavy; it is kept for later days beside the 20 built-in feelings (touch and hold to remove it).
+- **Routines are never hidden (3.2).** The energy filter no longer hides routine tasks, and from 6 pm the Matrix
+  shows tomorrow's routines with their first time.
 - **Routines (3.1).** When adding a task, "How often?" offers One time, Every day, Weekly (chosen weekdays) or Every
   few days (2–30), and Once, Twice or Three times a day, each at its own time. On each day it is due, the routine keeps
   exactly one task in its quadrant (3.1.1): the one for the current time of day. When the next time arrives, it takes
