@@ -151,8 +151,10 @@ function queueFocus(job: () => Promise<void>): Promise<void> {
 
 /**
  * Alarm for the end of a focus session or break, delivered even if the app is closed.
- * Exact on Android thanks to USE_EXACT_ALARM (app.json): expo-notifications falls back to an
- * inexact alarm, late by minutes in Doze, unless the app may schedule exact alarms.
+ * Exact where the app may schedule exact alarms (SCHEDULE_EXACT_ALARM: granted up to Android 13,
+ * a user setting from Android 14); otherwise expo-notifications falls back to an inexact alarm,
+ * which Doze can delay by a few minutes. USE_EXACT_ALARM is not declared: Google Play allows it
+ * only for apps whose core function is an alarm clock or calendar.
  */
 export function scheduleFocusAlarm(at: number, title: string, body: string): Promise<void> {
   if (Platform.OS === 'web') return Promise.resolve();
