@@ -1,7 +1,7 @@
 # Daybloom: Publishing on Google Play (Guide v1)
 
 This guide takes Daybloom 3.2.1 from GitHub to Google Play. Work through it in order.
-Texts for the store listing and the Data safety answers are in `docs/daybloom_store-listing_v1.md`.
+Texts for the store listing are in `docs/daybloom_store-listing_v2.md`; graphics are in `docs/store-graphics/`.
 
 ## Step 1. Add the upload key to GitHub (once)
 
