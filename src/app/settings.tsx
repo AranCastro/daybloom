@@ -323,11 +323,12 @@ function Credits() {
     <Card>
       <Text variant="label">Credits</Text>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-        <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: t.brand, alignItems: 'center', justifyContent: 'center' }}>
-          <Text variant="bodyStrong" style={{ color: t.brandText }}>
-            AC
-          </Text>
-        </View>
+        <Image
+          source={require('../../assets/images/creator.jpg')}
+          style={{ width: 64, height: 64, borderRadius: 32, borderWidth: 2, borderColor: t.brand }}
+          contentFit="cover"
+          accessibilityLabel="Photo of Dr Aran Castro"
+        />
         <View style={{ flex: 1 }}>
           <Text variant="bodyStrong">Dr Aran Castro, PhD</Text>
           <Text variant="small">Designed and developed Daybloom</Text>

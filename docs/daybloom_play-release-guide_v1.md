@@ -1,6 +1,6 @@
 # Daybloom: Publishing on Google Play (Guide v1)
 
-This guide takes Daybloom 3.2.0 from GitHub to Google Play. Work through it in order.
+This guide takes Daybloom 3.2.1 from GitHub to Google Play. Work through it in order.
 Texts for the store listing and the Data safety answers are in `docs/daybloom_store-listing_v1.md`.
 
 ## Step 1. Add the upload key to GitHub (once)
@@ -22,7 +22,7 @@ the Play Store version must back up (Settings → Backup and restore), uninstall
 
 1. github.com/AranCastro/daybloom → **Actions → Build Play Store bundle → Run workflow → Run workflow**.
 2. Wait about 15 minutes for a green tick. Open the run and download **daybloom-play-bundle** under Artifacts.
-3. Unzip it. The file inside is `daybloom-3.2.0-vc26.aab`.
+3. Unzip it. The file inside is `daybloom-3.2.1-vc27.aab`.
 
 Every later upload needs a higher version code. Either raise `versionCode` in `app.json`, or type the next number
 (14, 15, …) in the **versionCode** box when you click Run workflow.
@@ -80,8 +80,8 @@ Dashboard; check the current numbers there.
 2. **Testers:** create an email list with at least 12 Gmail addresses (colleagues, students, family).
 3. **Create new release:**
    - Play App Signing: accept "Use Google-generated key" (recommended). Your key stays the upload key.
-   - Upload `daybloom-3.2.0-vc26.aab`.
-   - Release name: `3.2.0`. Release notes: "First release of Daybloom: mood check-in, Eisenhower Matrix, focus
+   - Upload `daybloom-3.2.1-vc27.aab`.
+   - Release name: `3.2.1`. Release notes: "First release of Daybloom: mood check-in, Eisenhower Matrix, focus
      timer, calm games, circle of people and a buddy nudge."
 4. **Countries:** India (add others later if wanted).
 5. **Review release → Start rollout.** Google's review of the first release can take several days.
