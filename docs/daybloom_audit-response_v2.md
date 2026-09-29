@@ -9,7 +9,7 @@
 | N2 | Each reminder button press is claimed once in shared storage (notification id + delivery time + action), so the background task and the in-app listener cannot both handle it. |
 | N3 | While the lock is on, screenshots and the recent-apps preview are blocked (`expo-screen-capture`); "Immediately" locks as the app leaves the screen. |
 | N4 | Lock record and failed-attempt count move to `expo-secure-store`; the PIN hash is salted and iterated; waits escalate from 30 s to 1 h and survive a force-stop. Android auto-backup is off (`allowBackup: false`). |
-| N5 | `USE_EXACT_ALARM` declared, so the focus alarm is exact on Android 13+. Play Console needs the exact-alarm declaration (timer). |
+| N5 | Partly. 3.0 declared `USE_EXACT_ALARM`; 3.2.2 removes it because Google Play allows it only for alarm-clock and calendar apps. `SCHEDULE_EXACT_ALARM` stays: exact up to Android 13; on Android 14+ (not granted by default) the focus-end notification can be a few minutes late in Doze, while the in-app and widget timers stay exact. |
 | N6 | `expectReturn()` before pickers, share sheets, calls, messages and permission prompts; "Immediately" has a 5-second grace. The lock screen is a full-screen modal above any open sheet. |
 | N7 | Focus alarm calls run in sequence with a token that Stop and Pause invalidate; notification setup runs once at start-up; widget focus buttons await the alarm. |
 | N8 | The APK uses its own sideload key (`SIDELOAD_*` secrets), never the Play upload key; secrets are scoped to the signing steps; actions are pinned by commit; only builds from `main` are marked latest, branch builds are pre-release previews. |
