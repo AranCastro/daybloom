@@ -8,6 +8,7 @@
  *   WIDGET_LOCK  lock or unlock ticking on this widget (locked, task taps open the app)
  *   FOCUS_START / FOCUS_PAUSE / FOCUS_RESUME / FOCUS_STOP  the Pomodoro widget's buttons
  */
+import { Platform } from 'react-native';
 import type { WidgetTaskHandlerProps } from 'react-native-android-widget';
 
 import { stepProgress } from '@/lib/effort';
@@ -15,8 +16,8 @@ import { FocusPreset, pauseTimer, PRESETS, resumeTimer, startFocus, stopTimer } 
 import { flowerOf } from '@/lib/flowers';
 import { moodOf, MoodValue } from '@/lib/moods';
 import { syncRoutineReminders } from '@/lib/reminders';
-import { awardBadges, ensureRoutines, flushState, getState, recordMood, reloadState, TaskWidget, toggleWidgetLock, widgetTickTask, widgetUndo } from '@/lib/store';
-import { renderFor, setFlash } from '@/widgets/catalogue';
+import { awardBadges, ensureRoutines, flushState, getState, recordMood, reloadState, TaskWidget, toggleWidgetLock, WIDGET_UNDO_MS, widgetTickTask, widgetUndo } from '@/lib/store';
+import { FLASH_MS, renderFor, setFlash } from '@/widgets/catalogue';
 import { refreshWidgets } from '@/widgets/sync';
 import { syncFocusDnd } from '@/lib/focus-dnd';
 
@@ -96,4 +97,12 @@ export async function widgetTaskHandler({ widgetInfo, widgetAction, clickAction,
 
   // A tap on one widget changes what the others show (streak, garden, tasks).
   if (widgetAction === 'WIDGET_CLICK') await refreshWidgets(name);
+
+  // Undo and notes like "Done" must not stay on the home screen: Android only redraws widgets now and
+  // then, so wait for them to expire and redraw every widget without them. The background task may
+  // run for 30 seconds; both last 15.
+  if (widgetAction === 'WIDGET_CLICK' && Platform.OS === 'android') {
+    await new Promise((r) => setTimeout(r, Math.max(WIDGET_UNDO_MS, FLASH_MS) + 500));
+    await refreshWidgets();
+  }
 }

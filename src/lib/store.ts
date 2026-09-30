@@ -224,7 +224,8 @@ export const WIDGET_KEYS: readonly WidgetKey[] = ['Matrix', 'Circle', 'CheckIn',
 export type TaskWidget = 'Tasks' | 'Matrix';
 
 /** How long a widget offers Undo after a task is ticked off. */
-export const WIDGET_UNDO_MS = 10 * 60_000;
+/** Undo on a widget lasts this long; the widget then redraws itself without it (task-handler). */
+export const WIDGET_UNDO_MS = 15_000;
 
 export const DEFAULT_WIDGET_PREFS: WidgetPrefs = { theme: 'auto', opacity: 100, font: 'default', checkbox: true, completed: false };
 
