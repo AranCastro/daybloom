@@ -52,7 +52,8 @@ export function specOf(name: string): WidgetSpec | undefined {
 
 /** A short "what just happened" line (e.g. "Jasmine bloomed") shown on a widget for a few minutes. */
 const flashes = new Map<string, { text: string; until: number }>();
-const FLASH_MS = 10 * 60_000;
+/** A note like "Done · Marigold bloomed" shows this long; the tap's task then redraws without it. */
+export const FLASH_MS = 15_000;
 
 export function setFlash(name: string, text: string) {
   flashes.set(name, { text, until: Date.now() + FLASH_MS });

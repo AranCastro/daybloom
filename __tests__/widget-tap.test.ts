@@ -83,7 +83,7 @@ describe('widget lock and undo', () => {
     expect(store.widgetUndoFor(store.getState(), 'Matrix')).toBeNull();
   });
 
-  it('Undo expires after ten minutes', async () => {
+  it('Undo expires after fifteen seconds', async () => {
     store.addTask('Print maps', 1);
     const t = store.getState().tasks.find((x) => x.title === 'Print maps')!;
     await tap('Tasks', 'TASK_DONE', t.id);
