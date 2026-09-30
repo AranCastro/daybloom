@@ -9,7 +9,7 @@ import { BackupCard } from '@/components/backup';
 import { Icon } from '@/components/icons';
 import { AvatarPicker, ProfileAvatar } from '@/components/profile';
 import { Text } from '@/components/text';
-import { Card, Choice, Divider, Input, Row, Screen, tap } from '@/components/ui';
+import { Button, Card, Choice, Divider, Input, Row, Screen, tap } from '@/components/ui';
 import { Radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { QUADRANTS } from '@/lib/quadrants';
@@ -19,6 +19,7 @@ import { cancelFocusAlarm, cancelReminders, scheduleDailyReminder } from '@/lib/
 import { helpline } from '@/lib/region';
 import { disableLock } from '@/lib/app-lock';
 import { enableLiveWeather } from '@/lib/weather';
+import { dndSupported, openDndAccess, useDndAccess } from '@/lib/focus-dnd';
 import app from '../../app.json';
 import { AppState, resetAll, setLabel, setSettings, update, useAppState } from '@/lib/store';
 
@@ -53,6 +54,7 @@ export default function Settings() {
   const reminder = useAppState((s) => s.reminder);
   const streak = useAppState((s) => s.streak);
   const prefs = useAppState((s) => s.settings);
+  const dndAccess = useDndAccess();
   const help = helpline();
 
   async function setReminder(next: AppState['reminder']) {
@@ -174,6 +176,27 @@ export default function Settings() {
           onChange={(focusPreset) => setSettings({ focusPreset })}
         />
         <Text variant="small">On a low day the timer still suggests the gentle 15 minutes.</Text>
+        {dndSupported && (
+          <>
+            <Text variant="bodyStrong">Do Not Disturb while focusing</Text>
+            <Choice
+              options={[
+                { label: 'Ask', value: 'ask' },
+                { label: 'Always', value: 'always' },
+                { label: 'Never', value: 'never' },
+              ]}
+              value={prefs.focusDnd}
+              onChange={(focusDnd) => setSettings({ focusDnd })}
+            />
+            <Text variant="small">
+              Silences notifications until the session ends; alarms and your starred contacts still come through.
+              {prefs.focusDnd !== 'never' && !dndAccess ? ' Daybloom needs Do Not Disturb access first.' : ''}
+            </Text>
+            {prefs.focusDnd !== 'never' && !dndAccess && (
+              <Button title="Allow Do Not Disturb access" kind="secondary" icon="settings" onPress={openDndAccess} />
+            )}
+          </>
+        )}
       </Card>
 
       <Card>

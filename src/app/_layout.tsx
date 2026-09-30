@@ -19,6 +19,7 @@ import { handleNotificationAction } from '@/lib/notification-checkin';
 import { startRoutineSync } from '@/lib/routine-sync';
 import { prepareNotifications } from '@/lib/reminders';
 import { weeklyBackupIfDue } from '@/lib/backup';
+import { startFocusDndSync } from '@/lib/focus-dnd';
 import { startFocusSoundSync } from '@/lib/focus-sound';
 import { refreshWeather } from '@/lib/weather';
 import { getState, subscribe, useAppState } from '@/lib/store';
@@ -66,6 +67,8 @@ export default function RootLayout() {
 
   // Focus sounds follow the focus timer; the app lock watches for returns from the background.
   useEffect(() => startFocusSoundSync(getState, subscribe), []);
+  // Do Not Disturb follows the focus timer when the user asked for it (Android).
+  useEffect(() => startFocusDndSync(getState, subscribe), []);
   useEffect(() => startLockWatch(), []);
 
   // Routine tasks for today, and their quiet reminders.

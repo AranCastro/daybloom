@@ -2,7 +2,7 @@
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { router, useIsFocused, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Alert, Modal, Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, {
   cancelAnimation,
   Easing,
@@ -24,7 +24,7 @@ import { Button, Card, Choice, Screen, tap } from '@/components/ui';
 import { Radius, Spacing, TabBarInset } from '@/constants/theme';
 import { useAppActive } from '@/hooks/use-app-active';
 import { useReduceMotion } from '@/hooks/use-reduce-motion';
-import { useTheme } from '@/hooks/use-theme';
+import { useIsDark, useTheme } from '@/hooks/use-theme';
 import { useToday } from '@/hooks/use-today';
 import { FlowerKind, GOLDEN_EVERY, RARITY_LABEL } from '@/lib/flowers';
 import {
@@ -44,7 +44,9 @@ import {
   stopTimer,
 } from '@/lib/focus';
 import { isLow } from '@/lib/moods';
-import { Bloom, getState, openTasks, toggleTask, useAppState } from '@/lib/store';
+import { Bloom, getState, openTasks, setSettings, toggleTask, useAppState } from '@/lib/store';
+import { dndSupported, openDndAccess, useDndAccess } from '@/lib/focus-dnd';
+import { QUADRANTS } from '@/lib/quadrants';
 import { GardenBed } from '@/components/garden';
 import { NowPlaying, SoundPicker } from '@/components/sound-picker';
 
@@ -107,6 +109,12 @@ export default function FocusScreen() {
     active?.preset ?? presetFrom(params.preset) ?? (lowToday ? 'gentle' : highEnergy ? 'deep' : defaultPreset),
   );
   const [taskId, setTaskId] = useState<string | undefined>(params.task);
+  const [allTasks, setAllTasks] = useState(false);
+  const [askDnd, setAskDnd] = useState(false);
+  const [rememberDnd, setRememberDnd] = useState(false);
+  const dndMode = useAppState((s) => s.settings.focusDnd);
+  const dndAccess = useDndAccess();
+  const dark = useIsDark();
 
   // The tab stays mounted, so pick up a preset or task passed later (widget buttons, "Focus on this task").
   const [seen, setSeen] = useState({ preset: params.preset, task: params.task });
@@ -190,13 +198,33 @@ export default function FocusScreen() {
   const focusTask = tasks.find((x) => x.id === (active?.taskId ?? taskId));
   // The task saved with the finished session (survives the app being closed mid-session).
   const rewardTask = reward?.session.taskId ? tasks.find((x) => x.id === reward.session.taskId) : undefined;
-  const candidates = [...openTasks(tasks, 1), ...openTasks(tasks, 2)].slice(0, 6);
+  // Every open task can be focused on, Do first to Later; the first few show until "Show all".
+  const allOpen = ([1, 2, 3, 4] as const).flatMap((q) => openTasks(tasks, q));
+  const picked = allOpen.find((x) => x.id === taskId);
+  const firstFew = allOpen.slice(0, 6);
+  const candidates = allTasks ? allOpen : picked && !firstFew.includes(picked) ? [...firstFew.slice(0, 5), picked] : firstFew;
 
-  function begin() {
+  function start(dnd: boolean) {
+    setAskDnd(false);
     setBreakOver(false);
     setReward(null);
     haptic.medium();
-    startFocus(preset, taskId);
+    startFocus(preset, taskId, dnd);
+  }
+
+  /** Start: asks about Do Not Disturb first when Settings says "Ask" (Android only). */
+  function begin() {
+    if (!dndSupported || dndMode === 'never') start(false);
+    else if (dndMode === 'always') start(true);
+    else {
+      setRememberDnd(false);
+      setAskDnd(true);
+    }
+  }
+
+  function answerDnd(yes: boolean) {
+    if (rememberDnd) setSettings({ focusDnd: yes ? 'always' : 'never' });
+    start(yes);
   }
 
   return (
@@ -320,17 +348,32 @@ export default function FocusScreen() {
                   <View style={styles.chips}>
                     {candidates.map((task) => {
                       const on = task.id === taskId;
+                      const q = QUADRANTS[task.quadrant - 1];
                       return (
                         <Pressable
                           key={task.id}
                           onPress={() => (tap(), setTaskId(on ? undefined : task.id))}
-                          style={[styles.chip, { borderColor: on ? t.text : t.line, backgroundColor: on ? t.text : 'transparent' }]}>
+                          accessibilityRole="radio"
+                          accessibilityState={{ selected: on }}
+                          accessibilityLabel={`${task.title}, ${q.action}`}
+                          style={[styles.chip, styles.taskChip, { borderColor: on ? t.text : t.line, backgroundColor: on ? t.text : 'transparent' }]}>
+                          <View style={[styles.qDot, { backgroundColor: dark ? q.color.dark : q.color.light }]} />
                           <Text variant="small" strong numberOfLines={1} style={{ color: on ? t.background : t.text, maxWidth: 220 }}>
                             {task.title}
                           </Text>
                         </Pressable>
                       );
                     })}
+                    {allOpen.length > 6 && (
+                      <Pressable
+                        onPress={() => (tap(), setAllTasks(!allTasks))}
+                        accessibilityRole="button"
+                        style={[styles.chip, { borderColor: t.line, borderStyle: 'dashed' }]}>
+                        <Text variant="small" strong color="accent">
+                          {allTasks ? 'Show fewer' : `Show all ${allOpen.length}`}
+                        </Text>
+                      </Pressable>
+                    )}
                   </View>
                 </View>
               )}
@@ -339,6 +382,27 @@ export default function FocusScreen() {
           )}
 
           {active?.kind === 'focus' && active.endAt !== null && <NowPlaying />}
+          {active?.kind === 'focus' && active.dnd && dndSupported && (
+            <View style={[styles.dndRow, { borderColor: t.line, backgroundColor: t.surface }]}>
+              <Icon name="mute" color={t.textSecondary} size={16} />
+              {dndAccess ? (
+                <Text variant="caption" color="text" style={{ flex: 1 }}>
+                  {active.endAt !== null ? 'Do Not Disturb is on until this session ends.' : 'Do Not Disturb is off while paused.'}
+                </Text>
+              ) : (
+                <>
+                  <Text variant="caption" color="text" style={{ flex: 1 }}>
+                    Allow Daybloom to use Do Not Disturb, then come back: it turns on for this session.
+                  </Text>
+                  <Pressable onPress={() => (tap(), openDndAccess())} accessibilityRole="button" hitSlop={8}>
+                    <Text variant="caption" strong color="accent">
+                      Allow
+                    </Text>
+                  </Pressable>
+                </>
+              )}
+            </View>
+          )}
           {active?.kind === 'focus' && (
             <View style={styles.controls}>
               {active.endAt === null ? (
@@ -356,6 +420,36 @@ export default function FocusScreen() {
       {!reward && <SoundPicker running={!!active && active.kind === 'focus' && active.endAt !== null} />}
 
       <FocusStats sessions={sessions} garden={garden} />
+      <Modal visible={askDnd} transparent animationType="fade" onRequestClose={() => setAskDnd(false)}>
+        <Pressable style={styles.scrim} onPress={() => setAskDnd(false)} accessibilityLabel="Close" />
+        <View style={styles.askWrap} pointerEvents="box-none">
+          <Card tone="raised" style={{ gap: 14 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <Icon name="mute" color={t.text} size={22} />
+              <Text variant="heading" style={{ flex: 1 }}>
+                Silence notifications?
+              </Text>
+            </View>
+            <Text variant="bodySm" color="textSecondary">
+              Turns on Do Not Disturb for this {PRESETS[preset].focus}-minute session and turns it off when it ends. Alarms and your starred
+              contacts still come through.
+            </Text>
+            {!dndAccess && (
+              <Text variant="caption">The first time, Android asks you to allow Daybloom in its Do Not Disturb settings.</Text>
+            )}
+            <Pressable onPress={() => (tap(), setRememberDnd(!rememberDnd))} accessibilityRole="checkbox" accessibilityState={{ checked: rememberDnd }} style={styles.remember}>
+              <View style={[styles.box, { borderColor: rememberDnd ? t.brand : t.line, backgroundColor: rememberDnd ? t.brand : 'transparent' }]}>
+                {rememberDnd && <Icon name="check" color={t.brandText} size={14} />}
+              </View>
+              <Text variant="small" color="text">
+                Remember my choice (change it in Settings)
+              </Text>
+            </Pressable>
+            <Button title="Yes, silence" icon="check" onPress={() => answerDnd(true)} />
+            <Button title="No, just focus" kind="secondary" onPress={() => answerDnd(false)} />
+          </Card>
+        </View>
+      </Modal>
     </Screen>
   );
 }
@@ -476,6 +570,13 @@ const styles = StyleSheet.create({
   face: { borderRadius: RING, alignItems: 'center', justifyContent: 'center', gap: 2 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: Radius.pill, borderWidth: 1 },
+  taskChip: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  qDot: { width: 8, height: 8, borderRadius: 4 },
+  dndRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 9, borderRadius: Radius.sm, borderWidth: 1 },
+  scrim: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)' },
+  askWrap: { flex: 1, justifyContent: 'center', padding: Spacing.screen },
+  remember: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  box: { width: 22, height: 22, borderRadius: 6, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
   controls: { flexDirection: 'row', gap: 10 },
   reward: { borderRadius: Radius.xl, padding: 22, gap: 10, alignItems: 'center' },
   bloom: { width: 190, height: 190, alignItems: 'center', justifyContent: 'center' },

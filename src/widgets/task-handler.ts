@@ -18,6 +18,7 @@ import { syncRoutineReminders } from '@/lib/reminders';
 import { awardBadges, ensureRoutines, flushState, getState, recordMood, reloadState, TaskWidget, toggleWidgetLock, widgetTickTask, widgetUndo } from '@/lib/store';
 import { renderFor, setFlash } from '@/widgets/catalogue';
 import { refreshWidgets } from '@/widgets/sync';
+import { syncFocusDnd } from '@/lib/focus-dnd';
 
 export async function widgetTaskHandler({ widgetInfo, widgetAction, clickAction, clickActionData, renderWidget }: WidgetTaskHandlerProps) {
   if (widgetAction === 'WIDGET_DELETED') return;
@@ -67,6 +68,8 @@ export async function widgetTaskHandler({ widgetInfo, widgetAction, clickAction,
     if (clickAction === 'FOCUS_PAUSE') await pauseTimer();
     if (clickAction === 'FOCUS_RESUME') await resumeTimer();
     if (clickAction === 'FOCUS_STOP') await stopTimer();
+    // Do Not Disturb follows the timer here too: the app may not be running to do it.
+    if (clickAction?.startsWith('FOCUS_')) syncFocusDnd(getState());
 
     if (clickAction === 'WIDGET_UNDO') {
       const widget: TaskWidget = clickActionData?.widget === 'Matrix' ? 'Matrix' : 'Tasks';

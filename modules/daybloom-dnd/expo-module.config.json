@@ -1,0 +1,6 @@
+{
+  "platforms": ["android"],
+  "android": {
+    "modules": ["online.draran.daybloom.dnd.DaybloomDndModule"]
+  }
+}

@@ -26,6 +26,8 @@ export type ActiveTimer = {
   /** Remaining ms while paused. */
   pausedLeft: number | null;
   taskId?: string;
+  /** Do Not Disturb is wanted while this focus session runs (lib/focus-dnd keeps it in step). */
+  dnd?: boolean;
 };
 
 export type FocusSession = { at: number; minutes: number; flower: string; taskId?: string };
@@ -39,10 +41,15 @@ function setActive(active: ActiveTimer | null) {
 }
 
 /** Resolves once the end alarm is scheduled (the widget handler waits for it before returning). */
-export function startFocus(preset: FocusPreset, taskId?: string): Promise<void> {
+/**
+ * Starts a focus session. `dnd` asks for Do Not Disturb while it runs; left out (a widget button),
+ * the Settings choice decides: only "Always" turns it on without asking.
+ */
+export function startFocus(preset: FocusPreset, taskId?: string, dnd?: boolean): Promise<void> {
   const total = PRESETS[preset].focus * 60_000;
   const endAt = Date.now() + total;
-  setActive({ kind: 'focus', preset, total, endAt, pausedLeft: null, taskId });
+  const wantDnd = dnd ?? getState().settings.focusDnd === 'always';
+  setActive({ kind: 'focus', preset, total, endAt, pausedLeft: null, taskId, ...(wantDnd ? { dnd: true } : {}) });
   return scheduleFocusAlarm(endAt, 'Focus session complete', 'A new flower is waiting in your garden.');
 }
 

@@ -34,6 +34,13 @@ weather following the phone, and Thottam now says Poo Kolam.
   ticked, "I worked on it today", or a focus session on that task) grows one flower at the task's rare odds, and those
   flowers stay even if the task is unticked later; the full effort reward still comes when the task is finished. On a
   low- or medium-energy day, a big task with open steps stays in the matrix, because only its next step is asked.
+- **Focus on any task, with Do Not Disturb (3.3).** The Focus tab offers every open task, Do first to Later, each
+  with its quadrant colour (the first six, then "Show all"). On Android, Start asks whether to silence notifications:
+  Do Not Disturb (priority only: alarms and starred contacts still come through) turns on for the session and off
+  again on Pause, Stop, the break, or at the end time through an alarm even if the app is closed; a Do Not Disturb the
+  user set themselves is left alone. The first time, Android asks the user to allow Daybloom in its Do Not Disturb
+  access page. Settings → Do Not Disturb while focusing: Ask, Always or Never (`modules/daybloom-dnd`,
+  `src/lib/focus-dnd.ts`).
 - **Notes for every day (3.2).** Today has a Notes card on every day, good or hard: several short notes (up to 280
   characters, 20 a day), each with its time; tap one to edit it. The calendar shows and adds notes for any past day.
   The Jar of good days stays as it was.
