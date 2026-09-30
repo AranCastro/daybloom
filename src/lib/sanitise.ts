@@ -175,7 +175,7 @@ function timer(v: unknown): ActiveTimer | null {
   const pausedLeft = isNum(v.pausedLeft) ? Math.max(0, v.pausedLeft) : null;
   // Running needs an end time; paused needs what was left.
   if (endAt === null && pausedLeft === null) return null;
-  return { kind: v.kind, preset: v.preset, total: v.total, endAt, pausedLeft, ...pick(v, { taskId: isStr }) };
+  return { kind: v.kind, preset: v.preset, total: v.total, endAt, pausedLeft, ...pick(v, { taskId: isStr, dnd: isBool }) };
 }
 
 function widgetPrefs(v: unknown): Partial<WidgetPrefs> | undefined {
@@ -203,6 +203,7 @@ function settings(v: unknown): Partial<Settings> | undefined {
     widgetTheme: (x) => oneOf(x, ['system', 'light', 'dark'] as const),
     focusSound: isStr,
     liveWeather: isBool,
+    focusDnd: (x) => oneOf(x, ['ask', 'always', 'never'] as const),
   });
   if (isNum(v.focusVolume)) out.focusVolume = Math.min(1, Math.max(0, v.focusVolume));
   return out;

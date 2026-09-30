@@ -1,0 +1,8 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <!-- Lets the app switch Do Not Disturb on for a focus session, once the user has allowed it in system settings. -->
+  <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
+  <application>
+    <!-- Turns Do Not Disturb back off when the focus session ends, even if the app is closed. -->
+    <receiver android:name="online.draran.daybloom.dnd.DndRestoreReceiver" android:exported="false" />
+  </application>
+</manifest>

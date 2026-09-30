@@ -185,6 +185,8 @@ export type Settings = {
   focusVolume: number;
   /** Live weather and day/night in the garden, from the phone's approximate location (open-meteo.com). */
   liveWeather: boolean;
+  /** Do Not Disturb during focus sessions (Android): ask each time, always, or never. */
+  focusDnd: 'ask' | 'always' | 'never';
 };
 
 export type Place = { id: string; name: string; emoji: string; lat?: number; lon?: number; createdAt: number };
@@ -201,7 +203,7 @@ export type Pookalam = {
   createdAt: number;
 };
 
-export const DEFAULT_SETTINGS: Settings = { appearance: 'system', haptics: true, reduceMotion: false, weekStart: 0, focusPreset: 'classic', autoBackup: true, widgetTheme: 'system', focusSound: 'off', focusVolume: 0.6, liveWeather: false };
+export const DEFAULT_SETTINGS: Settings = { appearance: 'system', haptics: true, reduceMotion: false, weekStart: 0, focusPreset: 'classic', autoBackup: true, widgetTheme: 'system', focusSound: 'off', focusVolume: 0.6, liveWeather: false, focusDnd: 'ask' };
 
 export type WidgetPrefs = {
   theme: 'auto' | 'light' | 'dark';
