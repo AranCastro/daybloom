@@ -34,6 +34,16 @@ weather following the phone, and Thottam now says Poo Kolam.
   ticked, "I worked on it today", or a focus session on that task) grows one flower at the task's rare odds, and those
   flowers stay even if the task is unticked later; the full effort reward still comes when the task is finished. On a
   low- or medium-energy day, a big task with open steps stays in the matrix, because only its next step is asked.
+- **Sync between phones (3.4, GitHub APK only).** Settings → Sync between phones signs in with Google and keeps one
+  file, `daybloom-sync.json`, in the hidden app-data folder of the user's own Google Drive (scope `drive.appdata`:
+  the app sees only that file). Each phone downloads it, joins it with its own data and uploads the result: at launch,
+  on return to the app, and 20 s after a change. Lists are joined by id, days day by day, and the most recently
+  changed phone wins for single values; deletions are remembered for 180 days so another phone cannot bring an item
+  back. Widget settings, backup dates, a running timer and a profile photo stay on each phone. Erasing a phone signs
+  it out of sync without touching the Drive copy. The flag `EXPO_PUBLIC_DEVICE_SYNC=1` is set only in
+  `android-apk.yml`; the Play build (`play-bundle.yml`) has no sync. Setup for a new signing key: a Google Cloud
+  project with the Drive API enabled, an OAuth consent screen with the `drive.appdata` scope, and an Android OAuth
+  client for `online.draran.daybloom` with the SHA-1 of the key that signs the APK.
 - **Focus on any task, with Do Not Disturb (3.3).** The Focus tab offers every open task, Do first to Later, each
   with its quadrant colour (the first six, then "Show all"). On Android, Start asks whether to silence notifications:
   Do Not Disturb (priority only: alarms and starred contacts still come through) turns on for the session and off

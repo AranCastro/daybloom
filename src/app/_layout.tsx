@@ -20,6 +20,7 @@ import { startRoutineSync } from '@/lib/routine-sync';
 import { prepareNotifications } from '@/lib/reminders';
 import { weeklyBackupIfDue } from '@/lib/backup';
 import { startFocusDndSync } from '@/lib/focus-dnd';
+import { startDeviceSync } from '@/lib/device-sync';
 import { startFocusSoundSync } from '@/lib/focus-sound';
 import { refreshWeather } from '@/lib/weather';
 import { getState, subscribe, useAppState } from '@/lib/store';
@@ -73,6 +74,9 @@ export default function RootLayout() {
 
   // Routine tasks for today, and their quiet reminders.
   useEffect(() => startRoutineSync(), []);
+
+  // Sync between phones through the user's own Google Drive (GitHub build only).
+  useEffect(() => startDeviceSync(), []);
 
   // A button on a reminder pressed while the app is open (a press already handled by the
   // background task is skipped inside handleNotificationAction).
