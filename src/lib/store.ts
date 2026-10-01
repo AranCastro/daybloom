@@ -138,6 +138,8 @@ export type AppState = {
   routines: Routine[];
   /** The last day each routine added its tasks, so a task deleted for today does not come back. */
   routineMade: Record<string, string>;
+  /** Routine history: routine id -> day -> the time slots ticked off that day (lib/routine-stats). */
+  routineLog: Record<string, Record<string, number[]>>;
   /** The user's own names for the matrix quadrants and circle sections (empty = the default name). */
   labels: { matrix: Partial<Record<Quadrant, string>>; circle: Partial<Record<CircleQuadrant, string>> };
   /** Profile picture: a photo saved in the app's storage, or one of the built-in avatars. */
@@ -270,6 +272,7 @@ const initial: AppState = {
   clearedFocus: {},
   routines: [],
   routineMade: {},
+  routineLog: {},
   labels: { matrix: {}, circle: {} },
   avatar: null,
 };
@@ -313,6 +316,8 @@ function mergeSaved(raw: Partial<AppState>): AppState {
   merged.clearedFocus = { ...saved.clearedFocus };
   merged.routines = [...(saved.routines ?? [])];
   merged.routineMade = { ...saved.routineMade };
+  // Before 3.5 there was no routine history: rebuild it once from the flowers routine tasks grew.
+  merged.routineLog = saved.routineLog ? { ...saved.routineLog } : logFromGarden(merged.garden ?? [], merged.tasks ?? [], merged.routines);
   merged.labels = { matrix: { ...saved.labels?.matrix }, circle: { ...saved.labels?.circle } };
   // Older versions kept a separate ntfy buddy; now the buddy is a person in the circle.
   const legacy = (saved as { buddy?: { name?: string } | null }).buddy;
@@ -371,6 +376,46 @@ export function flushState(): void {
   }
 }
 
+// ── Routine history ─────────────────────────────────────────────────────────
+
+function withSlot(log: AppState['routineLog'], routineId: string, day: string, slot: number, done: boolean): AppState['routineLog'] {
+  const days = { ...log[routineId] };
+  const slots = new Set(days[day] ?? []);
+  if (done) slots.add(slot);
+  else slots.delete(slot);
+  if (slots.size) days[day] = [...slots].sort((a, b) => a - b);
+  else delete days[day];
+  return { ...log, [routineId]: days };
+}
+
+/**
+ * Records every routine task ticked on or off, whatever ticked it (the app, a widget or a
+ * reminder's Done button), so the history survives the task being replaced by the next one.
+ */
+function logRoutineTicks(prev: AppState, next: AppState): AppState {
+  const before = new Map(prev.tasks.filter((t) => t.routineId).map((t) => [t.id, t.done]));
+  let log = next.routineLog;
+  for (const t of next.tasks) {
+    if (!t.routineId || !t.due || t.slot === undefined) continue;
+    const was = before.get(t.id) ?? false;
+    if (was !== t.done) log = withSlot(log, t.routineId, t.due, t.slot, t.done);
+  }
+  return log === next.routineLog ? next : { ...next, routineLog: log };
+}
+
+/** The history a routine's flowers and today's ticked tasks imply (for data saved before 3.5). */
+function logFromGarden(garden: Bloom[], tasks: Task[], routines: Routine[]): AppState['routineLog'] {
+  const ids = new Set(routines.map((r) => r.id));
+  let log: AppState['routineLog'] = {};
+  const add = (ref: string | undefined) => {
+    const m = ref ? /^(.+):(\d{4}-\d{2}-\d{2}):(\d)$/.exec(ref) : null;
+    if (m && ids.has(m[1])) log = withSlot(log, m[1], m[2], Number(m[3]), true);
+  };
+  for (const b of garden) if (b.source === 'task') add(b.ref);
+  for (const t of tasks) if (t.routineId && t.done) add(t.id);
+  return log;
+}
+
 /** Changes that only concern this phone, and do not count as an edit for device sync. */
 const LOCAL_ONLY = new Set<keyof AppState>(['widgetPrefs', 'widgetLocks', 'widgetUndo', 'backup', 'modifiedAt', 'deletedIds']);
 
@@ -382,6 +427,7 @@ function syncedChange(prev: AppState, next: AppState): boolean {
 }
 
 function set(next: AppState, opts: { fromSync?: boolean } = {}) {
+  if (!opts.fromSync && next.tasks !== state.tasks) next = logRoutineTicks(state, next);
   if (!opts.fromSync && syncedChange(state, next)) {
     const now = Date.now();
     const gone = deletionsBetween(state, next);
@@ -994,7 +1040,9 @@ export function deleteRoutine(id: string, removeToday = false): void {
         const { routineId: _r, slot: _s, ...rest } = t;
         return rest;
       });
-    return { routines: s.routines.filter((r) => r.id !== id), routineMade, tasks };
+    const routineLog = { ...s.routineLog };
+    delete routineLog[id];
+    return { routines: s.routines.filter((r) => r.id !== id), routineMade, routineLog, tasks };
   });
 }
 

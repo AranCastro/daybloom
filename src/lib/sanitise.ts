@@ -277,6 +277,14 @@ const FIELDS: Record<string, (v: unknown) => unknown> = {
   avatar,
   tasks: (v) => list(v, task),
   routines: (v) => list(v, routine),
+  routineLog: (v) =>
+    strMap(v, (days) =>
+      dayMap(days, (slots) => {
+        if (!Array.isArray(slots)) return undefined;
+        const ok = [...new Set(slots.filter((x): x is number => Number.isInteger(x) && x >= 0 && x <= 2))].sort((a, b) => a - b);
+        return ok.length ? ok : undefined;
+      }),
+    ),
   routineMade: (v) => strMap(v, (x) => (isStr(x) && isDayKey(x.split('#')[0]) && /^[^#]+(#\d)?$/.test(x) ? x : undefined)),
   people: (v) => list(v, person),
   games: (v) =>
