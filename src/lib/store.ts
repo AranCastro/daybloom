@@ -140,6 +140,8 @@ export type AppState = {
   routineMade: Record<string, string>;
   /** Routine history: routine id -> day -> the time slots ticked off that day (lib/routine-stats). */
   routineLog: Record<string, Record<string, number[]>>;
+  /** Routine times marked "Not done": routine id -> day -> time slots. */
+  routineMissed: Record<string, Record<string, number[]>>;
   /** The user's own names for the matrix quadrants and circle sections (empty = the default name). */
   labels: { matrix: Partial<Record<Quadrant, string>>; circle: Partial<Record<CircleQuadrant, string>> };
   /** Profile picture: a photo saved in the app's storage, or one of the built-in avatars. */
@@ -273,6 +275,7 @@ const initial: AppState = {
   routines: [],
   routineMade: {},
   routineLog: {},
+  routineMissed: {},
   labels: { matrix: {}, circle: {} },
   avatar: null,
 };
@@ -318,6 +321,7 @@ function mergeSaved(raw: Partial<AppState>): AppState {
   merged.routineMade = { ...saved.routineMade };
   // Before 3.5 there was no routine history: rebuild it once from the flowers routine tasks grew.
   merged.routineLog = saved.routineLog ? { ...saved.routineLog } : logFromGarden(merged.garden ?? [], merged.tasks ?? [], merged.routines);
+  merged.routineMissed = { ...saved.routineMissed };
   merged.labels = { matrix: { ...saved.labels?.matrix }, circle: { ...saved.labels?.circle } };
   // Older versions kept a separate ntfy buddy; now the buddy is a person in the circle.
   const legacy = (saved as { buddy?: { name?: string } | null }).buddy;
@@ -395,12 +399,17 @@ function withSlot(log: AppState['routineLog'], routineId: string, day: string, s
 function logRoutineTicks(prev: AppState, next: AppState): AppState {
   const before = new Map(prev.tasks.filter((t) => t.routineId).map((t) => [t.id, t.done]));
   let log = next.routineLog;
+  let missed = next.routineMissed;
   for (const t of next.tasks) {
     if (!t.routineId || !t.due || t.slot === undefined) continue;
     const was = before.get(t.id) ?? false;
-    if (was !== t.done) log = withSlot(log, t.routineId, t.due, t.slot, t.done);
+    if (was !== t.done) {
+      log = withSlot(log, t.routineId, t.due, t.slot, t.done);
+      // Done replaces an earlier "Not done" for the same time.
+      if (t.done && missed[t.routineId]?.[t.due]?.includes(t.slot)) missed = withSlot(missed, t.routineId, t.due, t.slot, false);
+    }
   }
-  return log === next.routineLog ? next : { ...next, routineLog: log };
+  return log === next.routineLog && missed === next.routineMissed ? next : { ...next, routineLog: log, routineMissed: missed };
 }
 
 /** The history a routine's flowers and today's ticked tasks imply (for data saved before 3.5). */
@@ -910,6 +919,49 @@ export function toggleWidgetLock(widget: TaskWidget) {
   update((s) => ({ widgetLocks: { ...s.widgetLocks, [widget]: !s.widgetLocks[widget] } }));
 }
 
+/**
+ * "Not done" for a routine's task: the time is recorded as not done in the routine's history and
+ * the task leaves the matrix. The routine's next time still comes as usual. A task already ticked
+ * off is unticked first (its flowers go back), so the history never shows a time as both.
+ */
+export function markNotDone(id: string): void {
+  const task = state.tasks.find((t) => t.id === id);
+  if (!task?.routineId || !task.due || task.slot === undefined) return;
+  if (task.done) toggleTask(id);
+  const { routineId, due, slot } = task;
+  update((s) => ({
+    tasks: s.tasks.filter((t) => t.id !== id),
+    routineMissed: withSlot(s.routineMissed, routineId, due, slot, true),
+  }));
+}
+
+export type SlotMark = 'done' | 'missed' | null;
+
+/** How one time of a routine on one day is recorded: done, not done, or not answered. */
+export function slotMark(s: Pick<AppState, 'routineLog' | 'routineMissed'>, routineId: string, day: string, slot: number): SlotMark {
+  if (s.routineLog[routineId]?.[day]?.includes(slot)) return 'done';
+  if (s.routineMissed[routineId]?.[day]?.includes(slot)) return 'missed';
+  return null;
+}
+
+/**
+ * Corrects a routine's history from its page (a time forgotten, or ticked by mistake). If that
+ * time's task is still in the matrix, the task follows: ticked, unticked or marked not done.
+ * A past day marked done afterwards does not grow a flower.
+ */
+export function setSlotMark(routineId: string, day: string, slot: number, mark: SlotMark): void {
+  const live = state.tasks.find((t) => t.routineId === routineId && t.due === day && t.slot === slot);
+  if (live) {
+    if (mark === 'missed') markNotDone(live.id);
+    else if ((mark === 'done') !== live.done) toggleTask(live.id);
+    return;
+  }
+  update((s) => ({
+    routineLog: withSlot(s.routineLog, routineId, day, slot, mark === 'done'),
+    routineMissed: withSlot(s.routineMissed, routineId, day, slot, mark === 'missed'),
+  }));
+}
+
 export function deleteTask(id: string) {
   const task = state.tasks.find((t) => t.id === id);
   update((s) => ({
@@ -1042,7 +1094,9 @@ export function deleteRoutine(id: string, removeToday = false): void {
       });
     const routineLog = { ...s.routineLog };
     delete routineLog[id];
-    return { routines: s.routines.filter((r) => r.id !== id), routineMade, routineLog, tasks };
+    const routineMissed = { ...s.routineMissed };
+    delete routineMissed[id];
+    return { routines: s.routines.filter((r) => r.id !== id), routineMade, routineLog, routineMissed, tasks };
   });
 }
 

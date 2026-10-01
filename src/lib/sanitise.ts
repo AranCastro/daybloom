@@ -277,6 +277,7 @@ const FIELDS: Record<string, (v: unknown) => unknown> = {
   avatar,
   tasks: (v) => list(v, task),
   routines: (v) => list(v, routine),
+  routineMissed: (v) => FIELDS.routineLog(v),
   routineLog: (v) =>
     strMap(v, (days) =>
       dayMap(days, (slots) => {

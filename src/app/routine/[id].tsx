@@ -20,7 +20,7 @@ import { effortInfo } from '@/lib/effort';
 import { useQuadrantNames } from '@/lib/labels';
 import { clockText, repeatLabel } from '@/lib/routines';
 import { percent, routineStats } from '@/lib/routine-stats';
-import { useAppState } from '@/lib/store';
+import { setSlotMark, SlotMark, useAppState } from '@/lib/store';
 
 export default function RoutineScreen() {
   const t = useTheme();
@@ -28,6 +28,7 @@ export default function RoutineScreen() {
   const today = useToday();
   const routine = useAppState((s) => s.routines.find((r) => r.id === id));
   const log = useAppState((s) => s.routineLog[id ?? '']);
+  const missed = useAppState((s) => s.routineMissed[id ?? '']);
   const weekStart = useAppState((s) => s.settings.weekStart);
   const names = useQuadrantNames();
   const { color } = useQuadrantColors(routine?.quadrant ?? 1);
@@ -50,7 +51,7 @@ export default function RoutineScreen() {
     );
   }
 
-  const s = routineStats(routine, log, today, weekStart);
+  const s = routineStats(routine, log, today, weekStart, 16, missed);
   const since = fromKey(s.since);
   const many = routine.times.length > 1;
 
@@ -104,7 +105,8 @@ export default function RoutineScreen() {
                   <Text variant="small">{s.total === 1 ? 'time done' : 'times done'} in all</Text>
                 </View>
                 <Text variant="caption">
-                  {s.last30.done} of {s.last30.due} in the last 30 days · {s.perfectDays} full {s.perfectDays === 1 ? 'day' : 'days'} since{' '}
+                  {s.last30.done} of {s.last30.due} in the last 30 days
+                  {s.notDone30 ? ` · ${s.notDone30} marked not done` : ''} · {s.perfectDays} full {s.perfectDays === 1 ? 'day' : 'days'} since{' '}
                   {shortDate(since)}
                 </Text>
               </View>
@@ -148,30 +150,38 @@ export default function RoutineScreen() {
 
         <Card>
           <Text variant="label">Recent days</Text>
+          <Text variant="caption">Tap a circle to change it: done, not done, or no answer.</Text>
           {s.recent.length === 0 ? (
             <Text variant="small">Nothing yet. It starts {shortDate(fromKey(routine.start))}.</Text>
           ) : (
             <View style={{ gap: 2 }}>
               {s.recent.map((d) => {
                 const date = fromKey(d.day);
-                const all = d.slots.every(Boolean);
+                const done = d.slots.filter((x) => x === 'done').length;
+                const notDone = d.slots.filter((x) => x === 'missed').length;
+                const summary =
+                  done === d.slots.length ? 'Done' : notDone === d.slots.length ? 'Not done' : done || notDone ? `${done} of ${d.slots.length}` : 'No answer';
                 return (
                   <View key={d.day} style={[styles.recent, { borderColor: t.line }]}>
                     <Text variant="small" color="text" style={{ flex: 1 }}>
                       {d.day === today ? 'Today' : `${weekdayShort(date)} ${shortDate(date)}`}
                     </Text>
                     <View style={{ flexDirection: 'row', gap: 6 }}>
-                      {d.slots.map((ok, i) => (
-                        <View
+                      {d.slots.map((mark, i) => (
+                        <SlotButton
                           key={i}
-                          accessibilityLabel={`${routine.times[i] ? clockText(routine.times[i]) : `Time ${i + 1}`}: ${ok ? 'done' : 'not done'}`}
-                          style={[styles.tick, ok ? { backgroundColor: t.brand, borderColor: t.brand } : { borderColor: t.line }]}>
-                          {ok && <Icon name="check" size={12} color={t.brandText} strokeWidth={3} />}
-                        </View>
+                          mark={mark}
+                          label={routine.times[i] ? clockText(routine.times[i]) : `Time ${i + 1}`}
+                          onPress={() => setSlotMark(routine.id, d.day, i, mark === null ? 'done' : mark === 'done' ? 'missed' : null)}
+                        />
                       ))}
                     </View>
-                    <Text variant="caption" strong color={all ? 'success' : 'textMuted'} style={{ width: 64, textAlign: 'right' }}>
-                      {all ? 'Done' : `${d.slots.filter(Boolean).length} of ${d.slots.length}`}
+                    <Text
+                      variant="caption"
+                      strong
+                      color={summary === 'Done' ? 'success' : summary === 'Not done' ? 'danger' : 'textMuted'}
+                      style={{ width: 72, textAlign: 'right' }}>
+                      {summary}
                     </Text>
                   </View>
                 );
@@ -184,6 +194,31 @@ export default function RoutineScreen() {
       </Screen>
       <TaskSheet visible={editing} routine={routine} onClose={() => setEditing(false)} />
     </View>
+  );
+}
+
+/** One time of one day: tap to cycle done → not done → no answer. */
+function SlotButton({ mark, label, onPress }: { mark: SlotMark; label: string; onPress: () => void }) {
+  const t = useTheme();
+  const state = mark === 'done' ? 'done' : mark === 'missed' ? 'not done' : 'no answer';
+  return (
+    <Pressable
+      onPress={() => (tap(), onPress())}
+      hitSlop={6}
+      accessibilityRole="button"
+      accessibilityLabel={`${label}: ${state}`}
+      accessibilityHint="Changes it to the next of done, not done and no answer"
+      style={[
+        styles.tick,
+        mark === 'done'
+          ? { backgroundColor: t.brand, borderColor: t.brand }
+          : mark === 'missed'
+            ? { backgroundColor: t.danger + '1F', borderColor: t.danger }
+            : { borderColor: t.line, borderStyle: 'dashed' },
+      ]}>
+      {mark === 'done' && <Icon name="check" size={13} color={t.brandText} strokeWidth={3} />}
+      {mark === 'missed' && <Icon name="close" size={12} color={t.danger} strokeWidth={3} />}
+    </Pressable>
   );
 }
 
@@ -212,5 +247,5 @@ const styles = StyleSheet.create({
   tile: { flex: 1, gap: 4, padding: 12, borderRadius: Radius.lg, borderWidth: 1 },
   tileIcon: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginBottom: 2 },
   recent: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9, borderBottomWidth: StyleSheet.hairlineWidth },
-  tick: { width: 22, height: 22, borderRadius: 11, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
+  tick: { width: 28, height: 28, borderRadius: 14, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
 });

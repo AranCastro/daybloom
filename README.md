@@ -34,6 +34,10 @@ weather following the phone, and Thottam now says Poo Kolam.
   ticked, "I worked on it today", or a focus session on that task) grows one flower at the task's rare odds, and those
   flowers stay even if the task is unticked later; the full effort reward still comes when the task is finished. On a
   low- or medium-energy day, a big task with open steps stays in the matrix, because only its next step is asked.
+- **Not done (3.6).** A routine's task can be answered either way: tick it, or tap *Not done* (on the task, in its
+  sheet, or on the reminder). Not done is kept in `routineMissed`, takes the task off the matrix, and the routine's
+  next time still comes. On the routine's page each recent time can be changed by tapping it: done, not done, or no
+  answer; the headline counts times marked not done in the last 30 days.
 - **Routine history (3.5, Play and GitHub builds).** Every time a routine task is ticked off (in the app, from a widget
   or from a reminder's Done button) is kept in `routineLog`, so the record survives the task being replaced by the next
   one; data from earlier versions is rebuilt from the flowers routine tasks grew. The Routines list shows this week

@@ -138,7 +138,7 @@ export function RepeatEditor({ value, onChange }: { value: RepeatDraft; onChange
               <Text variant="bodySm" strong color="text">
                 Gentle reminder
               </Text>
-              <Text variant="caption">A quiet notification at each time, with a Done button. No sound.</Text>
+              <Text variant="caption">A quiet notification at each time, with Done and Not done buttons. No sound.</Text>
             </View>
             <Switch
               value={value.remind}
