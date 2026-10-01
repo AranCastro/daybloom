@@ -42,8 +42,10 @@ export type RoutineStats = {
   slots: (Tally & { time: string })[];
   /** Sunday … Saturday over the last 12 weeks. */
   weekdays: Tally[];
-  /** The most recent days it was due (newest first), with which times were done. */
-  recent: { day: string; slots: boolean[] }[];
+  /** Times marked "Not done" in the last 30 days. */
+  notDone30: number;
+  /** The most recent days it was due (newest first), each time done, marked not done, or not answered. */
+  recent: { day: string; slots: ('done' | 'missed' | null)[] }[];
 };
 
 const rate = (x: Tally) => (x.due ? x.done / x.due : 0);
@@ -80,7 +82,14 @@ function streaks(cells: DayCell[], today: string): { streak: number; best: numbe
   return { streak: run, best };
 }
 
-export function routineStats(r: Routine, log: RoutineLog | undefined, today: string, weekStart: 0 | 1 = 0, heatWeeks = 16): RoutineStats {
+export function routineStats(
+  r: Routine,
+  log: RoutineLog | undefined,
+  today: string,
+  weekStart: 0 | 1 = 0,
+  heatWeeks = 16,
+  missed?: RoutineLog,
+): RoutineStats {
   const logged = Object.keys(log ?? {}).sort();
   const since = logged[0] && logged[0] < r.start ? logged[0] : r.start;
   const all = since <= today ? span(since, today).map((d) => cellFor(r, log, d, today)) : [];
@@ -118,12 +127,16 @@ export function routineStats(r: Routine, log: RoutineLog | undefined, today: str
     .filter((c) => c.due)
     .slice(-10)
     .reverse()
-    .map((c) => ({ day: c.day, slots: Array.from({ length: c.due }, (_, i) => !!log?.[c.day]?.includes(i)) }));
+    .map((c) => ({
+      day: c.day,
+      slots: Array.from({ length: c.due }, (_, i) => (log?.[c.day]?.includes(i) ? 'done' : missed?.[c.day]?.includes(i) ? 'missed' : null)),
+    }));
 
   return {
     total: Object.values(log ?? {}).reduce((n, s) => n + s.length, 0),
     perfectDays: all.filter((c) => c.due && c.done >= c.due).length,
     last30: sum(last30Cells),
+    notDone30: last30Cells.reduce((n, c) => n + (c.due ? (missed?.[c.day]?.length ?? 0) : 0), 0),
     thisWeek: sum(span(weekOf, today).map((d) => cellFor(r, log, d, today))),
     streak,
     best,

@@ -2,7 +2,7 @@
   "expo": {
     "name": "Daybloom",
     "slug": "daybloom",
-    "version": "3.5.0",
+    "version": "3.6.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "daybloom",
@@ -14,7 +14,7 @@
     },
     "android": {
       "package": "online.draran.daybloom",
-      "versionCode": 33,
+      "versionCode": 34,
       "adaptiveIcon": {
         "backgroundColor": "#F6F2EC",
         "foregroundImage": "./assets/images/android-icon-foreground.png",

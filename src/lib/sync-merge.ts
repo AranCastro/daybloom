@@ -119,15 +119,20 @@ export function mergeStates(local: AppState, remote: AppState, now = Date.now())
   for (const [id, v] of Object.entries(newer.routineMade ?? {})) routineMade[id] = (routineMade[id] ?? '') > v ? routineMade[id] : v;
 
   // Routine history: joined day by day per routine; a deleted routine's history goes with it.
-  const routineLog: AppState['routineLog'] = {};
-  for (const id of new Set([...Object.keys(older.routineLog ?? {}), ...Object.keys(newer.routineLog ?? {})])) {
-    if (deletedIds[id]) continue;
-    routineLog[id] = joinDays(newer.routineLog?.[id], older.routineLog?.[id]);
-  }
+  const joinLogs = (key: 'routineLog' | 'routineMissed') => {
+    const out: AppState['routineLog'] = {};
+    for (const id of new Set([...Object.keys(older[key] ?? {}), ...Object.keys(newer[key] ?? {})])) {
+      if (!deletedIds[id]) out[id] = joinDays(newer[key]?.[id], older[key]?.[id]);
+    }
+    return out;
+  };
+  const routineLog = joinLogs('routineLog');
+  const routineMissed = joinLogs('routineMissed');
 
   return {
     ...newer,
     routineLog,
+    routineMissed,
     ...lists,
     ...days,
     dayNotes,

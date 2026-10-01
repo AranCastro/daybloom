@@ -25,10 +25,11 @@ export const CHECKIN_ACTIONS: { id: string; mood: 2 | 3 | 4; title: string }[] =
   { id: 'mood-2', mood: 2, title: '🙁 Low' },
 ];
 const NOTED_ID = 'checkin-noted';
-/** Routine reminders: quiet (no sound or vibration), with a Done button that ticks the task. */
+/** Routine reminders: quiet (no sound or vibration), with Done and Not done buttons. */
 const ROUTINE_CHANNEL = 'routine-gentle';
 export const ROUTINE_CATEGORY = 'daybloom-routine';
 export const ROUTINE_DONE = 'routine-done';
+export const ROUTINE_NOT_DONE = 'routine-not-done';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -99,6 +100,7 @@ export function prepareNotifications(): Promise<void> {
     ).catch(() => undefined);
     await Notifications.setNotificationCategoryAsync(ROUTINE_CATEGORY, [
       { identifier: ROUTINE_DONE, buttonTitle: '✓ Done', options: { opensAppToForeground: false } },
+      { identifier: ROUTINE_NOT_DONE, buttonTitle: '✕ Not done', options: { opensAppToForeground: false } },
     ]).catch(() => undefined);
   })().catch(() => {
     setup = null;

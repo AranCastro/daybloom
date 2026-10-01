@@ -27,7 +27,7 @@ jest.mock('expo-notifications', () => ({
 
 import { addDays, dayKey, fromKey } from '@/lib/dates';
 import { handleRoutineAction } from '@/lib/notification-checkin';
-import { ROUTINE_DONE, syncRoutineReminders } from '@/lib/reminders';
+import { ROUTINE_DONE, ROUTINE_NOT_DONE, syncRoutineReminders } from '@/lib/reminders';
 import { fromMinutes, instanceId, normaliseTimes, occursOn, repeatLabel, reminderId, taskIdFromReminder } from '@/lib/routines';
 import { sanitise } from '@/lib/sanitise';
 import * as store from '@/lib/store';
@@ -213,5 +213,13 @@ describe('gentle reminders', () => {
     // The same press arriving again (background task and in-app listener) does nothing.
     expect(await handleRoutineAction(ROUTINE_DONE, reminderId(id), 111)).toBe(false);
     expect(await handleRoutineAction('mood-4', reminderId(id), 112)).toBe(false);
+  });
+
+  it('Not done on the reminder records it and takes the task off the matrix', async () => {
+    const r = store.addRoutine({ title: 'Stretch', quadrant: 2, kind: 'daily', times: ['00:00'], remind: true });
+    const id = instanceId(r.id, TODAY, 0);
+    expect(await handleRoutineAction(ROUTINE_NOT_DONE, reminderId(id), 113)).toBe(true);
+    expect(store.getState().tasks.some((t) => t.id === id)).toBe(false);
+    expect(store.getState().routineMissed[r.id]).toEqual({ [TODAY]: [0] });
   });
 });

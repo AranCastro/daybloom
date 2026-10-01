@@ -41,6 +41,7 @@ import {
   hapticsOn,
   logProgress,
   makeRoutineFrom,
+  markNotDone,
   moveTask,
   openTasks,
   Quadrant,
@@ -132,7 +133,7 @@ export function TaskRow({ task, today, onOpen, compact }: { task: Task; today: s
         </Text>
         <StepProgress task={task} compact={compact} />
         {!task.done && (task.due || task.effort) && (
-          <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: 8, rowGap: 4, alignItems: 'center' }}>
             {task.routineId && task.at && task.due === today ? (
               <View style={styles.routineMeta}>
                 <Icon name="repeat" size={13} color={color} />
@@ -148,10 +149,32 @@ export function TaskRow({ task, today, onOpen, compact }: { task: Task; today: s
                 {effortInfo(task.effort).emoji} {effortInfo(task.effort).label}
               </Text>
             )}
+            {task.routineId && task.due === today && <NotDoneButton task={task} />}
           </View>
         )}
       </Pressable>
     </Animated.View>
+  );
+}
+
+/** "Not done" beside a routine's task: recorded in its history, and the task leaves the matrix. */
+function NotDoneButton({ task }: { task: Task }) {
+  const t = useTheme();
+  return (
+    <Pressable
+      hitSlop={8}
+      onPress={() => {
+        if (hapticsOn()) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        markNotDone(task.id);
+      }}
+      accessibilityRole="button"
+      accessibilityLabel={`Not done: ${task.title}`}
+      style={[styles.notDone, { borderColor: t.line }]}>
+      <Icon name="close" size={10} color={t.textMuted} strokeWidth={2.6} />
+      <Text variant="micro" color="textMuted">
+        Not done
+      </Text>
+    </Pressable>
   );
 }
 
@@ -500,6 +523,17 @@ function SheetBody({ onClose, task, defaultQuadrant = 1, defaultDue, routine: ro
               </Text>
             </Pressable>
           )}
+          {task?.routineId && !task.done && (
+            <Button
+              title="Not done"
+              icon="close"
+              kind="secondary"
+              onPress={() => {
+                markNotDone(task.id);
+                onClose();
+              }}
+            />
+          )}
           {task && (
             <Pressable
               onPress={() =>
@@ -584,6 +618,7 @@ const styles = StyleSheet.create({
   pick: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start' },
   calendar: { borderWidth: 1, borderRadius: Radius.md, padding: 10 },
   routineMeta: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  notDone: { flexDirection: 'row', alignItems: 'center', gap: 3, borderWidth: 1, borderRadius: 10, paddingHorizontal: 7, paddingVertical: 2 },
   dueChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: Radius.pill, borderWidth: 1 },
   delete: { flexDirection: 'row', gap: 8, alignSelf: 'center', alignItems: 'center', padding: 8 },
 });

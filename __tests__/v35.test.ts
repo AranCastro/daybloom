@@ -91,7 +91,7 @@ describe('numbers from the history', () => {
     expect(s.slots.map((x) => x.done)).toEqual([1, 2]);
     expect(s.heat).toHaveLength(16 * 7);
     expect(fromKey(s.heat[0].day).getDay()).toBe(1);
-    expect(s.recent[0]).toEqual({ day: TODAY, slots: [false, true] });
+    expect(s.recent[0]).toEqual({ day: TODAY, slots: [null, 'done'] });
   });
 
   it('the summary adds up every routine this week', () => {
@@ -100,5 +100,56 @@ describe('numbers from the history', () => {
     expect(w.days).toHaveLength(7);
     expect(w).toMatchObject({ done: 1, due: 5 }); // Mon–Thu for r1, today for r2
     expect(lastDays(daily(), {}, TODAY)).toHaveLength(14);
+  });
+});
+
+describe('Not done (3.6)', () => {
+  it('marks a routine task not done: recorded, off the matrix, and the next time still comes', () => {
+    const r = store.addRoutine({ title: 'Water', quadrant: 1, kind: 'daily', times: ['00:00', '23:59'], remind: false });
+    const task = store.getState().tasks.find((t) => t.routineId === r.id)!;
+    store.toggleTask(task.id);
+    const blooms = store.getState().bloomCount;
+    store.markNotDone(task.id);
+    const s = store.getState();
+    expect(s.tasks.some((t) => t.id === task.id)).toBe(false);
+    expect(s.routineMissed[r.id]).toEqual({ [task.due!]: [0] });
+    expect(s.routineLog[r.id]).toEqual({}); // no longer counted as done
+    expect(s.bloomCount).toBeLessThan(blooms); // its flower went back
+    expect(store.slotMark(s, r.id, task.due!, 0)).toBe('missed');
+    // Later the evening time arrives as usual.
+    const evening = new Date();
+    evening.setHours(23, 59, 30);
+    store.ensureRoutines(evening);
+    expect(store.getState().tasks.filter((t) => t.routineId === r.id).map((t) => t.slot)).toEqual([1]);
+  });
+
+  it('the routine page cycles a past time: done, not done, no answer', () => {
+    store.replaceState({ onboarded: true, routines: [daily()] });
+    store.setSlotMark('r1', day(-2), 0, 'done');
+    expect(store.slotMark(store.getState(), 'r1', day(-2), 0)).toBe('done');
+    store.setSlotMark('r1', day(-2), 0, 'missed');
+    expect(store.getState().routineLog.r1[day(-2)]).toBeUndefined();
+    expect(store.slotMark(store.getState(), 'r1', day(-2), 0)).toBe('missed');
+    store.setSlotMark('r1', day(-2), 0, null);
+    expect(store.slotMark(store.getState(), 'r1', day(-2), 0)).toBeNull();
+  });
+
+  it('ticking a time done clears an earlier Not done for it', () => {
+    const r = store.addRoutine({ title: 'Read', quadrant: 2, kind: 'daily', times: ['00:00'], remind: false });
+    const task = store.getState().tasks.find((t) => t.routineId === r.id)!;
+    store.setSlotMark(r.id, task.due!, 0, 'missed');
+    expect(store.getState().tasks.some((t) => t.id === task.id)).toBe(false);
+    store.setSlotMark(r.id, task.due!, 0, 'done');
+    expect(store.slotMark(store.getState(), r.id, task.due!, 0)).toBe('done');
+  });
+
+  it('stats count Not done and show it in recent days', () => {
+    const s = routineStats(daily(['08:00', '20:00']), { [day(-1)]: [0] }, TODAY, 1, 16, { [day(-1)]: [1], [day(-3)]: [0, 1] });
+    expect(s.notDone30).toBe(3);
+    expect(s.recent[1]).toEqual({ day: day(-1), slots: ['done', 'missed'] });
+  });
+
+  it('a damaged Not done record is cleaned like the history', () => {
+    expect(sanitise({ routineMissed: { r1: { [TODAY]: [1, 9] } } }).routineMissed).toEqual({ r1: { [TODAY]: [1] } });
   });
 });
