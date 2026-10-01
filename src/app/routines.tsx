@@ -1,6 +1,7 @@
 /**
- * Routines: tasks that come back on their own. Lists each routine with how often it repeats, its
- * times and whether it reminds; tap one to change it, or add a new one.
+ * Routines: tasks that come back on their own. This week across all routines at the top, then each
+ * routine with how often it repeats, its times, the last two weeks and how often it was done; tap
+ * one for its full history (routine/[id]), or add a new one.
  */
 import { router } from 'expo-router';
 import { useState } from 'react';
@@ -8,6 +9,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { Icon } from '@/components/icons';
+import { DayStrip, ProgressRing, WeekColumns } from '@/components/routine-charts';
 import { TaskSheet, useQuadrantColors } from '@/components/tasks';
 import { Text } from '@/components/text';
 import { Button, Card, EmptyState, Screen, Tappable, tap } from '@/components/ui';
@@ -17,12 +19,13 @@ import { useToday } from '@/hooks/use-today';
 import { effortInfo } from '@/lib/effort';
 import { useQuadrantNames } from '@/lib/labels';
 import { clockText, occursOn, repeatLabel } from '@/lib/routines';
+import { allRoutinesWeek, lastDays, percent } from '@/lib/routine-stats';
+import { fromKey } from '@/lib/dates';
 import { Routine, useAppState } from '@/lib/store';
 
 export default function RoutinesScreen() {
   const t = useTheme();
   const routines = useAppState((s) => s.routines);
-  const [editing, setEditing] = useState<Routine | null>(null);
   const [adding, setAdding] = useState(false);
 
   return (
@@ -45,18 +48,50 @@ export default function RoutinesScreen() {
             <EmptyState line="No routines yet. Medicines, a walk, watering the plants: add one and it will appear by itself." action="Add a routine" onAction={() => setAdding(true)} />
           </Card>
         ) : (
-          <View style={{ gap: 10 }}>
-            {routines.map((r) => (
-              <RoutineRow key={r.id} r={r} onOpen={() => setEditing(r)} />
-            ))}
-          </View>
+          <>
+            <WeekSummary routines={routines} />
+            <View style={{ gap: 10 }}>
+              {routines.map((r, i) => (
+                <Animated.View key={r.id} entering={FadeInDown.delay(80 + i * 40).duration(350)}>
+                  <RoutineRow r={r} onOpen={() => router.push({ pathname: '/routine/[id]', params: { id: r.id } })} />
+                </Animated.View>
+              ))}
+            </View>
+          </>
         )}
 
         {routines.length > 0 && <Button title="Add a routine" icon="plus" onPress={() => setAdding(true)} />}
       </Screen>
-      <TaskSheet visible={!!editing} routine={editing} onClose={() => setEditing(null)} />
       <TaskSheet visible={adding} onClose={() => setAdding(false)} />
     </View>
+  );
+}
+
+/** This week across every routine: a ring, the count, and one column per day. */
+function WeekSummary({ routines }: { routines: Routine[] }) {
+  const today = useToday();
+  const logs = useAppState((s) => s.routineLog);
+  const weekStart = useAppState((s) => s.settings.weekStart);
+  const week = allRoutinesWeek(routines, logs, today, weekStart);
+  return (
+    <Animated.View entering={FadeInDown.delay(40).duration(400)}>
+      <Card>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+          <ProgressRing value={week.due ? week.done / week.due : 0} size={84} stroke={9}>
+            <Text variant="numeral">{week.due ? `${percent(week)}%` : '–'}</Text>
+          </ProgressRing>
+          <View style={{ flex: 1, gap: 8 }}>
+            <View>
+              <Text variant="label">This week</Text>
+              <Text variant="bodySm" strong color="text">
+                {week.done} of {week.due} done
+              </Text>
+            </View>
+            <WeekColumns days={week.days} weekStart={weekStart} today={fromKey(today).getDay()} />
+          </View>
+        </View>
+      </Card>
+    </Animated.View>
   );
 }
 
@@ -65,6 +100,8 @@ function RoutineRow({ r, onOpen }: { r: Routine; onOpen: () => void }) {
   const today = useToday();
   const names = useQuadrantNames();
   const { color } = useQuadrantColors(r.quadrant);
+  const log = useAppState((s) => s.routineLog[r.id]);
+  const total = Object.values(log ?? {}).reduce((n, x) => n + x.length, 0);
   // The routine's one task in the matrix today (the current time of day), if any.
   const current = useAppState((s) => s.tasks.find((x) => x.routineId === r.id && x.due === today));
   const dueToday = occursOn(r, today);
@@ -91,12 +128,21 @@ function RoutineRow({ r, onOpen }: { r: Routine; onOpen: () => void }) {
           <Icon name={r.remind ? 'bell' : 'clock'} size={13} color={t.textMuted} />
           <Text variant="caption">{r.times.map(clockText).join(' · ')}</Text>
         </View>
+        <View style={[styles.meta, { gap: 10, marginTop: 4 }]}>
+          <DayStrip cells={lastDays(r, log, today)} />
+          <Text variant="caption" strong color="textSecondary">
+            {total}×
+          </Text>
+        </View>
       </View>
-      {dueToday && !!status && (
-        <Text variant="caption" strong color={current?.done ? 'success' : 'textSecondary'}>
-          {status}
-        </Text>
-      )}
+      <View style={{ alignItems: 'flex-end', gap: 6 }}>
+        {dueToday && !!status && (
+          <Text variant="caption" strong color={current?.done ? 'success' : 'textSecondary'}>
+            {status}
+          </Text>
+        )}
+        <Icon name="arrow" size={16} color={t.textMuted} />
+      </View>
     </Tappable>
   );
 }

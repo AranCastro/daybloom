@@ -34,6 +34,13 @@ weather following the phone, and Thottam now says Poo Kolam.
   ticked, "I worked on it today", or a focus session on that task) grows one flower at the task's rare odds, and those
   flowers stay even if the task is unticked later; the full effort reward still comes when the task is finished. On a
   low- or medium-energy day, a big task with open steps stays in the matrix, because only its next step is asked.
+- **Routine history (3.5, Play and GitHub builds).** Every time a routine task is ticked off (in the app, from a widget
+  or from a reminder's Done button) is kept in `routineLog`, so the record survives the task being replaced by the next
+  one; data from earlier versions is rebuilt from the flowers routine tasks grew. The Routines list shows this week
+  across all routines (a ring and one column per day) and, on each routine, the last two weeks and the times done.
+  Each routine's own page (`routine/[id]`) has the last-30-days share as a ring, the all-time count, current and best
+  streak, a 16-week calendar heat map (tap a day), week-by-week bars, time-of-day and weekday bars, and the recent
+  days with each time ticked or not. An unfinished today never breaks a streak.
 - **Sync between phones (3.4, GitHub APK only).** Settings → Sync between phones signs in with Google and keeps one
   file, `daybloom-sync.json`, in the hidden app-data folder of the user's own Google Drive (scope `drive.appdata`:
   the app sees only that file). Each phone downloads it, joins it with its own data and uploads the result: at launch,

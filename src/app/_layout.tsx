@@ -107,6 +107,7 @@ export default function RootLayout() {
         <Stack.Screen name="calendar" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="places" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="routines" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="routine/[id]" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="thottam" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="send-flower" options={{ animation: 'slide_from_bottom' }} />
         <Stack.Screen name="game/[id]" options={{ animation: 'fade_from_bottom', gestureEnabled: false }} />
