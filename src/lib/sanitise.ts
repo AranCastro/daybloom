@@ -265,6 +265,8 @@ const FIELDS: Record<string, (v: unknown) => unknown> = {
   lastNudgeDay: (v) => (isDayKey(v) ? v : undefined),
   bloomCount: (v) => clampInt(v, 0, Number.MAX_SAFE_INTEGER),
   bloomsEver: (v) => clampInt(v, 0, Number.MAX_SAFE_INTEGER),
+  modifiedAt: (v) => clampInt(v, 0, Number.MAX_SAFE_INTEGER),
+  deletedIds: (v) => strMap(v, (x) => clampInt(x, 0, Number.MAX_SAFE_INTEGER)),
   clearedWork: (v) => dayMap(v, (x) => clampInt(x, 0, 10_000)),
   clearedFocus: (v) =>
     dayMap(v, (x) => {

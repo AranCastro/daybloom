@@ -17,6 +17,7 @@ import { isLowStreak } from '@/lib/nudge-rule';
 import { rewardFor } from '@/lib/effort';
 import { currentSlot, instanceId, normaliseTimes, occursOn, parseMade, Routine, SKIPPED_SLOT } from '@/lib/routines';
 import { sanitise } from '@/lib/sanitise';
+import { deletionsBetween, mergeStates, pruneDeleted } from '@/lib/sync-merge';
 import { cleanMoodWord, CUSTOM_PREFIX, MAX_CUSTOM_MOODS, type MoodTag } from '@/lib/mood-tags';
 
 export type NudgeLog = {
@@ -160,6 +161,9 @@ export type AppState = {
   widgetUndo: { taskId: string; stepId?: string; widget: TaskWidget; at: number } | null;
   /** App-wide preferences from Settings. */
   settings: Settings;
+  /** Device sync (GitHub build): when this data last changed, and ids deleted (id -> epoch ms) so another phone cannot bring them back. */
+  modifiedAt?: number;
+  deletedIds?: Record<string, number>;
   /** When backups were last made (kept on this phone; not replaced by a restore). */
   backup: { lastManual?: number; lastAuto?: number; lastRestore?: number; pendingSave?: boolean };
 };
@@ -367,7 +371,23 @@ export function flushState(): void {
   }
 }
 
-function set(next: AppState) {
+/** Changes that only concern this phone, and do not count as an edit for device sync. */
+const LOCAL_ONLY = new Set<keyof AppState>(['widgetPrefs', 'widgetLocks', 'widgetUndo', 'backup', 'modifiedAt', 'deletedIds']);
+
+function syncedChange(prev: AppState, next: AppState): boolean {
+  for (const k of Object.keys(next) as (keyof AppState)[]) {
+    if (prev[k] !== next[k] && !LOCAL_ONLY.has(k)) return k !== 'focus' || prev.focus.sessions !== next.focus.sessions;
+  }
+  return false;
+}
+
+function set(next: AppState, opts: { fromSync?: boolean } = {}) {
+  if (!opts.fromSync && syncedChange(state, next)) {
+    const now = Date.now();
+    const gone = deletionsBetween(state, next);
+    next = { ...next, modifiedAt: Math.max(now, (state.modifiedAt ?? 0) + 1) };
+    if (gone.length) next.deletedIds = pruneDeleted({ ...next.deletedIds, ...Object.fromEntries(gone.map((id) => [id, now])) }, now);
+  }
   state = next;
   dirty = true;
   if (!queued) {
@@ -582,6 +602,19 @@ export function replaceState(saved: Partial<AppState>) {
   set(next);
 }
 
+/**
+ * Joins the copy downloaded from the other phones (device sync) into this phone's data. Cleaned the
+ * same way as a restore; widget settings, backup dates and a running timer stay as they are here.
+ * Returns true when anything changed.
+ */
+export function applyRemote(raw: Partial<AppState>, opts: { firstTime?: boolean } = {}): boolean {
+  // A phone's first sync takes names and settings from the copy in Drive, even if it was just set up.
+  const merged = mergeStates(opts.firstTime ? { ...state, modifiedAt: 0 } : state, mergeSaved(raw));
+  if (JSON.stringify(merged) === JSON.stringify(state)) return false;
+  set(merged, { fromSync: true });
+  return true;
+}
+
 /** Renames a matrix quadrant or circle section; an empty name brings back the default. */
 export function setLabel(kind: 'matrix' | 'circle', q: Quadrant, name: string) {
   const clean = name.trim().slice(0, 24);
@@ -618,7 +651,8 @@ export function resetAll() {
       // Clean-up is best effort; the erase itself must still happen.
     }
   });
-  set(initial);
+  // Not an edit for device sync: an erased phone (signed out by its erase hook) must not delete the other phones' data.
+  set(initial, { fromSync: true });
 }
 
 /**

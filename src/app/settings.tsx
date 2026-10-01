@@ -20,6 +20,7 @@ import { helpline } from '@/lib/region';
 import { disableLock } from '@/lib/app-lock';
 import { enableLiveWeather } from '@/lib/weather';
 import { dndSupported, openDndAccess, useDndAccess } from '@/lib/focus-dnd';
+import { deleteSyncCopy, signInForSync, signOutOfSync, syncEnabled, syncNow, useSyncInfo } from '@/lib/device-sync';
 import app from '../../app.json';
 import { AppState, resetAll, setLabel, setSettings, update, useAppState } from '@/lib/store';
 
@@ -267,7 +268,7 @@ export default function Settings() {
         <Row
           icon="shield"
           title="Your data stays with you"
-          detail="Moods, tasks and your circle are stored on this phone, and in backups you choose to make. No account, no ads, no tracking."
+          detail={syncEnabled ? 'Moods, tasks and your circle are stored on this phone, in backups you choose to make and, if you sign in to sync, in your own Google Drive. No ads, no tracking.' : 'Moods, tasks and your circle are stored on this phone, and in backups you choose to make. No account, no ads, no tracking.'}
         />
         <Divider />
         <Row
@@ -280,6 +281,8 @@ export default function Settings() {
         <Row icon="lock" title="Privacy policy" onPress={() => Linking.openURL(PRIVACY_URL).catch(() => {})} />
       </Card>
 
+      {syncEnabled && <DeviceSyncCard />}
+
       <BackupCard />
 
       <Card>
@@ -290,6 +293,52 @@ export default function Settings() {
 
       <AboutFooter />
     </Screen>
+  );
+}
+
+/** Sync between phones (GitHub build): one file in the app-data folder of the user's own Google Drive. */
+function DeviceSyncCard() {
+  const sync = useSyncInfo();
+  const [note, setNote] = useState<string | null>(null);
+  const signIn = async () => {
+    tap();
+    setNote(await signInForSync());
+  };
+  const stop = () => {
+    const go = (alsoDrive: boolean) => {
+      void (async () => {
+        if (alsoDrive) await deleteSyncCopy().catch(() => setNote('The copy in Google Drive could not be removed. Try again when online.'));
+        await signOutOfSync();
+      })();
+    };
+    Alert.alert('Stop syncing this phone?', 'Your data stays on this phone. You can also remove the copy kept in your Google Drive.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Stop, keep Drive copy', onPress: () => go(false) },
+      { text: 'Stop and remove Drive copy', style: 'destructive', onPress: () => go(true) },
+    ]);
+  };
+  const when = sync.lastSync ? new Date(sync.lastSync) : null;
+  return (
+    <Card>
+      <Row
+        icon="refresh"
+        title="Sync between phones"
+        detail={
+          sync.email
+            ? `Signed in as ${sync.email}. ${sync.busy ? 'Syncing…' : when ? `Last synced ${when.toLocaleDateString()} at ${prettyTime(when.getHours(), when.getMinutes())}.` : 'Not synced yet.'}`
+            : 'Sign in with Google on each phone to keep the same moods, notes, tasks and garden on all of them. Daybloom keeps one private file in your own Google Drive; it cannot see your other files.'
+        }
+      />
+      {!!(sync.error ?? note) && <Text variant="small">{sync.error ?? note}</Text>}
+      {sync.email ? (
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          <Button title="Sync now" icon="refresh" loading={sync.busy} onPress={() => (tap(), void syncNow())} style={{ flex: 1 }} />
+          <Button title="Stop" kind="secondary" onPress={stop} style={{ flex: 1 }} />
+        </View>
+      ) : (
+        <Button title="Sign in with Google" icon="refresh" onPress={signIn} />
+      )}
+    </Card>
   );
 }
 
