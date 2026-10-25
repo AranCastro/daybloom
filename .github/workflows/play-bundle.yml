@@ -93,10 +93,16 @@ jobs:
           CODE=$(node -p "require('./app.json').expo.android.versionCode")
           NAME="daybloom-${VERSION}-vc${CODE}.aab"
           cp android/app/build/outputs/bundle/release/app-release.aab "$NAME"
+          # R8 is on: the mapping turns crash reports back into readable names. The bundle already
+          # carries it for Play; this copy is for uploading by hand if Play ever asks for it.
+          MAP=android/app/build/outputs/mapping/release/mapping.txt
+          [ -f "$MAP" ] && cp "$MAP" "daybloom-${VERSION}-vc${CODE}-mapping.txt"
           echo "name=$NAME" >> "$GITHUB_OUTPUT"
           echo "### $NAME ready: download it below under Artifacts and upload it in Play Console." >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: daybloom-play-bundle
-          path: ${{ steps.aab.outputs.name }}
+          path: |
+            ${{ steps.aab.outputs.name }}
+            daybloom-*-mapping.txt
