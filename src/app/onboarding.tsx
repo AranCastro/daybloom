@@ -4,7 +4,7 @@
  */
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown, FadeInUp, FadeOut } from 'react-native-reanimated';
 
 import { Icon, IconName } from '@/components/icons';
@@ -54,11 +54,11 @@ export default function Onboarding() {
   }
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'web' ? undefined : 'padding'}>
-      <Screen contentStyle={{ paddingBottom: 12 }}>
+    // Screen keeps the fields above the keyboard (components/ui).
+    <Screen contentStyle={{ paddingBottom: 12 }}>
         <View style={styles.topRow}>
           {step > 0 ? (
-            <Pressable hitSlop={12} onPress={back} accessibilityLabel="Back">
+            <Pressable hitSlop={12} onPress={back} accessibilityRole="button" accessibilityLabel="Back">
               <Icon name="back" color={t.textSecondary} />
             </Pressable>
           ) : (
@@ -167,8 +167,7 @@ export default function Onboarding() {
             </>
           )}
         </Animated.View>
-      </Screen>
-    </KeyboardAvoidingView>
+    </Screen>
   );
 }
 

@@ -31,7 +31,7 @@ export default function RoutinesScreen() {
   return (
     <View style={{ flex: 1 }}>
       <Screen>
-        <Pressable hitSlop={12} onPress={() => (tap(), router.back())} accessibilityLabel="Back" style={{ height: 32, justifyContent: 'center' }}>
+        <Pressable hitSlop={12} onPress={() => (tap(), router.back())} accessibilityRole="button" accessibilityLabel="Back" style={{ height: 32, justifyContent: 'center' }}>
           <Icon name="back" color={t.textSecondary} />
         </Pressable>
         <Animated.View entering={FadeInDown.duration(400)} style={{ gap: 4 }}>
@@ -105,13 +105,14 @@ function RoutineRow({ r, onOpen }: { r: Routine; onOpen: () => void }) {
   // The routine's one task in the matrix today (the current time of day), if any.
   const current = useAppState((s) => s.tasks.find((x) => x.routineId === r.id && x.due === today));
   const dueToday = occursOn(r, today);
-  const last = current?.slot === r.times.length - 1;
+  // The next time today, if any (a task from before an edit may sit past the end of the times).
+  const nextTime = r.times[(current?.slot ?? 0) + 1];
   const status = !current
     ? null
     : current.done
-      ? last
-        ? 'Done for today'
-        : `Done · next ${clockText(r.times[(current.slot ?? 0) + 1])}`
+      ? nextTime
+        ? `Done · next ${clockText(nextTime)}`
+        : 'Done for today'
       : `Now · ${clockText(current.at ?? r.times[0])}`;
   return (
     <Tappable onPress={onOpen} radius={Radius.lg} style={[styles.row, { backgroundColor: t.surface, borderColor: t.line }]}>

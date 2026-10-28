@@ -6,7 +6,8 @@ import { Icon } from '@/components/icons';
 import { MoodDot } from '@/components/mood-orb';
 import { Text } from '@/components/text';
 import { Card, Screen, Tappable, tap } from '@/components/ui';
-import { Radius, Shadow, TabBarInset } from '@/constants/theme';
+import { Radius, Shadow } from '@/constants/theme';
+import { useTabBarInset } from '@/hooks/use-tab-bar-inset';
 import { useTheme } from '@/hooks/use-theme';
 import { useToday } from '@/hooks/use-today';
 import { dayKey, shortDate, fromKey } from '@/lib/dates';
@@ -41,6 +42,7 @@ const GO: Record<BloomSource, () => void> = {
 
 export default function Journey() {
   const t = useTheme();
+  const tabInset = useTabBarInset();
   const checkins = useAppState((s) => s.checkins);
   const garden = useAppState((s) => s.garden);
   const bloomCount = useAppState((s) => s.bloomCount);
@@ -75,7 +77,7 @@ export default function Journey() {
     .slice(0, 5);
 
   return (
-    <Screen bottomInset={TabBarInset + 24}>
+    <Screen bottomInset={tabInset + 24}>
       <Animated.View entering={FadeInDown.duration(450)} style={{ gap: 4, marginTop: 8 }}>
         <Text variant="label">Your garden</Text>
         <Text variant="title">Everything you do,{'\n'}in bloom.</Text>
@@ -209,13 +211,19 @@ export default function Journey() {
 
       <Card>
         <View style={styles.monthHead}>
-          <Pressable hitSlop={12} onPress={() => (tap(), setOffset(offset - 1))}>
+          <Pressable hitSlop={12} accessibilityRole="button" accessibilityLabel="Previous month" onPress={() => (tap(), setOffset(offset - 1))}>
             <Icon name="back" color={t.textSecondary} />
           </Pressable>
           <Text variant="heading">
             {MONTHS[first.getMonth()]} {first.getFullYear()}
           </Text>
-          <Pressable hitSlop={12} disabled={offset >= 0} onPress={() => (tap(), setOffset(offset + 1))}>
+          <Pressable
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Next month"
+            accessibilityState={{ disabled: offset >= 0 }}
+            disabled={offset >= 0}
+            onPress={() => (tap(), setOffset(offset + 1))}>
             <Icon name="arrow" color={offset >= 0 ? t.line : t.textSecondary} />
           </Pressable>
         </View>
@@ -292,7 +300,7 @@ export default function Journey() {
                 <View style={[styles.feelTrack, { backgroundColor: t.surfaceAlt }]}>
                   <View style={{ width: `${Math.round((count / top[0].count) * 100)}%`, height: '100%', borderRadius: 6, backgroundColor: tag.tone === 'light' ? t.tagWarm : t.tagCool }} />
                 </View>
-                <Text variant="small" style={{ width: 44, textAlign: 'right' }}>
+                <Text variant="small" style={styles.feelCount}>
                   {count} {count === 1 ? 'day' : 'days'}
                 </Text>
               </View>
@@ -319,6 +327,8 @@ function MiniStat({ label, value }: { label: string; value: string }) {
 const styles = StyleSheet.create({
   feelRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   feelTrack: { flex: 1, height: 12, borderRadius: 6, overflow: 'hidden' },
+  // Sized to its text ("12 days"), so it does not wrap at larger font sizes.
+  feelCount: { minWidth: 44, textAlign: 'right' },
   tabular: { fontVariant: ['tabular-nums'] },
   gardenStats: { flexDirection: 'row', gap: 8 },
   miniStat: { flex: 1, borderRadius: Radius.md, borderWidth: 1, paddingVertical: 10, alignItems: 'center', ...Shadow.sm },

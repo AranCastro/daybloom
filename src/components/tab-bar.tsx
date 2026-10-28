@@ -12,7 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon, IconName } from '@/components/icons';
 import { Text } from '@/components/text';
 import { tap } from '@/components/ui';
-import { Radius, Shadow, TabBarHeight } from '@/constants/theme';
+import { Radius, Shadow, TabBarHeight, TabBarMinBottom } from '@/constants/theme';
 import { useIsDark, useTheme } from '@/hooks/use-theme';
 
 const ICONS: Record<string, IconName> = {
@@ -69,7 +69,7 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
 
   const barStyle = [styles.bar, { width: barWidth, backgroundColor: fill, borderColor: t.line }, !glass && Shadow.md];
   return (
-    <View pointerEvents="box-none" style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, 14) }]}>
+    <View pointerEvents="box-none" style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, TabBarMinBottom) }]}>
       {glass ? (
         <GlassView glassEffectStyle="regular" colorScheme={dark ? 'dark' : 'light'} style={barStyle}>
           {items}

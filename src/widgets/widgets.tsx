@@ -429,7 +429,7 @@ export function TasksWidget({ s, p, height, flash }: WidgetProps) {
 
 // ── 5. Focus timer ───────────────────────────────────────────────────────────
 
-export function FocusWidget({ s, p, width, height }: WidgetProps) {
+export function FocusWidget({ s, p, width, height, flash }: WidgetProps) {
   if (!s.onboarded) return <Welcome p={p} />;
   const f = s.focus;
   const big = width >= 220 && height >= 170;
@@ -457,14 +457,17 @@ export function FocusWidget({ s, p, width, height }: WidgetProps) {
               <SvgWidget svg={iconSvg(f.paused ? 'play' : 'pause', p.ink, 15, f.paused ? p.ink : 'none')} style={{ height: 15, width: 15 }} />
             </FlexWidget>
           )}
-          <Spacer size={6} />
-          <FlexWidget
-            clickAction="FOCUS_STOP"
-            accessibilityLabel="Stop"
-            style={{ height: 30, width: 30, borderRadius: 15, backgroundColor: p.chip, alignItems: 'center', justifyContent: 'center' }}
-          >
-            <SvgWidget svg={iconSvg('stop', p.dim, 13)} style={{ height: 13, width: 13 }} />
-          </FlexWidget>
+          {/* Time is up: no Stop either, so the finished session is collected rather than thrown away. */}
+          {!done && <Spacer size={6} />}
+          {!done && (
+            <FlexWidget
+              clickAction="FOCUS_STOP"
+              accessibilityLabel="Stop"
+              style={{ height: 30, width: 30, borderRadius: 15, backgroundColor: p.chip, alignItems: 'center', justifyContent: 'center' }}
+            >
+              <SvgWidget svg={iconSvg('stop', p.dim, 13)} style={{ height: 13, width: 13 }} />
+            </FlexWidget>
+          )}
         </FlexWidget>
         <FlexWidget style={{ flex: 1, width: 'match_parent', alignItems: 'center', justifyContent: 'center' }} {...open(LINK.focus())}>
           <SvgWidget svg={done ? flowerSvg({ ...GOLD_BUD }, ring) : ringSvg(f.progress, color, p.line, ring, big ? 8 : 6, isBreak ? 'leaf' : 'bud')} style={{ height: ring, width: ring }} />
@@ -483,7 +486,8 @@ export function FocusWidget({ s, p, width, height }: WidgetProps) {
     { id: 'deep', min: 50 },
   ];
   const suggested = s.low ? 'gentle' : 'classic';
-  const today = f.sessionsToday ? `${f.sessionsToday} today · ${f.minutesToday} min` : 'Tap a time to start';
+  // A note from the last tap, such as "Session complete · Jasmine bloomed", for a few seconds.
+  const today = flash ?? (f.sessionsToday ? `${f.sessionsToday} today · ${f.minutesToday} min` : 'Tap a time to start');
   return (
     <Shell p={p} padding={14}>
       <FlexWidget style={{ flexDirection: 'row', alignItems: 'center', width: 'match_parent' }} {...open(LINK.focus())}>
@@ -498,7 +502,7 @@ export function FocusWidget({ s, p, width, height }: WidgetProps) {
       <FlexWidget style={{ flex: 1, width: 'match_parent', justifyContent: 'center' }} {...open(LINK.focus())}>
         {big && <SvgWidget svg={budSvg(44)} style={{ height: 44, width: 44 }} />}
         <TextWidget text="Grow a flower" style={{ fontSize: big ? 20 : 17, fontFamily: DISPLAY, color: p.ink }} />
-        <TextWidget text={today} style={{ fontSize: 11, fontFamily: BODY, color: f.sessionsToday ? p.accent : p.dim }} maxLines={1} truncate="END" />
+        <TextWidget text={today} style={{ fontSize: 11, fontFamily: BODY, color: flash || f.sessionsToday ? p.accent : p.dim }} maxLines={1} truncate="END" />
       </FlexWidget>
       <FlexWidget style={{ flexDirection: 'row', width: 'match_parent' }}>
         {presets.map((x, i) => (

@@ -12,6 +12,7 @@ import {
   View,
 } from 'react-native';
 import Animated, { FadeIn, useAnimatedStyle, useSharedValue, withSequence, withSpring } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { MonthCalendar } from '@/components/calendar';
 import { Icon } from '@/components/icons';
@@ -19,7 +20,7 @@ import { Effort, EFFORTS, effortInfo, rewardLine, stepProgress } from '@/lib/eff
 import { Text } from '@/components/text';
 import { Button, Input, tap } from '@/components/ui';
 import { defaultRepeat, RepeatDraft, RepeatEditor } from '@/components/repeat-editor';
-import { Fonts, Radius } from '@/constants/theme';
+import { Fonts, inkOn, Radius } from '@/constants/theme';
 import { useIsDark, useTheme } from '@/hooks/use-theme';
 import { useToday } from '@/hooks/use-today';
 import { useQuadrantNames } from '@/lib/labels';
@@ -59,15 +60,6 @@ export function useQuadrantColors(q: Quadrant) {
   return { color: dark ? info.color.dark : info.color.light, soft: dark ? info.soft.dark : info.soft.light };
 }
 
-/** White or near-black, whichever reads better on the given colour (WCAG relative luminance). */
-function inkOn(hex: string): string {
-  const n = parseInt(hex.slice(1, 7), 16);
-  const lin = (c: number) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
-  const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((c) => lin(c / 255));
-  const L = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-  return (L + 0.05) / 0.05 > 1.05 / (L + 0.05) ? '#1D1B18' : '#FFFFFF';
-}
-
 export function QuadrantChip({ q, size = 26 }: { q: Quadrant; size?: number }) {
   const { color } = useQuadrantColors(q);
   const info = quadrantOf(q);
@@ -101,7 +93,7 @@ export function Checkbox({ checked, color, onPress, size = 22, label }: { checke
           { width: size, height: size, borderColor: color, backgroundColor: checked ? color : 'transparent' },
           anim,
         ]}>
-        {checked && <Icon name="check" color="#fff" size={size - 6} strokeWidth={2.6} />}
+        {checked && <Icon name="check" color={inkOn(color)} size={size - 6} strokeWidth={2.6} />}
       </Animated.View>
     </Pressable>
   );
@@ -320,6 +312,7 @@ export function TaskSheet(props: SheetProps) {
 
 function SheetBody({ onClose, task, defaultQuadrant = 1, defaultDue, routine: routineProp }: SheetProps) {
   const t = useTheme();
+  const insets = useSafeAreaInsets();
   const today = useToday();
   // The routine behind this sheet: the one passed in, or the one that added this task.
   const [routine] = useState<Routine | undefined>(() => routineProp ?? getRoutine(task?.routineId));
@@ -380,7 +373,8 @@ function SheetBody({ onClose, task, defaultQuadrant = 1, defaultDue, routine: ro
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'web' ? undefined : 'padding'}>
       <Pressable style={styles.scrim} onPress={onClose} accessibilityLabel="Close" />
-      <View style={[styles.sheet, { backgroundColor: t.surface }]}>
+      {/* Edge to edge, the sheet runs under the navigation bar: its padding clears the bar. */}
+      <View style={[styles.sheet, { backgroundColor: t.surface, paddingBottom: 36 + insets.bottom }]}>
         <View style={[styles.grabber, { backgroundColor: t.line }]} />
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 18 }}>
           <Text variant="heading">{routine ? 'Edit routine' : task ? 'Edit task' : repeating ? 'New routine' : 'New task'}</Text>
@@ -599,7 +593,6 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 30,
     paddingHorizontal: 22,
     paddingTop: 10,
-    paddingBottom: 36,
     maxHeight: '88%',
   },
   grabber: { width: 40, height: 5, borderRadius: 3, alignSelf: 'center', marginBottom: 14 },

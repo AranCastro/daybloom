@@ -8,7 +8,7 @@
  * the day is not over.
  */
 import { addDays, dayKey, fromKey } from '@/lib/dates';
-import { occursOn, Routine } from '@/lib/routines';
+import { occursOn, Routine, scheduleOn } from '@/lib/routines';
 
 export type RoutineLog = Record<string, number[]>;
 
@@ -51,12 +51,16 @@ export type RoutineStats = {
 const rate = (x: Tally) => (x.due ? x.done / x.due : 0);
 export const percent = (x: Tally) => Math.round(rate(x) * 100);
 
-/** One day of a routine. A day with more ticks than times (the times were reduced later) counts them all. */
+/**
+ * One day of a routine, judged by the schedule it followed that day (an edit does not rewrite the
+ * past). A day with more ticks than times counts them all.
+ */
 export function cellFor(r: Routine, log: RoutineLog | undefined, day: string, today: string): DayCell {
   const done = log?.[day]?.length ?? 0;
   if (day > today) return { day, due: 0, done: 0, future: true };
-  const isDue = day >= r.start && occursOn(r, day);
-  return { day, due: isDue || done ? Math.max(isDue ? r.times.length : 0, done) : 0, done, future: false };
+  const s = scheduleOn(r, day);
+  const isDue = day >= s.start && occursOn(s, day);
+  return { day, due: isDue || done ? Math.max(isDue ? s.times.length : 0, done) : 0, done, future: false };
 }
 
 function sum(cells: DayCell[]): Tally {
@@ -91,7 +95,7 @@ export function routineStats(
   missed?: RoutineLog,
 ): RoutineStats {
   const logged = Object.keys(log ?? {}).sort();
-  const since = logged[0] && logged[0] < r.start ? logged[0] : r.start;
+  const since = [r.start, ...(r.past ?? []).map((p) => p.start), ...logged.slice(0, 1)].sort()[0];
   const all = since <= today ? span(since, today).map((d) => cellFor(r, log, d, today)) : [];
   const { streak, best } = streaks(all, today);
   const back = (n: number) => dayKey(addDays(fromKey(today), -n));
@@ -110,11 +114,18 @@ export function routineStats(
   });
 
   const last30Cells = span(back(29), today).map((d) => cellFor(r, log, d, today));
-  const slots = r.times.map((time, i) => ({
-    time,
-    done: last30Cells.filter((c) => c.due && log?.[c.day]?.includes(i)).length,
-    due: last30Cells.filter((c) => c.due).length,
-  }));
+  // Each current time of day, counted on the days whose schedule had that time.
+  const slots = r.times.map((time) => {
+    let done = 0;
+    let due = 0;
+    for (const c of last30Cells) {
+      const i = scheduleOn(r, c.day).times.indexOf(time);
+      if (!c.due || i < 0) continue;
+      due++;
+      if (log?.[c.day]?.includes(i)) done++;
+    }
+    return { time, done, due };
+  });
 
   const weekdays: Tally[] = Array.from({ length: 7 }, () => ({ done: 0, due: 0 }));
   for (const c of span(back(83), today).map((d) => cellFor(r, log, d, today))) {

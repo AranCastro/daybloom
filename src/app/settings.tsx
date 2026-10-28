@@ -21,6 +21,7 @@ import { disableLock } from '@/lib/app-lock';
 import { enableLiveWeather } from '@/lib/weather';
 import { dndSupported, openDndAccess, useDndAccess } from '@/lib/focus-dnd';
 import { deleteSyncCopy, signInForSync, signOutOfSync, syncEnabled, syncNow, useSyncInfo } from '@/lib/device-sync';
+import { SyncPinPrompt } from '@/components/sync-pin';
 import app from '../../app.json';
 import { AppState, resetAll, setLabel, setSettings, update, useAppState } from '@/lib/store';
 
@@ -100,7 +101,7 @@ export default function Settings() {
 
   return (
     <Screen>
-      <Pressable hitSlop={12} onPress={() => (tap(), router.back())} accessibilityLabel="Back" style={{ height: 32, justifyContent: 'center' }}>
+      <Pressable hitSlop={12} onPress={() => (tap(), router.back())} accessibilityRole="button" accessibilityLabel="Back" style={{ height: 32, justifyContent: 'center' }}>
         <Icon name="back" color={t.textSecondary} />
       </Pressable>
       <Animated.View entering={FadeInDown.duration(450)} style={{ gap: 4 }}>
@@ -330,6 +331,7 @@ function DeviceSyncCard() {
         }
       />
       {!!(sync.error ?? note) && <Text variant="small">{sync.error ?? note}</Text>}
+      {sync.email && sync.needsPin && <SyncPinPrompt />}
       {sync.email ? (
         <View style={{ flexDirection: 'row', gap: 10 }}>
           <Button title="Sync now" icon="refresh" loading={sync.busy} onPress={() => (tap(), void syncNow())} style={{ flex: 1 }} />

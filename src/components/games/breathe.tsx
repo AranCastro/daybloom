@@ -3,7 +3,6 @@
  * fills over the whole session. Three rhythms; about one minute each.
  */
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, {
@@ -19,7 +18,7 @@ import Animated, {
 import Svg, { Circle } from 'react-native-svg';
 
 import { haptic, ResultPanel } from '@/components/games/fx';
-import { GameShell, StatPill } from '@/components/games/shell';
+import { GameShell, leaveGame, StatPill } from '@/components/games/shell';
 import { Text } from '@/components/text';
 import { Button, Choice } from '@/components/ui';
 import { useIsDark, useTheme } from '@/hooks/use-theme';
@@ -82,6 +81,9 @@ function locate(p: Pattern, tick: number) {
 }
 
 const RING = 280;
+/** The ring shrinks to fit a short window, down to this; the stage keeps COPY_ROOM for the words below it. */
+const MIN_RING = 150;
+const COPY_ROOM = 96 + 30;
 const STROKE = 5;
 const R = (RING - STROKE) / 2;
 const CIRC = 2 * Math.PI * R;
@@ -100,6 +102,7 @@ export function BreatheGame() {
 
   const [tick, setTick] = useState<number | null>(null); // null = intro
   const tickRef = useRef(0);
+  const [stage, setStage] = useState({ w: 0, h: 0 });
   const scale = useSharedValue(SMALL);
   const glow = useSharedValue(0.25);
   const ring = useSharedValue(0);
@@ -155,10 +158,12 @@ export function BreatheGame() {
   const orbStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
   const glowStyle = useAnimatedStyle(() => ({ opacity: glow.value, transform: [{ scale: scale.value * 1.18 }] }));
   const ringProps = useAnimatedProps(() => ({ strokeDashoffset: CIRC * (1 - ring.value) }));
+  // Drawn at RING and scaled to fit, so the orb and the ring keep their proportions.
+  const ringSize = stage.h ? Math.max(MIN_RING, Math.min(RING, stage.h - COPY_ROOM, stage.w)) : RING;
 
   if (finished) {
     return (
-      <GameShell title={info.title}>
+      <GameShell title={info.title} scroll>
         <View style={styles.resultWrap}>
           <ResultPanel
             eyebrow={`${pattern.name} breathing`}
@@ -172,7 +177,7 @@ export function BreatheGame() {
             ]}
             againLabel="Breathe again"
             onAgain={() => setTick(null)}
-            onDone={() => router.back()}
+            onDone={leaveGame}
           />
         </View>
       </GameShell>
@@ -181,28 +186,37 @@ export function BreatheGame() {
 
   return (
     <GameShell title={info.title} stat={running ? <StatPill label={`${round}/${pattern.rounds}`} color={color} /> : undefined}>
-      <View style={styles.stage}>
-        <View style={styles.orbBox}>
-          <Svg width={RING} height={RING} style={StyleSheet.absoluteFill}>
-            <Circle cx={RING / 2} cy={RING / 2} r={R} stroke={t.line} strokeWidth={STROKE} fill="none" />
-            <AnimatedCircle
-              cx={RING / 2}
-              cy={RING / 2}
-              r={R}
-              stroke={color}
-              strokeWidth={STROKE}
-              strokeLinecap="round"
-              fill="none"
-              strokeDasharray={`${CIRC} ${CIRC}`}
-              animatedProps={ringProps}
-              transform={`rotate(-90 ${RING / 2} ${RING / 2})`}
-            />
-          </Svg>
-          <Animated.View style={[styles.glow, { backgroundColor: color }, glowStyle]} />
-          <Animated.View style={[styles.orb, orbStyle]}>
-            <LinearGradient colors={dark ? ['#D6CDFA', '#6E62B0'] : ['#E3DCFB', '#7A6FB8']} start={{ x: 0.2, y: 0.1 }} end={{ x: 0.85, y: 0.95 }} style={StyleSheet.absoluteFill} />
-            <LinearGradient colors={['rgba(255,255,255,0.55)', 'rgba(255,255,255,0)']} start={{ x: 0.3, y: 0 }} end={{ x: 0.5, y: 0.55 }} style={styles.shine} />
-          </Animated.View>
+      <View
+        style={styles.stage}
+        onLayout={(e) => {
+          const { width: w, height: h } = e.nativeEvent.layout;
+          // A session frees the room of the pattern picker; keep the ring the size it started at
+          // (no jump on Begin) unless the window itself gets smaller.
+          setStage((prev) => ({ w, h: running && prev.h ? Math.min(prev.h, h) : h }));
+        }}>
+        <View style={[styles.orbFit, { width: ringSize, height: ringSize }]}>
+          <View style={[styles.orbBox, { transform: [{ scale: ringSize / RING }] }]}>
+            <Svg width={RING} height={RING} style={StyleSheet.absoluteFill}>
+              <Circle cx={RING / 2} cy={RING / 2} r={R} stroke={t.line} strokeWidth={STROKE} fill="none" />
+              <AnimatedCircle
+                cx={RING / 2}
+                cy={RING / 2}
+                r={R}
+                stroke={color}
+                strokeWidth={STROKE}
+                strokeLinecap="round"
+                fill="none"
+                strokeDasharray={`${CIRC} ${CIRC}`}
+                animatedProps={ringProps}
+                transform={`rotate(-90 ${RING / 2} ${RING / 2})`}
+              />
+            </Svg>
+            <Animated.View style={[styles.glow, { backgroundColor: color }, glowStyle]} />
+            <Animated.View style={[styles.orb, orbStyle]}>
+              <LinearGradient colors={dark ? ['#D6CDFA', '#6E62B0'] : ['#E3DCFB', '#7A6FB8']} start={{ x: 0.2, y: 0.1 }} end={{ x: 0.85, y: 0.95 }} style={StyleSheet.absoluteFill} />
+              <LinearGradient colors={['rgba(255,255,255,0.55)', 'rgba(255,255,255,0)']} start={{ x: 0.3, y: 0 }} end={{ x: 0.5, y: 0.55 }} style={styles.shine} />
+            </Animated.View>
+          </View>
         </View>
 
         {running ? (
@@ -241,6 +255,7 @@ export function BreatheGame() {
 
 const styles = StyleSheet.create({
   stage: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 30 },
+  orbFit: { alignItems: 'center', justifyContent: 'center' },
   orbBox: { width: RING, height: RING, alignItems: 'center', justifyContent: 'center' },
   glow: { position: 'absolute', width: 220, height: 220, borderRadius: 110 },
   orb: { width: 230, height: 230, borderRadius: 115, overflow: 'hidden' },

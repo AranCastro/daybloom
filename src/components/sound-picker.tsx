@@ -5,7 +5,7 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 import { Icon } from '@/components/icons';
 import { Text } from '@/components/text';
 import { Card, Choice, Tappable, tap } from '@/components/ui';
-import { Radius } from '@/constants/theme';
+import { inkOn, Radius } from '@/constants/theme';
 import { useIsDark, useTheme } from '@/hooks/use-theme';
 import { previewSound, stopSound } from '@/lib/focus-sound';
 import { ragaForHour, soundOf, SOUNDS } from '@/lib/sounds';
@@ -114,7 +114,7 @@ function Tile({ label, blurb, icon, tint, on, onPress, dark }: { label: string; 
       containerStyle={styles.tileBox}
       style={[styles.tile, { borderColor: on ? tint : t.line, backgroundColor: on ? tint + (dark ? '33' : '1F') : t.surface }]}>
       <View style={[styles.iconBubble, { backgroundColor: on ? tint : tint + '26' }]}>
-        <Icon name={icon} color={on ? '#fff' : tint} size={22} />
+        <Icon name={icon} color={on ? inkOn(tint) : tint} size={22} />
       </View>
       <Text variant="caption" strong numberOfLines={2} style={{ color: t.text, textAlign: 'center' }}>
         {label}

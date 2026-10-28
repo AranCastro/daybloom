@@ -20,7 +20,7 @@ import Animated, {
 import { Icon } from '@/components/icons';
 import { Text } from '@/components/text';
 import { Button } from '@/components/ui';
-import { Fonts, Radius, Shadow } from '@/constants/theme';
+import { Fonts, inkOn, Radius, Shadow } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { hapticsOn } from '@/lib/store';
 
@@ -78,7 +78,7 @@ export function FloatText({ text, color }: { text: string; color: string }) {
 
 // ── Confetti ────────────────────────────────────────────────────────────────
 
-const CONFETTI_COLORS = ['#F2B84B', '#E07A4F', '#6FAE7C', '#8C84C6', '#2C7FA3', '#F2A999'];
+const CONFETTI_COLORS = ['#F2B84B', '#E07A4F', '#6FAE7C', '#8C84C6', '#2A7BA0', '#F2A999'];
 
 type Piece = { x: number; delay: number; color: string; w: number; h: number; fall: number; spin: number; drift: number };
 
@@ -235,8 +235,8 @@ export function ResultPanel({
       </View>
       {newBest && (
         <Animated.View entering={ZoomIn.delay(500).springify()} style={[styles.badge, { backgroundColor: color }]}>
-          <Icon name="spark" color="#fff" size={14} />
-          <Text variant="small" strong style={{ color: '#fff' }}>
+          <Icon name="spark" color={inkOn(color)} size={14} />
+          <Text variant="small" strong style={{ color: inkOn(color) }}>
             New personal best
           </Text>
         </Animated.View>

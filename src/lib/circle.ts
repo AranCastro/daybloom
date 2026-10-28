@@ -40,7 +40,7 @@ export const CIRCLE: readonly CircleInfo[] = [
     hint: 'A short, easy conversation lifts you.',
     mode: 'call',
     opener: 'Free for a quick call sometime today?',
-    color: { light: '#2C7FA3', dark: '#7CC3E0' },
+    color: { light: '#2A7BA0', dark: '#7CC3E0' },
     soft: { light: '#DDEEF6', dark: '#15293A' },
   },
   {

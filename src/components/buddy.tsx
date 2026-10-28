@@ -6,6 +6,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/icons';
 import { Avatar } from '@/components/people';
@@ -98,6 +99,7 @@ export function NudgeReadyCard() {
 /** Buddy section for the People tab: who it is and how to change it. */
 export function BuddyCard() {
   const t = useTheme();
+  const insets = useSafeAreaInsets();
   const { buddy, automatic } = useBuddy();
   const people = useAppState((s) => s.people);
   const myName = useAppState((s) => s.name);
@@ -162,7 +164,8 @@ export function BuddyCard() {
 
       <Modal visible={choosing} transparent animationType="slide" onRequestClose={() => setChoosing(false)}>
         <Pressable style={styles.scrim} onPress={() => setChoosing(false)} accessibilityLabel="Close" />
-        <View style={[styles.sheet, { backgroundColor: t.surface }]}>
+        {/* Edge to edge, the sheet runs under the navigation bar: its padding clears the bar. */}
+        <View style={[styles.sheet, { backgroundColor: t.surface, paddingBottom: 36 + insets.bottom }]}>
           <View style={[styles.grabber, { backgroundColor: t.line }]} />
           <Text variant="heading">Choose your buddy</Text>
           <ScrollView style={{ marginTop: 10 }}>
@@ -197,6 +200,6 @@ export function BuddyCard() {
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   scrim: { flex: 1, backgroundColor: 'rgba(10,8,6,0.38)' },
-  sheet: { borderTopLeftRadius: 30, borderTopRightRadius: 30, paddingHorizontal: 22, paddingTop: 10, paddingBottom: 36, maxHeight: '75%' },
+  sheet: { borderTopLeftRadius: 30, borderTopRightRadius: 30, paddingHorizontal: 22, paddingTop: 10, maxHeight: '75%' },
   grabber: { width: 40, height: 5, borderRadius: 3, alignSelf: 'center', marginBottom: 14 },
 });

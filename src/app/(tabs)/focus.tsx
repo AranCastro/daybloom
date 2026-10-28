@@ -21,9 +21,10 @@ import { Confetti, haptic } from '@/components/games/fx';
 import { Icon } from '@/components/icons';
 import { Text } from '@/components/text';
 import { Button, Card, Choice, Screen, tap } from '@/components/ui';
-import { Radius, Spacing, TabBarInset } from '@/constants/theme';
+import { inkOn, Radius, Spacing } from '@/constants/theme';
 import { useAppActive } from '@/hooks/use-app-active';
 import { useReduceMotion } from '@/hooks/use-reduce-motion';
+import { useTabBarInset } from '@/hooks/use-tab-bar-inset';
 import { useIsDark, useTheme } from '@/hooks/use-theme';
 import { useToday } from '@/hooks/use-today';
 import { FlowerKind, GOLDEN_EVERY, RARITY_LABEL } from '@/lib/flowers';
@@ -84,6 +85,7 @@ function confirmStop(onYes: () => void) {
 
 export default function FocusScreen() {
   const t = useTheme();
+  const tabInset = useTabBarInset();
   const reduceMotion = useReduceMotion();
   const { width } = useWindowDimensions();
   const ringSize = Math.min(RING, Math.min(width, 520) - Spacing.screen * 2);
@@ -228,7 +230,7 @@ export default function FocusScreen() {
   }
 
   return (
-    <Screen bottomInset={TabBarInset + 24}>
+    <Screen bottomInset={tabInset + 24}>
       <View style={[styles.top, { justifyContent: 'flex-end' }]}>
         <View style={[styles.todayPill, { backgroundColor: t.surface, borderColor: t.line }]}>
           <Icon name="leaf" color={t.success} size={15} />
@@ -492,7 +494,7 @@ function RewardView({
           <Flower kind={f} size={170} stem />
         </Animated.View>
         <Animated.View entering={ZoomIn.delay(450).springify()} style={[styles.rarity, { backgroundColor: rareColor }]}>
-          <Text variant="caption" strong color="onStatus">
+          <Text variant="caption" strong style={{ color: inkOn(rareColor) }}>
             {RARITY_LABEL[f.rarity]}
           </Text>
         </Animated.View>

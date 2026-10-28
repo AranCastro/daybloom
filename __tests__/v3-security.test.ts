@@ -53,7 +53,7 @@ jest.mock('expo-notifications', () => ({
   dismissNotificationAsync: jest.fn(async () => undefined),
 }));
 jest.mock('expo-audio', () => ({
-  createAudioPlayer: jest.fn(() => ({ play: jest.fn(), pause: jest.fn(), replace: jest.fn(), setActiveForLockScreen: jest.fn(), clearLockScreenControls: jest.fn(), loop: false, volume: 1 })),
+  createAudioPlayer: jest.fn(() => ({ play: jest.fn(), pause: jest.fn(), replace: jest.fn(), addListener: jest.fn(), setActiveForLockScreen: jest.fn(), clearLockScreenControls: jest.fn(), loop: false, volume: 1 })),
   setAudioModeAsync: jest.fn(),
 }));
 

@@ -8,7 +8,7 @@ import { Medal, tierLabel } from '@/components/badge';
 import { Icon } from '@/components/icons';
 import { Text } from '@/components/text';
 import { Card, Screen, tap } from '@/components/ui';
-import { Radius, Shadow } from '@/constants/theme';
+import { inkOn, Radius, Shadow } from '@/constants/theme';
 import { useIsDark, useTheme } from '@/hooks/use-theme';
 import { useToday } from '@/hooks/use-today';
 import { BADGES, REST_DAY_AFTER, streakInfo } from '@/lib/badges';
@@ -33,7 +33,7 @@ export default function BadgesScreen() {
 
   return (
     <Screen>
-      <Pressable hitSlop={12} onPress={() => (tap(), router.back())} accessibilityLabel="Back" style={{ height: 32, justifyContent: 'center' }}>
+      <Pressable hitSlop={12} onPress={() => (tap(), router.back())} accessibilityRole="button" accessibilityLabel="Back" style={{ height: 32, justifyContent: 'center' }}>
         <Icon name="back" color={t.textSecondary} />
       </Pressable>
 
@@ -74,7 +74,7 @@ export default function BadgesScreen() {
                     { backgroundColor: on ? t.accent : 'transparent', borderColor: on ? t.accent : t.line },
                     isToday && !on && { borderStyle: 'dashed', borderColor: t.text },
                   ]}>
-                  {on && <Icon name="check" color="#fff" size={12} strokeWidth={2.6} />}
+                  {on && <Icon name="check" color={inkOn(t.accent)} size={12} strokeWidth={2.6} />}
                 </View>
                 <Text variant="micro" color={isToday ? 'text' : 'textMuted'}>
                   {weekdayShort(d).slice(0, 1)}

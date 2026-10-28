@@ -1,7 +1,8 @@
 /** "Where are you?" after the check-in: the user's own places, optionally pinned with GPS. */
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/icons';
 import { Text } from '@/components/text';
@@ -81,6 +82,7 @@ export function PlacePicker({ day }: { day: string }) {
 /** Name a place, pick an icon, and optionally pin it with the phone's location. */
 export function AddPlace({ onClose, onAdded }: { onClose: () => void; onAdded?: (id: string) => void }) {
   const t = useTheme();
+  const insets = useSafeAreaInsets();
   const existing = useAppState((s) => s.places);
   const [name, setName] = useState('');
   const [emoji, setEmoji] = useState<string>('🏠');
@@ -107,50 +109,53 @@ export function AddPlace({ onClose, onAdded }: { onClose: () => void; onAdded?: 
 
   return (
     <Modal visible transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.scrim} onPress={onClose} accessibilityLabel="Close" />
-      <View style={[styles.sheet, { backgroundColor: t.background }]}>
-        <Backdrop />
-        <ScrollView contentContainerStyle={{ gap: 12, padding: 22 }} keyboardShouldPersistTaps="handled">
-          <Text variant="title">A new place</Text>
-          {ideas.length > 0 && (
+      {/* Edge to edge, the window no longer shrinks for the keyboard, so the sheet rises above it. */}
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'web' ? undefined : 'padding'}>
+        <Pressable style={styles.scrim} onPress={onClose} accessibilityLabel="Close" />
+        <View style={[styles.sheet, { backgroundColor: t.background }]}>
+          <Backdrop />
+          <ScrollView contentContainerStyle={{ gap: 12, padding: 22, paddingBottom: 22 + insets.bottom }} keyboardShouldPersistTaps="handled">
+            <Text variant="title">A new place</Text>
+            {ideas.length > 0 && (
+              <View style={styles.wrap}>
+                {ideas.map((i) => (
+                  <Pressable key={i.name} onPress={() => (tap(), setName(i.name), setEmoji(i.emoji))} style={[styles.chip, { borderColor: t.line, backgroundColor: t.surface }]}>
+                    <Text variant="bodySm">{i.emoji}</Text>
+                    <Text variant="small" strong style={{ color: t.text }}>{i.name}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            )}
+            <Input value={name} onChangeText={setName} placeholder="Name, e.g. Office" maxLength={24} />
             <View style={styles.wrap}>
-              {ideas.map((i) => (
-                <Pressable key={i.name} onPress={() => (tap(), setName(i.name), setEmoji(i.emoji))} style={[styles.chip, { borderColor: t.line, backgroundColor: t.surface }]}>
-                  <Text variant="bodySm">{i.emoji}</Text>
-                  <Text variant="small" strong style={{ color: t.text }}>{i.name}</Text>
+              {PLACE_EMOJI.map((e) => (
+                <Pressable
+                  key={e}
+                  onPress={() => (tap(), setEmoji(e))}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: emoji === e }}
+                  style={[styles.emoji, { borderColor: emoji === e ? t.brand : t.line, backgroundColor: emoji === e ? t.surfaceAlt : t.surface }]}>
+                  <Text variant="heading">{e}</Text>
                 </Pressable>
               ))}
             </View>
-          )}
-          <Input value={name} onChangeText={setName} placeholder="Name, e.g. Office" maxLength={24} />
-          <View style={styles.wrap}>
-            {PLACE_EMOJI.map((e) => (
-              <Pressable
-                key={e}
-                onPress={() => (tap(), setEmoji(e))}
-                accessibilityRole="radio"
-                accessibilityState={{ selected: emoji === e }}
-                style={[styles.emoji, { borderColor: emoji === e ? t.brand : t.line, backgroundColor: emoji === e ? t.surfaceAlt : t.surface }]}>
-                <Text variant="heading">{e}</Text>
-              </Pressable>
-            ))}
-          </View>
-          <Pressable onPress={pin} disabled={locating} accessibilityRole="button" style={[styles.pin, { borderColor: coords ? t.brand : t.line, backgroundColor: t.surface }]}>
-            <Icon name="pin" color={coords ? t.brand : t.textSecondary} size={20} />
-            <View style={{ flex: 1 }}>
-              <Text variant="bodyStrong">{coords ? 'Pinned here' : locating ? 'Finding you…' : 'Pin with GPS (optional)'}</Text>
-              <Text variant="caption">
-                {coords
-                  ? `${coords.lat.toFixed(4)}, ${coords.lon.toFixed(4)} (WGS 84) · kept on this phone`
-                  : 'Lets Daybloom suggest this place when you are near it, and draw it on your map.'}
-              </Text>
-            </View>
-          </Pressable>
-          {!!note && <Text variant="small">{note}</Text>}
-          <Button title="Save place" icon="check" disabled={!name.trim()} onPress={save} />
-          <Button title="Cancel" kind="quiet" onPress={onClose} />
-        </ScrollView>
-      </View>
+            <Pressable onPress={pin} disabled={locating} accessibilityRole="button" style={[styles.pin, { borderColor: coords ? t.brand : t.line, backgroundColor: t.surface }]}>
+              <Icon name="pin" color={coords ? t.brand : t.textSecondary} size={20} />
+              <View style={{ flex: 1 }}>
+                <Text variant="bodyStrong">{coords ? 'Pinned here' : locating ? 'Finding you…' : 'Pin with GPS (optional)'}</Text>
+                <Text variant="caption">
+                  {coords
+                    ? `${coords.lat.toFixed(4)}, ${coords.lon.toFixed(4)} (WGS 84) · kept on this phone`
+                    : 'Lets Daybloom suggest this place when you are near it, and draw it on your map.'}
+                </Text>
+              </View>
+            </Pressable>
+            {!!note && <Text variant="small">{note}</Text>}
+            <Button title="Save place" icon="check" disabled={!name.trim()} onPress={save} />
+            <Button title="Cancel" kind="quiet" onPress={onClose} />
+          </ScrollView>
+        </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

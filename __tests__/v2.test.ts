@@ -11,7 +11,7 @@ jest.mock('@/lib/kv', () => {
 jest.mock('@/widgets/sync', () => ({ refreshWidgets: jest.fn(async () => undefined) }));
 jest.mock('@/lib/reminders', () => ({ scheduleFocusAlarm: jest.fn(), cancelFocusAlarm: jest.fn() }));
 jest.mock('expo-audio', () => {
-  const player = { play: jest.fn(), pause: jest.fn(), replace: jest.fn(), setActiveForLockScreen: jest.fn(), clearLockScreenControls: jest.fn(), loop: false, volume: 1 };
+  const player = { play: jest.fn(), pause: jest.fn(), replace: jest.fn(), addListener: jest.fn(), setActiveForLockScreen: jest.fn(), clearLockScreenControls: jest.fn(), loop: false, volume: 1 };
   return { createAudioPlayer: jest.fn(() => player), setAudioModeAsync: jest.fn(async () => undefined), __player: player };
 });
 jest.mock('expo-crypto', () => {
@@ -118,6 +118,24 @@ describe('focus sounds', () => {
     expect(player.play).toHaveBeenCalled();
     await click('Focus', 'FOCUS_PAUSE');
     expect(player.pause).toHaveBeenCalled();
+    await click('Focus', 'FOCUS_STOP');
+    stop();
+  });
+
+  it('stop when the session ends even while the app is in the background (4.0)', async () => {
+    const player = (jest.requireMock('expo-audio') as { __player: { pause: jest.Mock; addListener: jest.Mock } }).__player;
+    store.update({ focus: { sessions: [], active: null }, settings: { ...store.getState().settings, focusSound: 'rain' } });
+    const stop = startFocusSoundSync(store.getState, store.subscribe);
+    await click('Focus', 'FOCUS_START', { preset: 'gentle' });
+    await Promise.resolve();
+    const onStatus = player.addListener.mock.calls[0][1] as () => void;
+    player.pause.mockClear();
+    // Timers are paused in the background, but the player's status updates still arrive.
+    const endAt = store.getState().focus.active!.endAt!;
+    const now = jest.spyOn(Date, 'now').mockReturnValue(endAt + 1000);
+    onStatus();
+    expect(player.pause).toHaveBeenCalled();
+    now.mockRestore();
     await click('Focus', 'FOCUS_STOP');
     stop();
   });

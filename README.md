@@ -34,6 +34,30 @@ weather following the phone, and Thottam now says Poo Kolam.
   ticked, "I worked on it today", or a focus session on that task) grows one flower at the task's rare odds, and those
   flowers stay even if the task is unticked later; the full effort reward still comes when the task is finished. On a
   low- or medium-energy day, a big task with open steps stays in the matrix, because only its next step is asked.
+- **4.0: the stable release.** A full audit (data and sync, routines and reminders, widgets and background work,
+  screens) and its fixes:
+  - *Sync (GitHub build):* every change is stamped piece by piece (`stamps`: each item by id, each day, each routine
+    time, each single value), and joining takes the later change for each piece, so an edit on one phone never undoes
+    a different edit on the other. The app's own upkeep (a routine's task for the day) is not an edit. A day cleared
+    on one phone stays cleared; two phones ticking different times of a routine keep both. Requests time out after
+    30 s; an erase during a sync cannot write the old data back; a phone new to the account must enter the Daybloom
+    PIN when the Drive copy is locked (the file carries a slow salted hash, never the PIN); the daily reminder time
+    stays on each phone.
+  - *Routines and reminders:* Done or Not done pressed on a reminder after its task was replaced is still recorded;
+    reminders are not scheduled for times already answered or skipped; editing a routine keeps today's answers with
+    their times and keeps earlier schedules (`past`) so the history and streaks are not rewritten.
+  - *Saving:* a reload never throws away unsaved edits, and an unreadable database is never overwritten with defaults.
+  - *Focus:* the focus sound stops on time with the screen off; Do Not Disturb is restored after a restart or an app
+    update, uses a ten-minute window when exact alarms are off, and respects a change made by the user mid-session.
+  - *App lock:* stays locked if its record cannot be read, strong biometrics only, one limit on wrong PINs for every
+    PIN entry, an opaque cover while away, and the PIN pad scrolls in short windows.
+  - *Widgets:* Stop or Pause after the time is up completes the session; a stale routine row is still recorded;
+    widgets redraw at midnight and at each routine's next time while the app runs.
+  - *Large screens:* no orientation lock in the manifest (Android 16 ignores it on tablets, and Play flags it):
+    phones stay upright at run time (`use-phone-portrait`), tablets and foldables turn freely, and screens, games,
+    sheets and the keyboard were checked in landscape and split-screen windows.
+  - *Build:* R8 shrinking (3.6.1); a debug-key APK is only ever a test pre-release; the R8 mapping is kept with each
+    build; checkout no longer keeps a write token.
 - **Not done (3.6).** A routine's task can be answered either way: tick it, or tap *Not done* (on the task, in its
   sheet, or on the reminder). Not done is kept in `routineMissed`, takes the task off the matrix, and the routine's
   next time still comes. On the routine's page each recent time can be changed by tapping it: done, not done, or no

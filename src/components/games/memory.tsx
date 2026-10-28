@@ -2,7 +2,6 @@
  * Pair Up: flip two cards; matching pairs stay open. Three levels. Stars reward few moves.
  */
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, {
@@ -16,7 +15,7 @@ import Animated, {
 
 import { Confetti, haptic, ResultPanel } from '@/components/games/fx';
 import { shuffle } from '@/components/games/shuffle';
-import { GameShell, StatPill } from '@/components/games/shell';
+import { GameShell, leaveGame, StatPill } from '@/components/games/shell';
 import { Icon, IconName } from '@/components/icons';
 import { Text } from '@/components/text';
 import { Choice } from '@/components/ui';
@@ -30,7 +29,7 @@ const SYMBOLS: { icon: IconName; color: string; soft: string }[] = [
   { icon: 'sun', color: '#D9962B', soft: '#FAEDD3' },
   { icon: 'heart', color: '#D65A45', soft: '#FBE5DF' },
   { icon: 'spark', color: '#7A6FB8', soft: '#ECE8F8' },
-  { icon: 'bell', color: '#2C7FA3', soft: '#DDEEF6' },
+  { icon: 'bell', color: '#2A7BA0', soft: '#DDEEF6' },
   { icon: 'leaf', color: '#3A9477', soft: '#DDEFE7' },
   { icon: 'chat', color: '#8656AC', soft: '#EFE3F7' },
   { icon: 'moon', color: '#4F63B8', soft: '#E3E7F8' },
@@ -45,6 +44,10 @@ const LEVELS: Record<Level, { label: string; pairs: number; cols: number; key: s
 };
 
 type Card = { key: string; symbol: number };
+
+/** Width over height of a card, and the space around each one. */
+const ASPECT = 0.82;
+const GAP = 5;
 
 function newDeck(pairs: number): Card[] {
   const picks = shuffle([...SYMBOLS.keys()]).slice(0, pairs);
@@ -75,6 +78,11 @@ export function MemoryGame() {
   const [seconds, setSeconds] = useState(0);
   const [started, setStarted] = useState(false);
   const [result, setResult] = useState<{ moves: number; seconds: number; stars: number; newBest: boolean } | null>(null);
+  // The board is sized from the space it has, so every card fits a short window (a tablet in landscape).
+  const [area, setArea] = useState({ w: 0, h: 0 });
+  const rows = Math.ceil((cfg.pairs * 2) / cfg.cols);
+  // The grid reaches GAP past each side, so the outer cards line up with the level picker.
+  const cellW = Math.floor(Math.min((area.w + GAP * 2) / cfg.cols, (area.h / rows) * ASPECT));
   const lock = useRef(false);
   const secondsRef = useRef(0);
   /** Bumped on every reset so timers from an abandoned board do nothing. */
@@ -170,7 +178,7 @@ export function MemoryGame() {
   const best = bests[cfg.key];
 
   return (
-    <GameShell title={info.title} stat={<StatPill label={fmt(seconds)} color={color} />}>
+    <GameShell title={info.title} stat={<StatPill label={fmt(seconds)} color={color} />} scroll={!!result}>
       {result && result.stars === 3 && <Confetti />}
       {result ? (
         <View style={styles.centerFill}>
@@ -187,7 +195,7 @@ export function MemoryGame() {
               { label: 'Best moves', value: `${Math.min(best ?? result.moves, result.moves)}` },
             ]}
             onAgain={() => reset()}
-            onDone={() => router.back()}
+            onDone={leaveGame}
           />
         </View>
       ) : (
@@ -203,20 +211,21 @@ export function MemoryGame() {
             </Text>
             <Text variant="small">{best !== undefined ? `Best ${best}` : 'No best yet'}</Text>
           </View>
-          <View style={styles.gridWrap}>
-            <View style={styles.grid}>
-              {deck.map((card, i) => (
-                <View key={card.key} style={[styles.cell, { width: `${100 / cfg.cols}%` }]}>
-                  <FlipCard
-                    symbol={card.symbol}
-                    up={open.includes(i) || matched.has(card.symbol)}
-                    matched={matched.has(card.symbol)}
-                    wrong={wrong.includes(i)}
-                    onPress={() => flip(i)}
-                    small={cfg.cols === 4}
-                  />
-                </View>
-              ))}
+          <View style={styles.gridWrap} onLayout={(e) => setArea({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
+            <View style={[styles.grid, { width: cellW * cfg.cols }]}>
+              {cellW > 0 &&
+                deck.map((card, i) => (
+                  <View key={card.key} style={[styles.cell, { width: cellW, height: cellW / ASPECT }]}>
+                    <FlipCard
+                      symbol={card.symbol}
+                      up={open.includes(i) || matched.has(card.symbol)}
+                      matched={matched.has(card.symbol)}
+                      wrong={wrong.includes(i)}
+                      onPress={() => flip(i)}
+                      iconSize={Math.min(cfg.cols === 4 ? 28 : 36, Math.round(cellW * 0.45))}
+                    />
+                  </View>
+                ))}
             </View>
           </View>
         </>
@@ -225,7 +234,7 @@ export function MemoryGame() {
   );
 }
 
-function FlipCard({ symbol, up, matched, wrong, onPress, small }: { symbol: number; up: boolean; matched: boolean; wrong: boolean; onPress: () => void; small: boolean }) {
+function FlipCard({ symbol, up, matched, wrong, onPress, iconSize }: { symbol: number; up: boolean; matched: boolean; wrong: boolean; onPress: () => void; iconSize: number }) {
   const t = useTheme();
   const dark = useIsDark();
   const sym = SYMBOLS[symbol];
@@ -262,7 +271,7 @@ function FlipCard({ symbol, up, matched, wrong, onPress, small }: { symbol: numb
             { backgroundColor: dark ? t.surfaceAlt : sym.soft, borderColor: wrong ? t.danger : sym.color, borderWidth: matched ? 2.5 : 1.5 },
             front,
           ]}>
-          <Icon name={sym.icon} color={sym.color} size={small ? 28 : 36} strokeWidth={2} fill={matched ? sym.soft : 'none'} />
+          <Icon name={sym.icon} color={sym.color} size={iconSize} strokeWidth={2} fill={matched ? sym.soft : 'none'} />
         </Animated.View>
       </Animated.View>
     </Pressable>
@@ -272,9 +281,9 @@ function FlipCard({ symbol, up, matched, wrong, onPress, small }: { symbol: numb
 const styles = StyleSheet.create({
   centerFill: { flex: 1, justifyContent: 'center' },
   metaRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12, marginBottom: 8 },
-  gridWrap: { flex: 1, justifyContent: 'center' },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -5 },
-  cell: { aspectRatio: 0.82, padding: 5 },
+  gridWrap: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  grid: { flexDirection: 'row', flexWrap: 'wrap' },
+  cell: { padding: GAP },
   face: {
     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
     borderRadius: Radius.md,

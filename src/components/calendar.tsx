@@ -5,7 +5,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { Icon } from '@/components/icons';
 import { Text } from '@/components/text';
 import { tap } from '@/components/ui';
-import { Fonts } from '@/constants/theme';
+import { Fonts, inkOn } from '@/constants/theme';
 import { useIsDark, useTheme } from '@/hooks/use-theme';
 import { useToday } from '@/hooks/use-today';
 import { dayKey, fromKey } from '@/lib/dates';
@@ -54,10 +54,13 @@ export function MonthCalendar({ selected, onSelect, marks = {}, onMonth, compact
     .map((r) => days.slice(r * 7, r * 7 + 7))
     // Drop a trailing row that is entirely next month.
     .filter((row) => row[0].getMonth() === month.getMonth() || row[6].getMonth() === month.getMonth());
-  const cell = compact ? 38 : 44;
+  // A day is never wider than a seventh of the measured width, so neighbours cannot overlap on a narrow phone.
+  const [width, setWidth] = useState(0);
+  const full = compact ? 38 : 44;
+  const cell = width ? Math.max(24, Math.min(full, Math.floor(width / 7) - 2)) : full;
 
   return (
-    <View style={{ gap: 8 }}>
+    <View style={{ gap: 8 }} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
       <View style={styles.head}>
         <Pressable onPress={() => shift(-1)} hitSlop={10} accessibilityRole="button" accessibilityLabel="Previous month" style={styles.nav}>
           <Icon name="back" color={t.textSecondary} size={20} />
@@ -109,7 +112,7 @@ export function MonthCalendar({ selected, onSelect, marks = {}, onMonth, compact
                     variant="bodySm"
                     strong={isSel || isToday}
                     style={{
-                      color: isSel && !heat ? t.brandText : level === 4 ? '#FFFFFF' : inMonth ? t.text : t.textMuted,
+                      color: isSel && !heat ? t.brandText : level === 4 ? inkOn(shades[4]) : inMonth ? t.text : t.textMuted,
                       opacity: inMonth ? 1 : 0.55,
                     }}>
                     {d.getDate()}

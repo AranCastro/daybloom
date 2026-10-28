@@ -24,6 +24,18 @@ const FILES: Record<SoundId, number> = {
 
 let player: AudioPlayer | null = null;
 let playing: SoundId | null = null;
+/**
+ * When the session sound must stop. JS timers pause while the app is in the background, but the
+ * player's status updates keep arriving (about once a second), so they stop the sound on time.
+ */
+let sessionEnd: number | null = null;
+
+function onStatus() {
+  if (sessionEnd !== null && Date.now() >= sessionEnd) {
+    sessionEnd = null;
+    stopSound();
+  }
+}
 let previewTimer: ReturnType<typeof setTimeout> | undefined;
 let modeSet: Promise<void> | null = null;
 
@@ -40,8 +52,10 @@ export async function playSound(id: SoundId, volume: number, session = true) {
   clearTimeout(previewTimer);
   previewTimer = undefined;
   await ensureMode();
-  if (!player) player = createAudioPlayer(FILES[id]);
-  else if (playing !== id) player.replace(FILES[id]);
+  if (!player) {
+    player = createAudioPlayer(FILES[id], { updateInterval: 1000 });
+    player.addListener('playbackStatusUpdate', onStatus);
+  } else if (playing !== id) player.replace(FILES[id]);
   player.loop = true;
   player.volume = volume;
   player.play();
@@ -100,6 +114,7 @@ export function startFocusSoundSync(getState: () => AppState, subscribe: (l: () 
     if (next !== key) {
       key = next;
       clearTimeout(endTimer);
+      sessionEnd = next ? a!.endAt : null;
       if (next && sound) {
         void playSound(sound.id, s.settings.focusVolume);
         endTimer = setTimeout(check, Math.max(0, a!.endAt! - Date.now()) + 50);

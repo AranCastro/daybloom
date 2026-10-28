@@ -5,16 +5,19 @@
  */
 import * as Notifications from 'expo-notifications';
 
+import { dayKey } from '@/lib/dates';
 import { flowerOf } from '@/lib/flowers';
 import { readItem, writeItem } from '@/lib/kv';
 import { moodOf } from '@/lib/moods';
 import { CHECKIN_ACTIONS, notifyCheckinNoted, ROUTINE_DONE, ROUTINE_NOT_DONE } from '@/lib/reminders';
-import { taskIdFromReminder } from '@/lib/routines';
-import { awardBadges, ensureRoutines, flushState, getState, markNotDone, recordMood, reloadState, toggleTask } from '@/lib/store';
+import { parseInstanceId, taskIdFromReminder } from '@/lib/routines';
+import { awardBadges, ensureRoutines, flushState, getState, markNotDone, recordMood, reloadState, setSlotMark, toggleTask } from '@/lib/store';
 
 export const NOTIFICATION_TASK = 'daybloom-notification-action';
 
 const HANDLED_KEY = 'daybloom.checkin-actions.v1';
+/** A mood tapped on the evening reminder this soon after midnight is filed under the evening's day. */
+const LATE_ANSWER_MS = 6 * 3_600_000;
 /** Enough to cover a few days of reminders; older keys can never come back. */
 const HANDLED_MAX = 20;
 
@@ -46,7 +49,10 @@ export async function handleCheckinAction(actionId: string, notificationId?: str
   if (!claimAction(actionId, notificationId, date)) return false;
   reloadState();
   const before = getState().garden.length;
-  await recordMood(action.mood);
+  // Last night's reminder answered just after midnight still counts for the day it was sent.
+  const sent = date ? new Date(date) : null;
+  const day = sent && dayKey(sent) < dayKey() && Date.now() - sent.getTime() < LATE_ANSWER_MS ? dayKey(sent) : undefined;
+  await recordMood(action.mood, day);
   awardBadges();
   const grew = getState().garden.length > before ? flowerOf(getState().garden[0].flower).name : undefined;
   if (notificationId) await Notifications.dismissNotificationAsync(notificationId).catch(() => undefined);
@@ -70,6 +76,13 @@ export async function handleRoutineAction(actionId: string, notificationId?: str
   else if (task && !task.done) {
     toggleTask(taskId);
     awardBadges();
+  } else if (!task) {
+    // Pressed late: the next time of day (or a new day) has already replaced this task. The answer
+    // still goes into the routine's history for that day and time.
+    const slot = parseInstanceId(taskId);
+    if (slot && getState().routines.some((r) => r.id === slot.routineId)) {
+      setSlotMark(slot.routineId, slot.day, slot.slot, actionId === ROUTINE_NOT_DONE ? 'missed' : 'done');
+    }
   }
   flushState();
   if (notificationId) await Notifications.dismissNotificationAsync(notificationId).catch(() => undefined);

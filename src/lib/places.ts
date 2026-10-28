@@ -41,20 +41,41 @@ export function nearestPlace(places: Place[], here: Coords, radius = 400): Place
   return best?.p ?? null;
 }
 
+/** After a lookup nobody asked for fails (location off, no fix), the next ones wait this long. */
+export const RETRY_MS = 30 * 60_000;
+let failedAt = 0;
+
 /**
  * The phone's position, asking for permission if `ask` is true. Null when refused or unavailable.
  * `cheap` only uses a recent position the phone already has, never waiting for a new fix.
+ * Without `ask` (the garden's weather, the place suggestion) no system dialog ever shows, not even
+ * Android's "Turn on location", and after a failure there is no new try for 30 minutes.
  */
 export async function currentCoords(ask: boolean, cheap = false): Promise<Coords | null> {
+  if (!ask && Date.now() - failedAt < RETRY_MS) return null;
   try {
-    if (ask) expectReturn();
-    const perm = ask ? await Location.requestForegroundPermissionsAsync() : await Location.getForegroundPermissionsAsync();
+    let perm = await Location.getForegroundPermissionsAsync();
+    if (!perm.granted && ask && perm.canAskAgain) {
+      // The permission dialog briefly leaves the app (the app lock should not ask again on return).
+      expectReturn();
+      perm = await Location.requestForegroundPermissionsAsync();
+    }
     if (!perm.granted) return null;
     const last = Platform.OS === 'web' ? null : await Location.getLastKnownPositionAsync({ maxAge: 10 * 60_000 });
     if (!last && cheap) return null;
-    const pos = last ?? (await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }));
+    if (!last && Platform.OS !== 'web' && !(await Location.hasServicesEnabledAsync())) {
+      if (!ask) {
+        failedAt = Date.now();
+        return null;
+      }
+      // Asked for: Android offers to turn location on, in a dialog that briefly leaves the app.
+      expectReturn();
+    }
+    const pos = last ?? (await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced, mayShowUserSettingsDialog: ask }));
+    failedAt = 0;
     return { lat: pos.coords.latitude, lon: pos.coords.longitude };
   } catch {
+    if (!ask) failedAt = Date.now();
     return null;
   }
 }

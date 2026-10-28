@@ -35,7 +35,7 @@ export default function RoutineScreen() {
   const [editing, setEditing] = useState(false);
 
   const back = (
-    <Pressable hitSlop={12} onPress={() => (tap(), router.back())} accessibilityLabel="Back" style={{ height: 32, justifyContent: 'center' }}>
+    <Pressable hitSlop={12} onPress={() => (tap(), router.back())} accessibilityRole="button" accessibilityLabel="Back" style={{ height: 32, justifyContent: 'center' }}>
       <Icon name="back" color={t.textSecondary} />
     </Pressable>
   );

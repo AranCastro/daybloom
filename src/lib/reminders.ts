@@ -115,6 +115,8 @@ async function ensureReady(): Promise<boolean> {
   if (current.granted) return true;
   // No prompt from a widget tap or other background work: there is no screen to show it on.
   if (RNAppState.currentState !== 'active') return false;
+  // Refused for good: no dialog will show, so no trip out of the app to expect.
+  if (!current.canAskAgain) return false;
   expectReturn();
   return (await Notifications.requestPermissionsAsync()).granted;
 }
@@ -237,6 +239,7 @@ export function syncRoutineReminders(
   tasks: { id: string; done: boolean }[],
   ask = false,
   now: Date = new Date(),
+  answered: (routineId: string, day: string, slot: number) => boolean = () => false,
 ): Promise<void> {
   if (Platform.OS === 'web') return Promise.resolve();
   const job = async () => {
@@ -245,6 +248,14 @@ export function syncRoutineReminders(
     const scheduled = await Notifications.getAllScheduledNotificationsAsync().catch(() => []);
     for (const n of scheduled) if (n.identifier.startsWith(REMINDER_PREFIX)) await Notifications.cancelScheduledNotificationAsync(n.identifier).catch(() => {});
     const done = new Set(tasks.filter((t) => t.done).map((t) => t.id));
+    // Times already answered without their task (Not done, Skip today, the routine's page) count as done too.
+    for (const r of routines) {
+      for (const day of nextDays(r, dayKey(now), ROUTINE_DAYS)) {
+        r.times.forEach((_, slot) => {
+          if (answered(r.id, day, slot)) done.add(instanceId(r.id, day, slot));
+        });
+      }
+    }
     // A reminder still showing for a task ticked since is taken away.
     const shown = await Notifications.getPresentedNotificationsAsync().catch(() => []);
     for (const n of shown) {

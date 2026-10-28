@@ -6,7 +6,7 @@
  */
 import type { AppState, Bloom, NudgeLog, Person, Place, Pookalam, PookalamRing, Settings, Task, TaskStep, WidgetKey, WidgetPrefs } from '@/lib/store';
 import type { ActiveTimer, FocusSession } from '@/lib/focus';
-import { cleanTime, MAX_EVERY, MAX_TIMES, MIN_EVERY, type Routine } from '@/lib/routines';
+import { cleanTime, MAX_EVERY, MAX_PAST, MAX_TIMES, MIN_EVERY, type PastSchedule, type Routine } from '@/lib/routines';
 
 type Obj = Record<string, unknown>;
 
@@ -114,6 +114,23 @@ function routine(v: unknown): Routine | undefined {
     ...(v.kind === 'weekly' ? { weekdays } : {}),
     ...(v.kind === 'interval' ? { every: clampInt(v.every, MIN_EVERY, MAX_EVERY) ?? MIN_EVERY } : {}),
     ...pick(v, { effort: (x) => oneOf(x, EFFORTS) }),
+    ...(Array.isArray(v.past) ? { past: list(v.past, pastSchedule)?.slice(-MAX_PAST) } : {}),
+  };
+}
+
+/** An earlier schedule of a routine (see PastSchedule in lib/routines). */
+function pastSchedule(v: unknown): PastSchedule | undefined {
+  if (!isObj(v) || !isDayKey(v.start) || !isDayKey(v.until) || v.start > v.until || !oneOf(v.kind, ['daily', 'weekly', 'interval'] as const)) return undefined;
+  const times = [...new Set(list(v.times, (x) => cleanTime(x)) ?? [])].sort().slice(0, MAX_TIMES);
+  const weekdays = [...new Set(list(v.weekdays, (x) => clampInt(x, 0, 6)) ?? [])];
+  if (!times.length || (v.kind === 'weekly' && !weekdays.length)) return undefined;
+  return {
+    kind: v.kind,
+    start: v.start,
+    until: v.until,
+    times,
+    ...(v.kind === 'weekly' ? { weekdays } : {}),
+    ...(v.kind === 'interval' ? { every: clampInt(v.every, MIN_EVERY, MAX_EVERY) ?? MIN_EVERY } : {}),
   };
 }
 
@@ -267,6 +284,7 @@ const FIELDS: Record<string, (v: unknown) => unknown> = {
   bloomsEver: (v) => clampInt(v, 0, Number.MAX_SAFE_INTEGER),
   modifiedAt: (v) => clampInt(v, 0, Number.MAX_SAFE_INTEGER),
   deletedIds: (v) => strMap(v, (x) => clampInt(x, 0, Number.MAX_SAFE_INTEGER)),
+  stamps: (v) => strMap(v, (x) => clampInt(x, 0, Number.MAX_SAFE_INTEGER)),
   clearedWork: (v) => dayMap(v, (x) => clampInt(x, 0, 10_000)),
   clearedFocus: (v) =>
     dayMap(v, (x) => {
