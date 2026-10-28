@@ -15,6 +15,7 @@ import { makeBackup, parseBackup } from '@/lib/backup-core';
 import { FLOWERS, pickFlower } from '@/lib/flowers';
 import { levelOf, workByDay } from '@/lib/productivity';
 import { whatsappNumber } from '@/lib/reach';
+import { circleName, quadrantName } from '@/lib/labels';
 import * as store from '@/lib/store';
 
 /** Small seeded generator so the odds test is repeatable. */
@@ -116,7 +117,6 @@ describe('section names and avatars', () => {
   beforeEach(() => store.resetAll());
 
   it('renames a quadrant and restores the default when cleared', () => {
-    const { quadrantName, circleName } = require('@/lib/labels');
     store.setLabel('matrix', 1, '  Today, urgent  ');
     expect(quadrantName(store.getState().labels, 1)).toBe('Today, urgent');
     store.setLabel('matrix', 1, '');

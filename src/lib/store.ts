@@ -6,7 +6,7 @@
 import { useSyncExternalStore } from 'react';
 import { AppState as RNAppState, Platform } from 'react-native';
 
-import { dayKey } from '@/lib/dates';
+import { addDays, dayKey, fromKey } from '@/lib/dates';
 import { readItem, removeItem, writeItem } from '@/lib/kv';
 import { Badge, newlyEarned } from '@/lib/badges';
 import { FlowerKind, flowerOf, pickFlower } from '@/lib/flowers';
@@ -15,9 +15,9 @@ import { MoodValue } from '@/lib/moods';
 import { sortOpen } from '@/lib/quadrants';
 import { isLowStreak } from '@/lib/nudge-rule';
 import { rewardFor } from '@/lib/effort';
-import { currentSlot, instanceId, normaliseTimes, occursOn, parseMade, Routine, SKIPPED_SLOT } from '@/lib/routines';
+import { currentSlot, instanceId, MAX_PAST, normaliseTimes, occursOn, parseMade, Routine, SKIPPED_SLOT } from '@/lib/routines';
 import { sanitise } from '@/lib/sanitise';
-import { deletionsBetween, mergeStates, pruneDeleted } from '@/lib/sync-merge';
+import { deletionsBetween, mergeStates, pruneDeleted, stampChanges } from '@/lib/sync-merge';
 import { cleanMoodWord, CUSTOM_PREFIX, MAX_CUSTOM_MOODS, type MoodTag } from '@/lib/mood-tags';
 
 export type NudgeLog = {
@@ -168,6 +168,8 @@ export type AppState = {
   /** Device sync (GitHub build): when this data last changed, and ids deleted (id -> epoch ms) so another phone cannot bring them back. */
   modifiedAt?: number;
   deletedIds?: Record<string, number>;
+  /** Device sync: when each piece (an item by id, a day, a single value) was last changed here or on another phone (lib/sync-merge). */
+  stamps?: Record<string, number>;
   /** When backups were last made (kept on this phone; not replaced by a restore). */
   backup: { lastManual?: number; lastAuto?: number; lastRestore?: number; pendingSave?: boolean };
 };
@@ -338,14 +340,37 @@ function mergeSaved(raw: Partial<AppState>): AppState {
   return merged;
 }
 
-function load(): AppState {
+/** Saving is held back after the saved data could not be read, so defaults never overwrite it. */
+let readFailed = false;
+
+/** Reads the saved state; null when it cannot be read right now (the database is unavailable). */
+function read(): AppState | null {
+  let raw: string | null;
   try {
-    const raw = readItem(KEY);
-    return raw ? mergeSaved(JSON.parse(raw) as Partial<AppState>) : initial;
+    raw = readItem(KEY);
   } catch {
-    // Unreadable database or file: start from defaults rather than crash at launch.
+    return null;
+  }
+  if (!raw) return initial;
+  try {
+    return mergeSaved(JSON.parse(raw) as Partial<AppState>);
+  } catch {
+    // Damaged beyond repair: keep the raw text aside (for support) and start afresh.
+    try {
+      writeItem(`${KEY}.damaged`, raw);
+    } catch {
+      // Nowhere to keep it.
+    }
     return initial;
   }
+}
+
+function load(): AppState {
+  const saved = read();
+  if (saved) return saved;
+  // Unreadable database: start from defaults rather than crash at launch, and do not save over it.
+  readFailed = true;
+  return initial;
 }
 
 let state: AppState = load();
@@ -370,6 +395,11 @@ function setSaveFailed(failed: boolean) {
 export function flushState(): void {
   queued = false;
   if (!dirty) return;
+  if (readFailed) {
+    // The saved data could not be read at launch: saving now would replace it with this session's.
+    setSaveFailed(true);
+    return;
+  }
   try {
     writeItem(KEY, JSON.stringify(state));
     dirty = false;
@@ -426,7 +456,7 @@ function logFromGarden(garden: Bloom[], tasks: Task[], routines: Routine[]): App
 }
 
 /** Changes that only concern this phone, and do not count as an edit for device sync. */
-const LOCAL_ONLY = new Set<keyof AppState>(['widgetPrefs', 'widgetLocks', 'widgetUndo', 'backup', 'modifiedAt', 'deletedIds']);
+const LOCAL_ONLY = new Set<keyof AppState>(['widgetPrefs', 'widgetLocks', 'widgetUndo', 'backup', 'reminder', 'modifiedAt', 'deletedIds', 'stamps']);
 
 function syncedChange(prev: AppState, next: AppState): boolean {
   for (const k of Object.keys(next) as (keyof AppState)[]) {
@@ -435,12 +465,16 @@ function syncedChange(prev: AppState, next: AppState): boolean {
   return false;
 }
 
-function set(next: AppState, opts: { fromSync?: boolean } = {}) {
+/**
+ * `fromSync`: a merge from another phone. `quiet`: upkeep the app does by itself (a routine's task
+ * for the day, tidying yesterday's), which every phone does alike and so is not an edit to sync.
+ */
+function set(next: AppState, opts: { fromSync?: boolean; quiet?: boolean } = {}) {
   if (!opts.fromSync && next.tasks !== state.tasks) next = logRoutineTicks(state, next);
-  if (!opts.fromSync && syncedChange(state, next)) {
-    const now = Date.now();
+  if (!opts.fromSync && !opts.quiet && syncedChange(state, next)) {
+    const now = Math.max(Date.now(), (state.modifiedAt ?? 0) + 1);
     const gone = deletionsBetween(state, next);
-    next = { ...next, modifiedAt: Math.max(now, (state.modifiedAt ?? 0) + 1) };
+    next = { ...next, modifiedAt: now, stamps: stampChanges(state, next, now) };
     if (gone.length) next.deletedIds = pruneDeleted({ ...next.deletedIds, ...Object.fromEntries(gone.map((id) => [id, now])) }, now);
   }
   state = next;
@@ -478,6 +512,11 @@ export function update(patch: Partial<AppState> | ((s: AppState) => Partial<AppS
   set({ ...state, ...p });
 }
 
+/** An update the app makes by itself (see `set`): not stamped as an edit for sync. */
+function updateQuiet(patch: (s: AppState) => Partial<AppState>): void {
+  set({ ...state, ...patch(state) }, { quiet: true });
+}
+
 export function getState(): AppState {
   return state;
 }
@@ -490,7 +529,11 @@ export function getState(): AppState {
 export function reloadState(opts: { silent?: boolean } = {}): void {
   // Anything not yet written would otherwise be lost by reading the older copy back.
   flushState();
-  state = load();
+  // Still unsaved (the disk is full): this copy in memory is the newest, so keep it.
+  if (dirty) return;
+  const saved = read();
+  if (!saved) return;
+  state = saved;
   if (!opts.silent) listeners.forEach((l) => l());
 }
 
@@ -664,7 +707,7 @@ export function replaceState(saved: Partial<AppState>) {
  */
 export function applyRemote(raw: Partial<AppState>, opts: { firstTime?: boolean } = {}): boolean {
   // A phone's first sync takes names and settings from the copy in Drive, even if it was just set up.
-  const merged = mergeStates(opts.firstTime ? { ...state, modifiedAt: 0 } : state, mergeSaved(raw));
+  const merged = mergeStates(state, mergeSaved(raw), Date.now(), { preferRemote: opts.firstTime });
   if (JSON.stringify(merged) === JSON.stringify(state)) return false;
   set(merged, { fromSync: true });
   return true;
@@ -740,11 +783,14 @@ export function onNudgeReady(fn: (name: string) => void) {
  * answer the same day cannot offer it again; only a later day that is Okay or better re-arms it.
  * Returns true when this check-in made a nudge ready.
  */
-export async function recordMood(mood: MoodValue): Promise<boolean> {
-  const today = dayKey();
+export async function recordMood(mood: MoodValue, day: string = dayKey()): Promise<boolean> {
+  const today = day;
   const firstToday = state.checkins[today] === undefined;
   const checkins = { ...state.checkins, [today]: mood };
-  const rearm = mood > 2 && (!state.lastNudgeDay || today > state.lastNudgeDay);
+  // Re-armed by an Okay-or-better day after the last nudge's day (a nudge day in the future, from a
+  // clock set wrong, must not keep it off for good).
+  const last = state.lastNudgeDay;
+  const rearm = mood > 2 && (!last || today > last || last > dayKey());
   const armed = rearm ? true : state.armed;
   update({ checkins, armed });
   if (firstToday) bloom('checkin', { note: 'Daily check-in' });
@@ -954,6 +1000,9 @@ export function setSlotMark(routineId: string, day: string, slot: number, mark: 
   if (live) {
     if (mark === 'missed') markNotDone(live.id);
     else if ((mark === 'done') !== live.done) toggleTask(live.id);
+    if (mark !== 'missed' && state.routineMissed[routineId]?.[day]?.includes(slot)) {
+      update((s) => ({ routineMissed: withSlot(s.routineMissed, routineId, day, slot, false) }));
+    }
     return;
   }
   update((s) => ({
@@ -995,7 +1044,7 @@ export function ensureRoutines(now: Date = new Date()): boolean {
   });
   const stale = s.tasks.some((t) => t.routineId && t.due && t.due < today);
   if (!due.length && !stale) return false;
-  update((cur) => {
+  updateQuiet((cur) => {
     const clearedWork = { ...cur.clearedWork };
     const routineMade = { ...cur.routineMade };
     const clear = (t: Task) => {
@@ -1017,6 +1066,8 @@ export function ensureRoutines(now: Date = new Date()): boolean {
       const slot = currentSlot(r.times, minutes);
       routineMade[r.id] = `${today}#${slot}`;
       if (tasks.some((t) => t.id === target.get(r.id))) continue;
+      // Already answered from the routine's page or a reminder (done or not done): nothing to add.
+      if (cur.routineLog[r.id]?.[today]?.includes(slot) || cur.routineMissed[r.id]?.[today]?.includes(slot)) continue;
       tasks = [
         ...tasks,
         {
@@ -1056,7 +1107,7 @@ export function getRoutine(id: string | undefined): Routine | undefined {
 export function editRoutine(id: string, patch: Partial<RoutineInput>): void {
   const old = getRoutine(id);
   if (!old) return;
-  const next: Routine = { ...old, ...patch, title: (patch.title ?? old.title).trim(), times: normaliseTimes(patch.times ?? old.times) };
+  let next: Routine = { ...old, ...patch, title: (patch.title ?? old.title).trim(), times: normaliseTimes(patch.times ?? old.times) };
   const today = dayKey();
   const reschedule =
     next.kind !== old.kind ||
@@ -1064,20 +1115,59 @@ export function editRoutine(id: string, patch: Partial<RoutineInput>): void {
     (next.weekdays ?? []).join() !== (old.weekdays ?? []).join() ||
     next.times.join() !== old.times.join() ||
     next.start !== old.start;
+  if (reschedule) {
+    // The old schedule keeps judging the days it covered (routine-stats), and the new one starts today.
+    const yesterday = dayKey(addDays(fromKey(today), -1));
+    const past =
+      old.start <= yesterday
+        ? [...(old.past ?? []), { until: yesterday, kind: old.kind, weekdays: old.weekdays, every: old.every, start: old.start, times: old.times }].slice(-MAX_PAST)
+        : old.past;
+    next = { ...next, start: patch.start ?? (old.start > today ? old.start : today), ...(past ? { past } : {}) };
+  }
+  // Today's answers follow their time of day to its new place in the list; a time taken away loses its answer.
+  const moveSlot = (slot: number) => next.times.indexOf(old.times[slot] ?? '');
+  const moveDay = (log: AppState['routineLog']): AppState['routineLog'] => {
+    const slots = log[id]?.[today];
+    if (!slots) return log;
+    const moved = slots.map(moveSlot).filter((x) => x >= 0).sort((a, b) => a - b);
+    const days = { ...log[id] };
+    if (moved.length) days[today] = moved;
+    else delete days[today];
+    return { ...log, [id]: days };
+  };
   update((s) => {
     const routines = s.routines.map((r) => (r.id === id ? next : r));
     const mine = (t: Task) => t.routineId === id && t.due === today && !t.done;
     if (reschedule) {
       const routineMade = { ...s.routineMade };
-      delete routineMade[id];
-      return { routines, routineMade, tasks: s.tasks.filter((t) => !mine(t)) };
+      // "Skip today" still holds; otherwise the current time is worked out again.
+      if (s.routineMade[id] !== `${today}#${SKIPPED_SLOT}`) delete routineMade[id];
+      let garden = s.garden;
+      const tasks = s.tasks.flatMap((t): Task[] => {
+        if (t.routineId !== id || t.due !== today || t.slot === undefined || !t.done) return [t];
+        // A task finished today moves with its time, or becomes an ordinary finished task.
+        const slot = moveSlot(t.slot);
+        if (slot < 0) {
+          const { routineId: _r, slot: _s, ...rest } = t;
+          return [rest];
+        }
+        const nid = instanceId(id, today, slot);
+        if (nid !== t.id) garden = garden.map((b) => (b.ref === t.id ? { ...b, ref: nid } : b));
+        return [{ ...t, id: nid, slot, at: next.times[slot] }];
+      });
+      return { routines, routineMade, tasks, garden, routineLog: moveDay(s.routineLog), routineMissed: moveDay(s.routineMissed) };
     }
     return {
       routines,
       tasks: s.tasks.map((t) => (mine(t) ? { ...t, title: next.title, quadrant: next.quadrant, effort: next.effort } : t)),
     };
   });
-  if (reschedule) ensureRoutines();
+  if (reschedule) {
+    // Today's open task makes way for the one the new schedule adds. Upkeep, not a deletion to
+    // sync: the new task may have the same id, and another phone's copy must not delete it.
+    updateQuiet((s) => ({ tasks: s.tasks.filter((t) => !(t.routineId === id && t.due === today && !t.done)) }));
+    ensureRoutines();
+  }
 }
 
 /** Stops a routine. Today's unfinished tasks from it become ordinary tasks unless `removeToday`. */

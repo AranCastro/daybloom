@@ -2,6 +2,7 @@
 import { Image } from 'expo-image';
 import { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Flower } from '@/components/flower';
 import { Text } from '@/components/text';
@@ -57,6 +58,7 @@ export function ProfileAvatar({ size = 44 }: { size?: number }) {
 /** Bottom sheet to upload a photo or choose an avatar. */
 export function AvatarPicker({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const t = useTheme();
+  const insets = useSafeAreaInsets();
   const avatar = useAppState((s) => s.avatar);
   const name = useAppState((s) => s.name);
   const [busy, setBusy] = useState(false);
@@ -74,7 +76,8 @@ export function AvatarPicker({ visible, onClose }: { visible: boolean; onClose: 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.scrim} onPress={onClose} accessibilityLabel="Close" />
-      <View style={[styles.sheet, { backgroundColor: t.surface }]}>
+      {/* Edge to edge, the sheet runs under the navigation bar: its padding clears the bar. */}
+      <View style={[styles.sheet, { backgroundColor: t.surface, paddingBottom: 36 + insets.bottom }]}>
         <View style={[styles.grabber, { backgroundColor: t.line }]} />
         <ScrollView contentContainerStyle={{ gap: 16 }}>
           <Text variant="heading">Profile picture</Text>
@@ -114,7 +117,7 @@ export function AvatarPicker({ visible, onClose }: { visible: boolean; onClose: 
 const styles = StyleSheet.create({
   round: { alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   scrim: { flex: 1, backgroundColor: 'rgba(10,8,6,0.38)' },
-  sheet: { borderTopLeftRadius: 30, borderTopRightRadius: 30, paddingHorizontal: 22, paddingTop: 10, paddingBottom: 36, maxHeight: '85%' },
+  sheet: { borderTopLeftRadius: 30, borderTopRightRadius: 30, paddingHorizontal: 22, paddingTop: 10, maxHeight: '85%' },
   grabber: { width: 40, height: 5, borderRadius: 3, alignSelf: 'center', marginBottom: 14 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'space-between' },
   cell: { width: '22%', aspectRatio: 1, borderRadius: 999, borderWidth: 2.5, alignItems: 'center', justifyContent: 'center' },

@@ -8,19 +8,20 @@ import { AppState as RNAppState } from 'react-native';
 
 import { dayKey } from '@/lib/dates';
 import { syncRoutineReminders } from '@/lib/reminders';
+import { answeredIn } from '@/lib/routines';
 import { ensureRoutines, getState, subscribe } from '@/lib/store';
 
-/** What the reminders depend on: the routines and which routine tasks are done. */
+/** What the reminders depend on: the routines, which routine tasks are done, and times answered or skipped. */
 function signature(): string {
   const s = getState();
   const done = s.tasks.filter((t) => t.routineId && t.done).map((t) => t.id);
-  return JSON.stringify([s.routines, done]);
+  return JSON.stringify([s.routines, done, s.routineMade, s.routineLog, s.routineMissed]);
 }
 
 /** Schedules the reminders now; `ask` may show the notification permission prompt. */
 export function syncRoutinesNow(ask = false): Promise<void> {
   const s = getState();
-  return syncRoutineReminders(s.routines, s.tasks, ask);
+  return syncRoutineReminders(s.routines, s.tasks, ask, new Date(), answeredIn(s));
 }
 
 export function startRoutineSync(): () => void {
@@ -32,7 +33,10 @@ export function startRoutineSync(): () => void {
     if (sig === last) return;
     last = sig;
     if (timer) clearTimeout(timer);
-    timer = setTimeout(() => void syncRoutinesNow(), 1500);
+    timer = setTimeout(() => {
+      timer = null;
+      void syncRoutinesNow();
+    }, 1500);
   };
   const refresh = () => {
     day = dayKey();
@@ -43,7 +47,15 @@ export function startRoutineSync(): () => void {
   };
   refresh();
   const unsub = subscribe(schedule);
-  const app = RNAppState.addEventListener('change', (st) => st === 'active' && refresh());
+  const app = RNAppState.addEventListener('change', (st) => {
+    if (st === 'active') refresh();
+    // Timers stop in the background: send a change made just before leaving now, not 1.5 s later.
+    else if (timer) {
+      clearTimeout(timer);
+      timer = null;
+      void syncRoutinesNow();
+    }
+  });
   // Each minute: a routine's next time of day replaces its earlier task, and a new day starts afresh.
   const tick = setInterval(() => {
     if (dayKey() !== day) refresh();

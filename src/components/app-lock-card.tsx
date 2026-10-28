@@ -1,13 +1,13 @@
 /** Settings card for the app lock: turn on with a PIN, fingerprint/face unlock, when to lock. */
 import { useEffect, useState } from 'react';
-import { Modal, Pressable, StyleSheet, Switch, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 
 import { PinPad } from '@/components/lock-screen';
 import { Icon } from '@/components/icons';
 import { Text } from '@/components/text';
 import { Backdrop, Card, Choice, Divider, tap } from '@/components/ui';
 import { useTheme } from '@/hooks/use-theme';
-import { biometricAvailable, checkPin, disableLock, LOCK_AFTER, LockAfter, setBiometric, setLockAfter, setPin, useLock } from '@/lib/app-lock';
+import { biometricAvailable, disableLock, LOCK_AFTER, LockAfter, setBiometric, setLockAfter, setPin, unlockWithPin, useLock, waitLabel } from '@/lib/app-lock';
 
 type Flow = null | 'set' | 'change' | 'off';
 
@@ -82,51 +82,59 @@ function PinFlow({ flow, onClose }: { flow: Flow; onClose: () => void }) {
     step === 'current' ? 'Enter your current PIN' : step === 'new' ? (flow === 'change' ? 'Choose a new PIN' : 'Choose a 4-digit PIN') : 'Enter it once more';
 
   return (
-    <Modal visible animationType="slide" onRequestClose={onClose} statusBarTranslucent>
-      <View style={styles.modal}>
+    <Modal visible animationType="slide" onRequestClose={onClose}>
+      <View style={styles.fill}>
         <Backdrop />
-        <PinPad
-          key={step}
-          title={title}
-          subtitle={note ?? (step === 'new' ? 'You will need it each time you open Daybloom.' : undefined)}
-          onDone={async (pin) => {
-            if (step === 'current') {
-              if (!(await checkPin(pin))) {
-                setNote('That PIN is not right.');
+        {/* Scrolls in short windows (landscape tablets, split screen) so every key stays reachable. */}
+        <ScrollView contentContainerStyle={styles.modal} showsVerticalScrollIndicator={false}>
+          <PinPad
+            key={step}
+            title={title}
+            subtitle={note ?? (step === 'new' ? 'You will need it each time you open Daybloom.' : undefined)}
+            onDone={async (pin) => {
+              if (step === 'current') {
+                const r = await unlockWithPin(pin);
+                if (r !== 'ok') {
+                  setNote(r === 'wait' ? `Too many tries. Wait ${waitLabel()}.` : 'That PIN is not right.');
+                  return false;
+                }
+                if (flow === 'off') {
+                  disableLock();
+                  onClose();
+                } else {
+                  setNote(undefined);
+                  setStep('new');
+                }
+                return true;
+              }
+              if (step === 'new') {
+                setFirst(pin);
+                setNote(undefined);
+                setStep('again');
+                return true;
+              }
+              if (pin !== first) {
+                setNote('The two PINs did not match. Choose a PIN again.');
+                setStep('new');
                 return false;
               }
-              if (flow === 'off') {
-                disableLock();
-                onClose();
-              } else {
-                setNote(undefined);
+              if (!(await setPin(pin))) {
+                setNote('This phone would not store the PIN. Try again, or restart the phone.');
                 setStep('new');
+                return false;
               }
+              onClose();
               return true;
+            }}
+            footer={
+              <Pressable onPress={onClose} hitSlop={10} accessibilityRole="button">
+                <Text variant="bodyStrong" color="textSecondary">
+                  Cancel
+                </Text>
+              </Pressable>
             }
-            if (step === 'new') {
-              setFirst(pin);
-              setNote(undefined);
-              setStep('again');
-              return true;
-            }
-            if (pin !== first) {
-              setNote('The two PINs did not match. Choose a PIN again.');
-              setStep('new');
-              return false;
-            }
-            await setPin(pin);
-            onClose();
-            return true;
-          }}
-          footer={
-            <Pressable onPress={onClose} hitSlop={10} accessibilityRole="button">
-              <Text variant="bodyStrong" color="textSecondary">
-                Cancel
-              </Text>
-            </Pressable>
-          }
-        />
+          />
+        </ScrollView>
       </View>
     </Modal>
   );
@@ -135,5 +143,6 @@ function PinFlow({ flow, onClose }: { flow: Flow; onClose: () => void }) {
 const styles = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   badge: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-  modal: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
+  fill: { flex: 1 },
+  modal: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
 });

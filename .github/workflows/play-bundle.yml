@@ -38,6 +38,9 @@ jobs:
           fi
 
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          # Nothing here pushes with git.
+          persist-credentials: false
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
@@ -60,6 +63,11 @@ jobs:
         env:
           CODE: ${{ inputs.versionCode }}
         run: |
+          # Play takes whole numbers from 1 to 2100000000.
+          if ! [[ "$CODE" =~ ^[1-9][0-9]{0,9}$ ]] || [ "$CODE" -gt 2100000000 ]; then
+            echo "::error::versionCode must be a whole number from 1 to 2100000000 (digits only), or left empty to use app.json."
+            exit 1
+          fi
           node -e "const f='app.json',fs=require('fs'),a=JSON.parse(fs.readFileSync(f));a.expo.android.versionCode=Number(process.env.CODE);fs.writeFileSync(f,JSON.stringify(a,null,2))"
 
       - name: Generate native Android project
@@ -82,8 +90,11 @@ jobs:
           zip -q -d "$AAB" 'META-INF/*.SF' 'META-INF/*.RSA' 'META-INF/*.EC' 'META-INF/*.MF' || true
           jarsigner -sigalg SHA256withRSA -digestalg SHA-256 -keystore "$RUNNER_TEMP/upload.jks" \
             -storepass:env KS_PASS -keypass:env KEY_PASS "$AAB" "$KEY_ALIAS"
-          jarsigner -verify "$AAB" | tail -1
-          keytool -printcert -jarfile "$AAB" | grep -E 'Owner|SHA256:' | head -2
+          # Checked on their own (not piped), so a failed check fails the step.
+          jarsigner -verify "$AAB" > "$RUNNER_TEMP/verify.txt"
+          grep -m1 'jar verified' "$RUNNER_TEMP/verify.txt"
+          keytool -printcert -jarfile "$AAB" > "$RUNNER_TEMP/cert.txt"
+          grep -E 'Owner|SHA256:' "$RUNNER_TEMP/cert.txt" | head -2
           rm -f "$RUNNER_TEMP/upload.jks"
 
       - name: Name the bundle

@@ -11,6 +11,7 @@ import { ReducedMotionConfig, ReduceMotion } from 'react-native-reanimated';
 import { BloomToast } from '@/components/garden';
 import { LockGate } from '@/components/lock-screen';
 import { SaveFailedBanner } from '@/components/save-failed-banner';
+import { usePhonePortrait } from '@/hooks/use-phone-portrait';
 import { useIsDark, useTheme } from '@/hooks/use-theme';
 import * as Notifications from 'expo-notifications';
 
@@ -65,6 +66,9 @@ export default function RootLayout() {
 
   // Home-screen widgets redraw whenever something changes in the app (Android).
   useEffect(() => startWidgetSync(), []);
+
+  // Upright on phones; free to turn on tablets and foldables.
+  usePhonePortrait();
 
   // Focus sounds follow the focus timer; the app lock watches for returns from the background.
   useEffect(() => startFocusSoundSync(getState, subscribe), []);

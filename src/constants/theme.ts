@@ -34,8 +34,8 @@ export const Colors = {
     success: '#3A9477',
     successSoft: '#DDEFE7',
     warning: '#D08A2E',
-    /** Warning as text: darker, so it passes 4.5:1 on paper and white. */
-    warningText: '#B57A12',
+    /** Warning as text: darker, so it passes 4.5:1 on paper (4.95:1) and on white cards (5.5:1). */
+    warningText: '#8F5F00',
     danger: '#C9503B',
     rare: '#7E6FD0',
     legendary: '#C98A1E',
@@ -136,4 +136,30 @@ export const Shadow = {
 
 export const MaxContentWidth = 520;
 export const TabBarHeight = 64;
+/** Least room under the floating tab bar; it grows to the bottom inset (3-button navigation, a taskbar). */
+export const TabBarMinBottom = 14;
+/**
+ * The fixed allowance for the tab bar, from before the bar followed the bottom inset. Tab screens
+ * use useTabBarInset() (hooks/use-tab-bar-inset), which never goes below this.
+ */
 export const TabBarInset = TabBarHeight + (Platform.OS === 'ios' ? 34 : 24);
+
+/** WCAG relative luminance of a '#RRGGBB' colour. */
+function luminance(hex: string): number {
+  const n = parseInt(hex.slice(1, 7), 16);
+  const lin = (c: number) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+  const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((c) => lin(c / 255));
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+const DARK_INK = '#12110F';
+const DARK_INK_L = luminance(DARK_INK);
+
+/**
+ * Near-black or white, whichever has more contrast on the given '#RRGGBB' fill. Use it for text and
+ * icons on a coloured fill: the pale dark-mode colours need the dark ink, the deeper light-mode ones white.
+ */
+export function inkOn(hex: string): string {
+  const L = luminance(hex);
+  return (L + 0.05) / (DARK_INK_L + 0.05) > 1.05 / (L + 0.05) ? DARK_INK : '#FFFFFF';
+}

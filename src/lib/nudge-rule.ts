@@ -13,7 +13,8 @@ export function isLowStreak(
   streak: number,
   today: string,
 ): boolean {
-  const keys = Object.keys(checkins).sort().reverse();
+  // A check-in dated after today (a clock set forward, a phone in a time zone ahead) is ignored.
+  const keys = Object.keys(checkins).filter((k) => k <= today).sort().reverse();
   if (keys.length < streak || keys[0] !== today) return false;
 
   const recent = keys.slice(0, streak);

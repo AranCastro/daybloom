@@ -3,16 +3,15 @@
  * 30 seconds. Streaks multiply points (×2 from 5, ×3 from 10). After 10 correct answers
  * the buttons start to shuffle.
  */
-import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming, ZoomIn } from 'react-native-reanimated';
 
 import { Confetti, Countdown, haptic, ResultPanel, TimeBar } from '@/components/games/fx';
-import { GameShell, StatPill } from '@/components/games/shell';
+import { GameShell, leaveGame, StatPill } from '@/components/games/shell';
 import { Text } from '@/components/text';
 import { Button } from '@/components/ui';
-import { Fonts, Radius } from '@/constants/theme';
+import { Fonts, inkOn, Radius } from '@/constants/theme';
 import { useIsDark, useTheme } from '@/hooks/use-theme';
 import { gameOf } from '@/lib/games';
 import { recordGame, useAppState } from '@/lib/store';
@@ -51,6 +50,9 @@ function shuffled(): number[] {
 }
 
 const multiplierFor = (streak: number) => (streak >= 10 ? 3 : streak >= 5 ? 2 : 1);
+
+/** The big word stays on one line: it grows a little with the font size, then shrinks to fit the card. */
+const WORD_FIT = { numberOfLines: 1, adjustsFontSizeToFit: true, maxFontSizeMultiplier: 1.3 } as const;
 
 export function ColoursGame() {
   const t = useTheme();
@@ -142,7 +144,7 @@ export function ColoursGame() {
   if (phase === 'over' && result) {
     const accuracy = result.answers ? Math.round((result.correct / result.answers) * 100) : 0;
     return (
-      <GameShell title={info.title}>
+      <GameShell title={info.title} scroll>
         {result.newBest && <Confetti />}
         <View style={styles.centerFill}>
           <ResultPanel
@@ -158,7 +160,7 @@ export function ColoursGame() {
               { label: 'Your best', value: `${Math.max(best ?? 0, result.score)}` },
             ]}
             onAgain={start}
-            onDone={() => router.back()}
+            onDone={leaveGame}
           />
         </View>
       </GameShell>
@@ -166,12 +168,14 @@ export function ColoursGame() {
   }
 
   return (
-    <GameShell title={info.title} stat={phase === 'play' ? <StatPill label={`${score}`} color={color} /> : undefined}>
+    <GameShell title={info.title} stat={phase === 'play' ? <StatPill label={`${score}`} color={color} /> : undefined} scroll={phase === 'intro'}>
       {phase === 'intro' && (
         <>
           <View style={styles.center}>
             <View style={[styles.wordCard, { backgroundColor: t.surface, borderColor: t.line }]}>
-              <Text style={[styles.word, { color: ink(0) }]}>BLUE</Text>
+              <Text style={[styles.word, { color: ink(0) }]} {...WORD_FIT}>
+                BLUE
+              </Text>
             </View>
             <Text variant="title" center>
               Tap the ink, not the word
@@ -200,7 +204,7 @@ export function ColoursGame() {
               <Text variant="small">{left}s</Text>
               {mult > 1 ? (
                 <Animated.View key={mult} entering={ZoomIn.springify()} style={[styles.mult, { backgroundColor: color }]}>
-                  <Text variant="caption" strong style={{ color: '#fff' }}>
+                  <Text variant="caption" strong style={{ color: inkOn(color) }}>
                     ×{mult} · streak {streak}
                   </Text>
                 </Animated.View>
@@ -216,7 +220,11 @@ export function ColoursGame() {
                 { backgroundColor: t.surface, borderColor: feedback ? (feedback.ok ? '#3FA86B' : '#E0664F') : t.line },
                 wordStyle,
               ]}>
-              <Animated.Text key={`${round.word}-${round.ink}-${feedback?.id ?? 0}`} entering={FadeIn.duration(120)} style={[styles.word, { color: ink(round.ink) }]}>
+              <Animated.Text
+                key={`${round.word}-${round.ink}-${feedback?.id ?? 0}`}
+                entering={FadeIn.duration(120)}
+                style={[styles.word, { color: ink(round.ink) }]}
+                {...WORD_FIT}>
                 {INKS[round.word].name.toUpperCase()}
               </Animated.Text>
             </Animated.View>
@@ -279,7 +287,7 @@ function Rule({ text }: { text: string }) {
 const styles = StyleSheet.create({
   centerFill: { flex: 1, justifyContent: 'center' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
-  wordCard: { minWidth: 250, paddingHorizontal: 28, paddingVertical: 24, borderRadius: Radius.lg, borderWidth: 2, alignItems: 'center' },
+  wordCard: { minWidth: 250, maxWidth: '100%', paddingHorizontal: 28, paddingVertical: 24, borderRadius: Radius.lg, borderWidth: 2, alignItems: 'center' },
   word: { fontFamily: Fonts.display, fontSize: 60, lineHeight: 70, letterSpacing: 1 },
   rules: { alignSelf: 'stretch', gap: 6, marginTop: 6 },
   rule: { flexDirection: 'row', alignItems: 'center', gap: 10 },

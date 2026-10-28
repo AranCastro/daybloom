@@ -7,7 +7,8 @@ import { BuddyCard, useBuddy } from '@/components/buddy';
 import { Icon } from '@/components/icons';
 import { Text } from '@/components/text';
 import { Card, Divider, Row, Screen, Tappable, tap } from '@/components/ui';
-import { Radius, Spacing, TabBarInset } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
+import { useTabBarInset } from '@/hooks/use-tab-bar-inset';
 import { useTheme } from '@/hooks/use-theme';
 import { useCircleNames } from '@/lib/labels';
 import { prettyDate } from '@/lib/dates';
@@ -17,6 +18,7 @@ import { CircleQuadrant, Person, peopleIn, useAppState } from '@/lib/store';
 
 export default function Circle() {
   const t = useTheme();
+  const tabInset = useTabBarInset();
   const nudges = useAppState((s) => s.nudges);
   const streak = useAppState((s) => s.streak);
   const cName = useCircleNames();
@@ -24,7 +26,7 @@ export default function Circle() {
   const autos = nudges.filter((n) => n.kind === 'auto');
 
   return (
-    <Screen bottomInset={TabBarInset + 24}>
+    <Screen bottomInset={tabInset + 24}>
       <Animated.View entering={FadeInDown.duration(450)} style={{ gap: 4, marginTop: 8 }}>
         <Text variant="label">Your circle</Text>
         <Text variant="title">Who lifts you{'\n'}on a low day?</Text>

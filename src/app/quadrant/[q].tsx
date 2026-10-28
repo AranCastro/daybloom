@@ -19,7 +19,8 @@ import { clearCompleted, moveTask, openTasks, Quadrant, Task, useAppState } from
 export default function QuadrantScreen() {
   const t = useTheme();
   const params = useLocalSearchParams<{ q: string }>();
-  const q = (Math.min(4, Math.max(1, Number(params.q) || 1)) as Quadrant);
+  // Whole numbers 1 to 4 only, so a link such as daybloom://quadrant/2.5 cannot pick a quadrant that does not exist.
+  const q = (Math.min(4, Math.max(1, Math.round(Number(params.q)) || 1)) as Quadrant);
   const info = quadrantOf(q);
   const name = useQuadrantNames()(q);
   const { color, soft } = useQuadrantColors(q);
@@ -35,7 +36,7 @@ export default function QuadrantScreen() {
   return (
     <Screen>
       <View style={styles.top}>
-        <Pressable hitSlop={12} onPress={() => (tap(), router.back())} accessibilityLabel="Back">
+        <Pressable hitSlop={12} onPress={() => (tap(), router.back())} accessibilityRole="button" accessibilityLabel="Back">
           <Icon name="back" color={t.textSecondary} />
         </Pressable>
       </View>

@@ -263,7 +263,7 @@ export default function Thottam() {
 function Back() {
   const t = useTheme();
   return (
-    <Pressable hitSlop={12} onPress={() => (tap(), router.back())} accessibilityLabel="Back" style={{ height: 32, justifyContent: 'center' }}>
+    <Pressable hitSlop={12} onPress={() => (tap(), router.back())} accessibilityRole="button" accessibilityLabel="Back" style={{ height: 32, justifyContent: 'center' }}>
       <Icon name="back" color={t.textSecondary} />
     </Pressable>
   );

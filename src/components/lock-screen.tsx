@@ -2,7 +2,7 @@
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -111,7 +111,17 @@ export function LockGate() {
     if (lock.locked && lock.biometric) void unlockWithBiometric();
   }, [lock.locked, lock.biometric]);
 
-  if (!lock.locked) return null;
+  // Away from the app: an opaque cover, so the screen behind never shows before the lock decides.
+  if (!lock.locked) {
+    if (!lock.covered) return null;
+    return (
+      <Modal visible animationType="none" onRequestClose={() => undefined}>
+        <View style={styles.fill}>
+          <Backdrop />
+        </View>
+      </Modal>
+    );
+  }
 
   function forgot() {
     const title = 'Forgot your PIN?';
@@ -132,36 +142,42 @@ export function LockGate() {
   }
 
   return (
-    <Modal visible animationType="fade" statusBarTranslucent navigationBarTranslucent onRequestClose={() => undefined}>
-      <View style={[styles.gate, { paddingTop: insets.top + 36, paddingBottom: insets.bottom + 20 }]}>
+    <Modal visible animationType="none" onRequestClose={() => undefined}>
+      <View style={styles.fill}>
         <Backdrop />
-        <Image source={require('../../assets/images/icon.png')} style={styles.logo} />
-        <PinPad
-          title="Daybloom is locked"
-          subtitle={message ?? 'Enter your PIN'}
-          biometric={lock.biometric}
-          onBiometric={() => void unlockWithBiometric()}
-          onDone={async (pin) => {
-            const r = await unlockWithPin(pin);
-            if (r === 'ok') return true;
-            setMessage(r === 'wait' ? `Too many tries. Wait ${waitLabel()}.` : 'That PIN is not right. Try again.');
-            return false;
-          }}
-          footer={
-            <Pressable onPress={forgot} hitSlop={10} accessibilityRole="button">
-              <Text variant="small" style={{ color: t.accentText, fontFamily: Fonts.bodyStrong }}>
-                Forgot PIN?
-              </Text>
-            </Pressable>
-          }
-        />
+        {/* Scrolls in short windows (landscape tablets, split screen) so every key stays reachable. */}
+        <ScrollView
+          contentContainerStyle={[styles.gate, { paddingTop: insets.top + 36, paddingBottom: insets.bottom + 20 }]}
+          showsVerticalScrollIndicator={false}>
+          <Image source={require('../../assets/images/icon.png')} style={styles.logo} />
+          <PinPad
+            title="Daybloom is locked"
+            subtitle={message ?? (lock.unreadable ? 'Daybloom cannot read its lock right now. Restart the phone and try again.' : 'Enter your PIN')}
+            biometric={lock.biometric}
+            onBiometric={() => void unlockWithBiometric()}
+            onDone={async (pin) => {
+              const r = await unlockWithPin(pin);
+              if (r === 'ok') return true;
+              setMessage(r === 'wait' ? `Too many tries. Wait ${waitLabel()}.` : 'That PIN is not right. Try again.');
+              return false;
+            }}
+            footer={
+              <Pressable onPress={forgot} hitSlop={10} accessibilityRole="button">
+                <Text variant="small" style={{ color: t.accentText, fontFamily: Fonts.bodyStrong }}>
+                  Forgot PIN?
+                </Text>
+              </Pressable>
+            }
+          />
+        </ScrollView>
       </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  gate: { flex: 1, alignItems: 'center', gap: 18 },
+  fill: { flex: 1 },
+  gate: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', gap: 18 },
   logo: { width: 72, height: 72, borderRadius: 20 },
   dots: { flexDirection: 'row', gap: 18 },
   dot: { width: 16, height: 16, borderRadius: 8, borderWidth: 1.5 },

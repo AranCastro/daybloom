@@ -2,11 +2,12 @@
 import * as Haptics from 'expo-haptics';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon, IconName } from '@/components/icons';
 import { Text } from '@/components/text';
 import { Button, Input, tap } from '@/components/ui';
-import { Fonts, Radius } from '@/constants/theme';
+import { Fonts, inkOn, Radius } from '@/constants/theme';
 import { useIsDark, useTheme } from '@/hooks/use-theme';
 import { useCircleNames } from '@/lib/labels';
 import { confirmThen } from '@/lib/confirm';
@@ -25,7 +26,7 @@ export function CircleChip({ q, size = 24 }: { q: CircleQuadrant; size?: number 
   const { color } = useCircleColors(q);
   return (
     <View style={[styles.center, { backgroundColor: color, width: size, height: size, borderRadius: size / 2 }]}>
-      <Text style={{ color: '#fff', fontFamily: Fonts.display, fontSize: size * 0.46, lineHeight: size * 0.62 }}>
+      <Text style={{ color: inkOn(color), fontFamily: Fonts.display, fontSize: size * 0.46, lineHeight: size * 0.62 }}>
         {circleOf(q).numeral}
       </Text>
     </View>
@@ -52,6 +53,8 @@ export function ReachButtons({ person, compact }: { person: Person; compact?: bo
   const t = useTheme();
   const { color } = useCircleColors(person.quadrant);
   const info = circleOf(person.quadrant);
+  // The filled button's ink: dark on the pale dark-mode colours, white on the deeper light ones.
+  const ink = inkOn(color);
   if (!person.phone) {
     return (
       <Text variant="small" color="textMuted">
@@ -86,8 +89,8 @@ export function ReachButtons({ person, compact }: { person: Person; compact?: bo
               compact && { paddingVertical: 9 },
               { backgroundColor: primary ? color : 'transparent', borderColor: primary ? color : t.line, opacity: pressed ? 0.7 : 1 },
             ]}>
-            <Icon name={a.icon} color={primary ? '#fff' : t.text} size={17} />
-            <Text variant="small" strong style={{ color: primary ? '#fff' : t.text }}>
+            <Icon name={a.icon} color={primary ? ink : t.text} size={17} />
+            <Text variant="small" strong style={{ color: primary ? ink : t.text }}>
               {a.label}
             </Text>
           </Pressable>
@@ -112,6 +115,7 @@ export function PersonSheet(props: SheetProps) {
 function SheetBody({ onClose, person, defaultQuadrant = 1 }: SheetProps) {
   const cName = useCircleNames();
   const t = useTheme();
+  const insets = useSafeAreaInsets();
   const [name, setName] = useState(person?.name ?? '');
   const [phone, setPhone] = useState(person?.phone ?? '');
   const [q, setQ] = useState<CircleQuadrant>(person?.quadrant ?? defaultQuadrant);
@@ -134,7 +138,8 @@ function SheetBody({ onClose, person, defaultQuadrant = 1 }: SheetProps) {
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'web' ? undefined : 'padding'}>
       <Pressable style={styles.scrim} onPress={onClose} accessibilityLabel="Close" />
-      <View style={[styles.sheet, { backgroundColor: t.surface }]}>
+      {/* Edge to edge, the sheet runs under the navigation bar: its padding clears the bar. */}
+      <View style={[styles.sheet, { backgroundColor: t.surface, paddingBottom: 36 + insets.bottom }]}>
         <View style={[styles.grabber, { backgroundColor: t.line }]} />
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 16 }}>
           {person ? (
@@ -225,7 +230,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   scrim: { flex: 1, backgroundColor: 'rgba(10,8,6,0.38)' },
-  sheet: { borderTopLeftRadius: 30, borderTopRightRadius: 30, paddingHorizontal: 22, paddingTop: 10, paddingBottom: 36, maxHeight: '90%' },
+  sheet: { borderTopLeftRadius: 30, borderTopRightRadius: 30, paddingHorizontal: 22, paddingTop: 10, maxHeight: '90%' },
   grabber: { width: 40, height: 5, borderRadius: 3, alignSelf: 'center', marginBottom: 14 },
   personHead: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   qGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },

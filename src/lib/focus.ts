@@ -110,6 +110,21 @@ export function completeBreak(): boolean {
   return true;
 }
 
+/**
+ * Completes the timer if its time is up, whichever kind it is (a focus session grows its flower).
+ * The Focus widget is not redrawn when a session ends with the app closed, so it can still offer
+ * Pause and Stop then: those taps come here first, so a finished session is never thrown away.
+ */
+export function completeIfOver(): { kind: 'focus'; flower: FlowerKind } | { kind: 'break' } | null {
+  const a = getState().focus.active;
+  if (!a || remaining(a) > 0) return null;
+  if (a.kind === 'focus') {
+    const r = completeFocus();
+    return r ? { kind: 'focus', flower: r.flower } : null;
+  }
+  return completeBreak() ? { kind: 'break' } : null;
+}
+
 /** Sessions kept in full; older ones are folded into per-day totals (AppState.clearedFocus). */
 export const MAX_SESSIONS = 500;
 

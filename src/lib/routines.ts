@@ -28,7 +28,22 @@ export type Routine = {
   /** A quiet notification at each time. */
   remind: boolean;
   createdAt: number;
+  /** Earlier schedules, oldest first, so past days are judged by the schedule that applied then. */
+  past?: PastSchedule[];
 };
+
+/** How a routine repeated before an edit, and the last day (inclusive) it applied. */
+export type PastSchedule = Pick<Routine, 'kind' | 'weekdays' | 'every' | 'start' | 'times'> & { until: string };
+export type Schedule = Pick<Routine, 'kind' | 'weekdays' | 'every' | 'start' | 'times'>;
+
+/** Earlier schedules kept per routine; the oldest are dropped first. */
+export const MAX_PAST = 24;
+
+/** The schedule a routine followed on a day: an earlier one kept from before an edit, or the current one. */
+export function scheduleOn(r: Routine, day: string): Schedule {
+  for (const p of r.past ?? []) if (day >= p.start && day <= p.until) return p;
+  return r;
+}
 
 export const MAX_TIMES = 3;
 export const MIN_EVERY = 2;
@@ -141,6 +156,23 @@ export function parseMade(v: string | undefined): { day: string; slot: number } 
   if (!v) return null;
   const [day, slot] = v.split('#');
   return { day, slot: slot === undefined ? -1 : Number(slot) };
+}
+
+type SlotLog = Record<string, Record<string, number[]>>;
+
+/** A time that needs no reminder: ticked or marked Not done (with or without its task), or a skipped day. */
+export function answeredIn(s: { routineLog: SlotLog; routineMissed: SlotLog; routineMade: Record<string, string> }) {
+  return (routineId: string, day: string, slot: number): boolean => {
+    if (s.routineLog[routineId]?.[day]?.includes(slot) || s.routineMissed[routineId]?.[day]?.includes(slot)) return true;
+    const made = parseMade(s.routineMade[routineId]);
+    return !!made && made.day === day && made.slot === SKIPPED_SLOT;
+  };
+}
+
+/** Parses a routine task id, "routineId:YYYY-MM-DD:slot". */
+export function parseInstanceId(taskId: string): { routineId: string; day: string; slot: number } | null {
+  const m = /^(.+):(\d{4}-\d{2}-\d{2}):(\d)$/.exec(taskId);
+  return m ? { routineId: m[1], day: m[2], slot: Number(m[3]) } : null;
 }
 
 /** The id of the task a routine adds for one day and time slot. Stable, so adding is idempotent. */

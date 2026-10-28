@@ -3,7 +3,6 @@
  * the bubbles speed up. Golden bubbles (rare) are worth 5. Every pop bursts into particles.
  */
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, {
@@ -18,7 +17,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { Burst, Confetti, FloatText, haptic, ResultPanel, TimeBar } from '@/components/games/fx';
-import { GameShell, StatPill } from '@/components/games/shell';
+import { GameShell, leaveGame, StatPill } from '@/components/games/shell';
 import { Icon } from '@/components/icons';
 import { Text } from '@/components/text';
 import { Button, Card } from '@/components/ui';
@@ -39,6 +38,9 @@ const PALETTE: [string, string][] = [
 const GOLD: [string, string] = ['#FFF1B8', '#E8A317'];
 const DASH_SECONDS = 60;
 const MAX_ON_SCREEN = 13;
+/** The intro art: four bubbles in a 300 × 210 box, drawn smaller in a short window. */
+const ART = { size: [84, 58, 70, 44], left: [40, 150, 210, 110], top: [60, 20, 110, 140] };
+const SHORT_WINDOW = 700;
 
 type Mode = 'zen' | 'dash';
 /** x is a 0..1 fraction of the field width, so no layout measurement is needed. */
@@ -155,7 +157,7 @@ export function BubblesGame() {
   if (over && mode) {
     const bestKey = mode === 'dash' ? 'bubbles60' : 'bubbles';
     return (
-      <GameShell title={info.title}>
+      <GameShell title={info.title} scroll>
         {over.newBest && <Confetti />}
         <View style={styles.centerFill}>
           <ResultPanel
@@ -167,7 +169,7 @@ export function BubblesGame() {
             color={color}
             stats={[{ label: 'Your best', value: `${Math.max(best[bestKey] ?? 0, over.score)}` }]}
             onAgain={() => begin(mode)}
-            onDone={() => router.back()}
+            onDone={leaveGame}
           />
         </View>
       </GameShell>
@@ -175,12 +177,14 @@ export function BubblesGame() {
   }
 
   if (!mode) {
+    // In a short window (a tablet in landscape, split screen) the art shrinks and the intro scrolls.
+    const k = travel < SHORT_WINDOW ? 0.6 : 1;
     return (
-      <GameShell title={info.title}>
+      <GameShell title={info.title} scroll>
         <View style={styles.intro}>
-          <Animated.View entering={FadeIn.duration(400)} style={styles.introArt}>
+          <Animated.View entering={FadeIn.duration(400)} style={[styles.introArt, { width: 300 * k, height: 210 * k }]}>
             {[0, 1, 2, 3].map((i) => (
-              <View key={i} style={[styles.introBubble, { width: [84, 58, 70, 44][i], height: [84, 58, 70, 44][i], left: [40, 150, 210, 110][i], top: [60, 20, 110, 140][i] }]}>
+              <View key={i} style={[styles.introBubble, { width: ART.size[i] * k, height: ART.size[i] * k, left: ART.left[i] * k, top: ART.top[i] * k }]}>
                 <LinearGradient colors={i === 1 ? GOLD : PALETTE[i]} style={StyleSheet.absoluteFill} start={{ x: 0.2, y: 0.1 }} end={{ x: 0.9, y: 0.95 }} />
               </View>
             ))}
@@ -192,7 +196,7 @@ export function BubblesGame() {
             Tap bubbles to pop them. Golden ones are worth five.
           </Text>
         </View>
-        <View style={{ gap: 10 }}>
+        <View style={{ gap: 10, marginTop: 10 }}>
           <ModeCard title="Zen" line="No timer. Stop whenever you like." icon="leaf" record={best.bubbles} onPress={() => begin('zen')} />
           <ModeCard title="60-second dash" line="Bubbles speed up. How many can you pop?" icon="clock" record={best.bubbles60} onPress={() => begin('dash')} />
         </View>
@@ -228,7 +232,7 @@ function ModeCard({ title, line, icon, record, onPress }: { title: string; line:
   return (
     <Card style={{ padding: 16 }}>
       <View style={styles.modeRow}>
-        <Icon name={icon} color="#2C7FA3" size={24} />
+        <Icon name={icon} color="#2A7BA0" size={24} />
         <View style={{ flex: 1 }}>
           <Text variant="bodyStrong">{title}</Text>
           <Text variant="small">
@@ -307,7 +311,7 @@ function BubbleView({ bubble, travel, onPop, onGone }: { bubble: Bubble; travel:
 const styles = StyleSheet.create({
   centerFill: { flex: 1, justifyContent: 'center' },
   intro: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
-  introArt: { width: 300, height: 210, marginBottom: 10 },
+  introArt: { marginBottom: 10 },
   introBubble: { position: 'absolute', borderRadius: 999, overflow: 'hidden', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.8)' },
   modeRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   field: { flex: 1, overflow: 'hidden', borderRadius: Radius.lg },

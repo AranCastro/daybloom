@@ -4,6 +4,8 @@ import { ReactNode, useEffect } from 'react';
 import {
   ActivityIndicator,
   GestureResponderEvent,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   PressableProps,
   ScrollView,
@@ -70,11 +72,16 @@ export function Screen({ children, scroll = true, bottomInset = Spacing.five, co
       <Backdrop />
       <SafeAreaView style={styles.fill} edges={['top', 'left', 'right']}>
         {scroll ? (
-          <ScrollView
-            contentContainerStyle={{ paddingBottom: bottomInset, flexGrow: 1 }}
-            showsVerticalScrollIndicator={false}>
-            {inner}
-          </ScrollView>
+          // Edge to edge (Android 15 and later) the window no longer shrinks for the keyboard, so the
+          // scroll view makes room itself and the focused field scrolls up into view.
+          <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === 'web' ? undefined : 'padding'}>
+            <ScrollView
+              contentContainerStyle={{ paddingBottom: bottomInset, flexGrow: 1 }}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}>
+              {inner}
+            </ScrollView>
+          </KeyboardAvoidingView>
         ) : (
           <View style={[styles.fill, { paddingBottom: bottomInset }]}>{inner}</View>
         )}

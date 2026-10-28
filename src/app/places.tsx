@@ -36,7 +36,7 @@ export default function PlacesScreen() {
 
   return (
     <Screen>
-      <Pressable hitSlop={12} onPress={() => (tap(), router.back())} accessibilityLabel="Back" style={{ height: 32, justifyContent: 'center' }}>
+      <Pressable hitSlop={12} onPress={() => (tap(), router.back())} accessibilityRole="button" accessibilityLabel="Back" style={{ height: 32, justifyContent: 'center' }}>
         <Icon name="back" color={t.textSecondary} />
       </Pressable>
       <Animated.View entering={FadeInDown.duration(400)} style={{ gap: 4 }}>

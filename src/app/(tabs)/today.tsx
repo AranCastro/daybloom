@@ -31,8 +31,9 @@ import { TaskRow, TaskSheet } from '@/components/tasks';
 import { ProfileAvatar } from '@/components/profile';
 import { Text } from '@/components/text';
 import { Card, Screen, Tappable, tap } from '@/components/ui';
-import { MaxContentWidth, Radius, Spacing, TabBarInset } from '@/constants/theme';
+import { MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { useReduceMotion } from '@/hooks/use-reduce-motion';
+import { useTabBarInset } from '@/hooks/use-tab-bar-inset';
 import { useAppActive } from '@/hooks/use-app-active';
 import { useClock } from '@/hooks/use-today';
 import { useTheme } from '@/hooks/use-theme';
@@ -63,6 +64,7 @@ export default function Today() {
   const scene = useScene();
   const t = useTheme();
   const reduceMotion = useReduceMotion();
+  const tabInset = useTabBarInset();
   const { width } = useWindowDimensions();
   const name = useAppState((s) => s.name);
   const checkins = useAppState((s) => s.checkins);
@@ -78,6 +80,8 @@ export default function Today() {
   // Five orbs across the card: sized from the window, so a 320 dp phone still fits them.
   const inner = Math.min(width, MaxContentWidth) - Spacing.screen * 2 - Spacing.card * 2 - 2;
   const orb = Math.max(36, Math.min(54, Math.floor(inner / 5) - 8));
+  // Each label stays within its fifth of the row, so a large font size cannot push the row wider.
+  const labelMax = Math.floor(inner / 5);
 
   // The check-in choreography: the other orbs step aside, then the chosen one grows into the hero.
   const [picking, setPicking] = useState<Pick | null>(null);
@@ -133,7 +137,7 @@ export default function Today() {
   const after = (i: number) => (from ? FadeInDown.delay(GROW_MS + 150 + 60 * i).duration(360) : undefined);
 
   return (
-    <Screen bottomInset={TabBarInset + 24}>
+    <Screen bottomInset={tabInset + 24}>
       <BadgeCelebration badges={celebrate} onClose={() => setCelebrate([])} />
       <Animated.View entering={FadeInDown.duration(500)} style={styles.header}>
         <View style={[styles.inline, { justifyContent: 'space-between' }]}>
@@ -200,7 +204,7 @@ export default function Today() {
                 setRow({ x, y, width: w });
               }}>
               {MOODS.map((m, i) => (
-                <PickerOrb key={m.value} index={i} size={orb} picking={picking} onPress={() => choose(m.value, i)} />
+                <PickerOrb key={m.value} index={i} size={orb} labelWidth={labelMax} picking={picking} onPress={() => choose(m.value, i)} />
               ))}
             </View>
             {fresh && <StartSteps />}
@@ -307,7 +311,7 @@ export default function Today() {
 }
 
 /** One orb in the picker. When another is chosen it steps aside, nearest first. */
-function PickerOrb({ index, size, picking, onPress }: { index: number; size: number; picking: Pick | null; onPress: () => void }) {
+function PickerOrb({ index, size, labelWidth, picking, onPress }: { index: number; size: number; labelWidth: number; picking: Pick | null; onPress: () => void }) {
   const m = MOODS[index];
   const out = useSharedValue(0);
   const chosen = picking?.index === index;
@@ -331,7 +335,14 @@ function PickerOrb({ index, size, picking, onPress }: { index: number; size: num
           onPress={onPress}
           style={({ pressed }) => [styles.moodBtn, pressed && { transform: [{ scale: 0.92 }] }]}>
           <MoodOrb mood={m} size={size} />
-          <Text variant="caption" color="text" style={{ opacity: chosen ? 0 : 1 }}>
+          {/* Grows with the font size up to 1.3x, then shrinks to fit its fifth of the row. */}
+          <Text
+            variant="caption"
+            color="text"
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            maxFontSizeMultiplier={1.3}
+            style={{ opacity: chosen ? 0 : 1, maxWidth: labelWidth }}>
             {m.label}
           </Text>
         </Pressable>

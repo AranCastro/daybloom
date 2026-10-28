@@ -1,14 +1,15 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, { FadeInDown, ZoomIn } from 'react-native-reanimated';
 
 import { Icon } from '@/components/icons';
 import { QuadrantChip, TaskRow, TaskSheet, useQuadrantColors } from '@/components/tasks';
 import { Text } from '@/components/text';
 import { EmptyState, Screen, Tappable, tap } from '@/components/ui';
-import { Radius, Shadow, Spacing, TabBarInset } from '@/constants/theme';
+import { inkOn, MaxContentWidth, Radius, Shadow, Spacing } from '@/constants/theme';
+import { useTabBarInset } from '@/hooks/use-tab-bar-inset';
 import { useTheme } from '@/hooks/use-theme';
 import { useClock, useToday } from '@/hooks/use-today';
 import { useQuadrantNames } from '@/lib/labels';
@@ -17,6 +18,12 @@ import { deepFirst, fitEnergy } from '@/lib/effort';
 import { addDays, dayKey, fromKey } from '@/lib/dates';
 import { clockText, occursOn } from '@/lib/routines';
 import { openTasks, Quadrant, Task, useAppState } from '@/lib/store';
+
+/** Below this window height (a tablet in landscape, split screen) the matrix scrolls instead of squeezing. */
+const SHORT_WINDOW = 650;
+/** Least height of a row of quadrants when the matrix scrolls: room for three or four tasks. */
+const MIN_ROW = 220;
+const FAB = 62;
 
 /** Energy tints, from the status colours of the current scheme. */
 const ENERGY_TINT = { 1: 'danger', 2: 'warning', 3: 'success' } as const;
@@ -46,9 +53,17 @@ export default function Matrix() {
   const dueToday = open.filter((x) => x.due && x.due <= today).length;
   const routineCount = useAppState((s) => s.routines.length);
 
+  const tabInset = useTabBarInset();
+  const { width, height } = useWindowDimensions();
+  const short = height < SHORT_WINDOW;
+  // The add button sits at the right edge of the content column, not of a wide window.
+  const fabRight = Math.max(0, (width - MaxContentWidth) / 2) + Spacing.screen;
+  const fabBottom = tabInset + 18;
+
   return (
     <View style={{ flex: 1 }}>
-      <Screen scroll={false} bottomInset={TabBarInset + 6}>
+      {/* When it scrolls, the end of the matrix can scroll clear of the add button. */}
+      <Screen scroll={short} bottomInset={short ? fabBottom + FAB + 6 : tabInset + 6}>
         <Animated.View entering={FadeInDown.duration(450)} style={styles.header}>
           <Pressable
             onPress={() => (tap(), router.push('/calendar'))}
@@ -126,7 +141,7 @@ export default function Matrix() {
 
         <View style={styles.grid}>
           {[0, 2].map((start) => (
-            <View key={start} style={styles.gridRow}>
+            <View key={start} style={[styles.gridRow, short && { minHeight: MIN_ROW }]}>
               {QUADRANTS.slice(start, start + 2).map((info, i) => (
                 <Animated.View
                   key={info.id}
@@ -140,7 +155,7 @@ export default function Matrix() {
         </View>
       </Screen>
 
-      <Animated.View entering={ZoomIn.delay(350).springify()} style={[styles.fab, { bottom: TabBarInset + 18 }]}>
+      <Animated.View entering={ZoomIn.delay(350).springify()} style={[styles.fab, { bottom: fabBottom, right: fabRight }]}>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Add task"
@@ -180,7 +195,7 @@ function QuadrantCard({ q, tasks, today, onOpen, keepOrder }: { q: Quadrant; tas
           </Text>
           {list.length > 0 && (
             <View style={[styles.count, { backgroundColor: color }]}>
-              <Text variant="micro" strong style={[styles.tabular, { color: '#fff' }]}>
+              <Text variant="micro" strong style={[styles.tabular, { color: inkOn(color) }]}>
                 {list.length}
               </Text>
             </View>
@@ -198,7 +213,7 @@ function QuadrantCard({ q, tasks, today, onOpen, keepOrder }: { q: Quadrant; tas
           </Text>
         </View>
       ) : (
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 6 }}>
+        <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 6 }}>
           {[...list, ...doneToday].map((task) => (
             <TaskRow key={task.id} task={task} today={today} onOpen={onOpen} compact />
           ))}
@@ -226,11 +241,11 @@ const styles = StyleSheet.create({
   count: { minWidth: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 },
   fade: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 28 },
   empty: { flex: 1, justifyContent: 'center', paddingBottom: 24 },
-  fab: { position: 'absolute', right: 22 },
+  fab: { position: 'absolute' },
   fabBtn: {
-    width: 62,
-    height: 62,
-    borderRadius: 31,
+    width: FAB,
+    height: FAB,
+    borderRadius: FAB / 2,
     alignItems: 'center',
     justifyContent: 'center',
   },

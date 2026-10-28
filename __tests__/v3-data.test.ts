@@ -142,10 +142,11 @@ describe('saving (D1)', () => {
     stop();
   });
 
-  it('an unreadable database gives defaults instead of a crash', () => {
+  it('an unreadable database neither crashes nor replaces what is in memory (4.0)', () => {
     kv.ctl.failRead = true;
     expect(() => store.reloadState()).not.toThrow();
-    expect(store.getState().onboarded).toBe(false);
+    // Before 4.0 this fell back to empty defaults, which the next save wrote over the real data.
+    expect(store.getState().onboarded).toBe(true);
   });
 });
 

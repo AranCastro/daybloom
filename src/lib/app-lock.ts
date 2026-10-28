@@ -16,6 +16,8 @@ import { readItem, removeItem, writeItem } from '@/lib/kv';
 
 const KEY = 'daybloom.lock.v1';
 const ATTEMPTS_KEY = 'daybloom.lock-attempts.v1';
+/** When the lock was last turned on, changed or turned off here (for device sync; not secret). */
+const CHANGED_KEY = 'daybloom.lock-changed.v1';
 export const PIN_LENGTH = 4;
 /** Wrong PINs allowed before a wait. */
 const MAX_TRIES = 5;
@@ -47,11 +49,15 @@ const NO_ATTEMPTS: Attempts = { tries: 0, strikes: 0, waitUntil: 0 };
 /** Secure store on the phone, kv on the web (secure-store has no web version). */
 const secure = Platform.OS !== 'web';
 
+/** The lock record could not be read: stay locked (only "Forgot PIN" helps) rather than open. */
+let unreadable = false;
+
 function readSecure(key: string): string | null {
   if (!secure) return readItem(key);
   try {
     return SecureStore.getItem(key) || null;
   } catch {
+    if (key === KEY) unreadable = true;
     return null;
   }
 }
@@ -74,7 +80,9 @@ function writeSecure(key: string, value: string | null): boolean {
 }
 
 function load(): Saved | null {
+  unreadable = false;
   let raw = readSecure(KEY);
+  if (unreadable) return null;
   if (!raw && secure) {
     // Before 2.4 the record was in the kv store (and so in Android auto-backup): move it once.
     // If the keystore refuses, it stays where it is and keeps working.
@@ -99,6 +107,10 @@ function loadAttempts(): Attempts {
 
 let saved = load();
 let locked = !!saved;
+/** While away from the app with the lock on: an opaque cover, so nothing shows before the lock decides. */
+let covered = false;
+/** When expectReturn was last called; the trip out must start soon after it to count. */
+let expectAt = 0;
 /** Wrong tries survive a force-stop, so the wait cannot be skipped by restarting the app. */
 let attempts = loadAttempts();
 let backgroundAt: number | null = null;
@@ -113,14 +125,22 @@ function setAttempts(next: Attempts) {
   writeSecure(ATTEMPTS_KEY, next.tries || next.strikes || next.waitUntil ? JSON.stringify(next) : null);
 }
 
-function persist(next: Saved | null) {
+/** Returns false if the keystore refused the change (the lock is then as it was before). */
+function persist(next: Saved | null): boolean {
   const wasOn = !!saved;
+  if (!writeSecure(KEY, next ? JSON.stringify(next) : null)) return false;
   saved = next;
-  writeSecure(KEY, next ? JSON.stringify(next) : null);
+  if (!next) unreadable = false;
+  try {
+    writeItem(CHANGED_KEY, String(Date.now()));
+  } catch {
+    // Sync then simply keeps the other phones' lock.
+  }
   // A record left in kv by a refused migration must not come back later.
   if (secure && readItem(KEY) !== null) removeItem(KEY);
   if (wasOn !== !!next) shield(!!next);
   emit();
+  return true;
 }
 
 /**
@@ -162,11 +182,32 @@ async function hashPin(pin: string, salt: string, rounds: number): Promise<strin
   return toHex(h);
 }
 
-export type LockInfo = { enabled: boolean; locked: boolean; biometric: boolean; after: LockAfter };
+/** The PIN check a synced copy carries, so another phone can ask for the PIN before taking the data (lib/device-sync). */
+export type SyncLock = { hash: string; salt: string; rounds: number };
+
+/** This phone's lock for the sync file, and when it last changed (0: never set here). */
+export function lockForSync(): { lock: SyncLock | null; at: number } {
+  let at = 0;
+  try {
+    at = Number(readItem(CHANGED_KEY)) || 0;
+  } catch {
+    // Unknown: the other phones' lock wins.
+  }
+  return { lock: saved ? { hash: saved.hash, salt: saved.salt, rounds: saved.rounds ?? 0 } : null, at };
+}
+
+/** Does `pin` match a lock carried by a synced copy? */
+export async function pinMatches(lock: SyncLock, pin: string): Promise<boolean> {
+  return (await hashPin(pin, lock.salt, lock.rounds)) === lock.hash;
+}
+
+/** `covered`: away from the app with the lock on (see LockGate). `unreadable`: the lock record could not be read. */
+export type LockInfo = { enabled: boolean; locked: boolean; biometric: boolean; after: LockAfter; covered: boolean; unreadable: boolean };
 
 let snapshot: LockInfo = info();
 function info(): LockInfo {
-  return { enabled: !!saved, locked: !!saved && locked, biometric: !!saved?.biometric, after: saved?.after ?? 60 };
+  const on = !!saved || unreadable;
+  return { enabled: on, locked: (!!saved && locked) || unreadable, biometric: !!saved?.biometric, after: saved?.after ?? 60, covered: on && covered, unreadable };
 }
 listeners.add(() => {
   snapshot = info();
@@ -193,15 +234,21 @@ async function newRecord(pin: string, from: Saved | null): Promise<Saved> {
   return { hash: await hashPin(pin, salt, ROUNDS), salt, biometric: from?.biometric ?? false, after: from?.after ?? 60, rounds: ROUNDS };
 }
 
-/** Turns the lock on (or changes the PIN). */
-export async function setPin(pin: string) {
-  persist(await newRecord(pin, saved));
+/** Turns the lock on (or changes the PIN). Returns false if the phone would not store it. */
+export async function setPin(pin: string): Promise<boolean> {
+  if (!persist(await newRecord(pin, saved))) return false;
   setAttempts(NO_ATTEMPTS);
   locked = false;
   emit();
+  return true;
 }
 
 export async function checkPin(pin: string): Promise<boolean> {
+  if (unreadable) {
+    // Try the keystore again; until it answers, no PIN can be checked.
+    saved = load();
+    if (unreadable) return false;
+  }
   if (!saved) return true;
   const current = saved;
   if ((await hashPin(pin, current.salt, current.rounds ?? 0)) !== current.hash) return false;
@@ -230,11 +277,22 @@ export function waitLabel(now = Date.now()): string {
 
 /** Tries a PIN on the lock screen. */
 export async function unlockWithPin(pin: string): Promise<'ok' | 'wrong' | 'wait'> {
-  if (waitSeconds() > 0) return 'wait';
-  if (await checkPin(pin)) {
-    setAttempts(NO_ATTEMPTS);
+  const r = await limitedTry(() => checkPin(pin));
+  if (r === 'ok') {
     locked = false;
     emit();
+  }
+  return r;
+}
+
+/**
+ * Runs a PIN check under the lock screen's limit on wrong tries (Settings' "current PIN", and the
+ * PIN for a locked copy in Drive), so no PIN entry can be guessed without waits.
+ */
+export async function limitedTry(check: () => Promise<boolean>): Promise<'ok' | 'wrong' | 'wait'> {
+  if (waitSeconds() > 0) return 'wait';
+  if (await check()) {
+    setAttempts(NO_ATTEMPTS);
     return 'ok';
   }
   const tries = attempts.tries + 1;
@@ -258,7 +316,8 @@ export async function biometricAvailable(): Promise<boolean> {
 export async function unlockWithBiometric(): Promise<boolean> {
   if (!saved?.biometric) return false;
   try {
-    const r = await LocalAuthentication.authenticateAsync({ promptMessage: 'Unlock Daybloom', cancelLabel: 'Use PIN', disableDeviceFallback: true });
+    // Strong (class 3) biometrics only: a fingerprint, or face unlock that cannot be fooled by a photo.
+    const r = await LocalAuthentication.authenticateAsync({ promptMessage: 'Unlock Daybloom', cancelLabel: 'Use PIN', disableDeviceFallback: true, biometricsSecurityLevel: 'strong' });
     if (r.success) {
       setAttempts(NO_ATTEMPTS);
       locked = false;
@@ -281,8 +340,14 @@ export function setLockAfter(after: LockAfter) {
 /** Turns the lock off (after the PIN was confirmed in Settings). */
 export function disableLock() {
   locked = false;
+  unreadable = false;
   setAttempts(NO_ATTEMPTS);
-  persist(null);
+  if (!persist(null)) {
+    // The keystore refused: off for now all the same (after "Forgot PIN" the data is gone anyway).
+    saved = null;
+    shield(false);
+  }
+  emit();
 }
 
 /**
@@ -292,36 +357,56 @@ export function disableLock() {
  * Holds for the next return only, and for two minutes at most.
  */
 export function expectReturn(now = Date.now()) {
+  expectAt = now;
   expectUntil = now + EXPECT_MS;
 }
+
+/** A trip out counts as expected only if it starts within this long of expectReturn (the dialog opening). */
+const EXPECT_LEAVE_MS = 10_000;
+/** Whether the current trip out was expected (decided when the app went to the background). */
+let leftExpected = false;
 
 /** What the lock does when the app changes state (exported for tests). */
 export function onAppStateChange(s: string, now = Date.now()) {
   if (!saved) return;
   if (s === 'background') {
+    if (backgroundAt === null) leftExpected = now - expectAt <= EXPECT_LEAVE_MS && now <= expectUntil;
     backgroundAt ??= now;
+    covered = true;
     // "Immediately": lock on the way out, unless a picker or share sheet is expected back.
-    if (saved.after === 0 && !locked && now > expectUntil) {
+    if (saved.after === 0 && !locked && !leftExpected) {
       locked = true;
       lockedOnLeave = true;
-      emit();
     }
+    emit();
   }
   if (s === 'active' && backgroundAt !== null) {
     const away = now - backgroundAt;
-    const expected = now <= expectUntil;
+    const expected = leftExpected && now <= expectUntil;
     if (lockedOnLeave && away < GRACE_MS) locked = false;
     else if (!expected && away >= Math.max(saved.after * 1000, GRACE_MS)) locked = true;
     backgroundAt = null;
     lockedOnLeave = false;
+    leftExpected = false;
     expectUntil = 0;
+    covered = false;
     emit();
   }
 }
 
 /** Locks when the app returns after being away longer than the chosen time. */
 export function startLockWatch(): () => void {
-  shield(!!saved);
-  const sub = RNAppState.addEventListener('change', (s) => onAppStateChange(s));
+  shield(!!saved || unreadable);
+  const sub = RNAppState.addEventListener('change', (s) => {
+    // A keystore that could not be read at launch is tried again on each return.
+    if (s === 'active' && unreadable) {
+      saved = load();
+      if (!unreadable) {
+        locked = !!saved;
+        emit();
+      }
+    }
+    onAppStateChange(s);
+  });
   return () => sub.remove();
 }

@@ -33,7 +33,7 @@ export const GAMES: readonly GameInfo[] = [
     tagline: 'Zen mode or a 60-second dash',
     why: 'A low day. Pop a few bubbles; there is no score to beat.',
     minutes: 'Any time',
-    color: { light: '#2C7FA3', dark: '#7CC3E0' },
+    color: { light: '#2A7BA0', dark: '#7CC3E0' },
     soft: { light: '#DDEEF6', dark: '#15293A' },
     record: (b) => (b.bubbles60 !== undefined ? `Best ${b.bubbles60} in 60 s` : b.bubbles !== undefined ? `Best ${b.bubbles} popped` : null),
   },

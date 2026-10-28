@@ -1,5 +1,5 @@
 /** Opens the phone's own contact picker and returns the chosen name and first phone number. */
-import { Contact, requestPermissionsAsync } from 'expo-contacts';
+import { Contact, getPermissionsAsync, requestPermissionsAsync } from 'expo-contacts';
 
 import { expectReturn } from '@/lib/app-lock';
 
@@ -19,9 +19,13 @@ export async function pickContact(): Promise<Picked | null> {
     return c ? await read(c) : null;
   } catch {
     // Some devices need contacts permission before the picked contact's details can be read.
-    expectReturn();
-    const { granted } = await requestPermissionsAsync();
-    if (!granted) return null;
+    // The lock is only told to expect a return when the permission dialog will really show.
+    let perm = await getPermissionsAsync();
+    if (!perm.granted && perm.canAskAgain) {
+      expectReturn();
+      perm = await requestPermissionsAsync();
+    }
+    if (!perm.granted) return null;
     try {
       expectReturn();
       const c = await Contact.presentPicker();

@@ -5,7 +5,8 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Icon } from '@/components/icons';
 import { Text } from '@/components/text';
 import { Button, Card, Screen, Tappable, tap } from '@/components/ui';
-import { Fonts, Radius, Shadow, TabBarInset } from '@/constants/theme';
+import { Fonts, Radius, Shadow } from '@/constants/theme';
+import { useTabBarInset } from '@/hooks/use-tab-bar-inset';
 import { useIsDark, useTheme } from '@/hooks/use-theme';
 import { useToday } from '@/hooks/use-today';
 import { GameId, GameInfo, gameForMood, GAMES } from '@/lib/games';
@@ -14,12 +15,13 @@ import { useAppState } from '@/lib/store';
 
 export default function Play() {
   const todayKey = useToday();
+  const tabInset = useTabBarInset();
   const mood = useAppState((s) => s.checkins[todayKey]);
   const pick = gameForMood(mood);
   const today = moodOf(mood);
 
   return (
-    <Screen bottomInset={TabBarInset + 24}>
+    <Screen bottomInset={tabInset + 24}>
       <Animated.View entering={FadeInDown.duration(450)} style={{ gap: 4, marginTop: 8 }}>
         <Text variant="label">Play</Text>
         <Text variant="title">A small break{'\n'}for your mind.</Text>
